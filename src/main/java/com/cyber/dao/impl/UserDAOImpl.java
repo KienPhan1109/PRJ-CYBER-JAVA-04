@@ -89,6 +89,16 @@ public class UserDAOImpl implements IUserDAO {
         }
     }
 
+    @Override
+    public void updatePassword(Connection conn, int userId, String newPasswordHash) throws SQLException {
+        String sql = "UPDATE users SET password_hash = ? WHERE user_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, newPasswordHash);
+            stmt.setInt(2, userId);
+            stmt.executeUpdate();
+        }
+    }
+
     private User mapRowToUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setUserId(rs.getInt("user_id"));

@@ -100,20 +100,28 @@ public class InputUtils {
     }
 
     public static String inputPassword(String message) {
+        // Hàm này gọi khi login, không cần validate format
         while (true) {
-            String password;
-            if (System.console() != null) {
-                char[] passwordChars = System.console().readPassword(message);
-                password = (passwordChars == null) ? "" : new String(passwordChars);
+            System.out.print(message);
+            String input = SCANNER.nextLine();
+            if (input == null || input.trim().isEmpty()) {
+                PrintUtils.printError("Mật khẩu không được để trống.");
             } else {
-                System.out.print(message);
-                password = SCANNER.nextLine();
+                return input;
             }
+        }
+    }
 
+    public static String inputRegisterPassword(String message) {
+        String regex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\W_]).{8,}$";
+        while (true) {
+            System.out.print(message);
+            String password = SCANNER.nextLine();
+            
             if (password == null || password.trim().isEmpty()) {
                 PrintUtils.printError("Mật khẩu không được để trống.");
-            } else if (password.length() < 6) {
-                PrintUtils.printError("Mật khẩu phải có tối thiểu 6 ký tự.");
+            } else if (!password.matches(regex)) {
+                PrintUtils.printError("Mật khẩu yếu! Phải chứa ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.");
             } else {
                 return password;
             }
@@ -190,15 +198,8 @@ public class InputUtils {
 
     public static String inputPasswordUpdate(String message, String oldPassword) {
         while (true) {
-            String password;
-            if (System.console() != null) {
-                char[] passwordChars = System.console().readPassword(message);
-                password = (passwordChars == null) ? "" : new String(passwordChars);
-            } else {
-                System.out.print(message);
-                password = SCANNER.nextLine();
-            }
-
+            System.out.print(message);
+            String password = SCANNER.nextLine();
             if (password == null || password.trim().isEmpty()) {
                 return oldPassword;
             } else if (password.length() < 6) {

@@ -19,16 +19,16 @@ public class User {
         this.username = com.cyber.util.InputUtils.inputString("Tên đăng nhập: ");
         String password;
         while (true) {
-            password = com.cyber.util.InputUtils.inputPassword("Mật khẩu (tối thiểu 6 ký tự): ");
+            password = com.cyber.util.InputUtils.inputRegisterPassword("Mật khẩu (>= 8 ký tự, 1 Hoa, 1 thường, 1 số, 1 ký tự đặc biệt): ");
             String confirmPassword = com.cyber.util.InputUtils.inputPassword("Xác nhận mật khẩu: ");
             if (!password.equals(confirmPassword)) {
-                System.out.println("\033[31m[LỖI] Mật khẩu xác nhận không khớp. Vui lòng nhập lại!\033[0m\n");
+                com.cyber.util.PrintUtils.printError("Mật khẩu xác nhận không khớp. Vui lòng nhập lại!");
             } else {
                 break;
             }
         }
         this.fullName = com.cyber.util.InputUtils.inputString("Họ và tên: ");
-        this.phone = com.cyber.util.InputUtils.inputString("Số điện thoại: ", "^\\d{10,15}$", "Số điện thoại chỉ được chứa 10-15 chữ số.");
+        this.phone = com.cyber.util.InputUtils.inputString("Số điện thoại: ", "^(0|\\+84)[3|5|7|8|9][0-9]{8}$", "Số điện thoại không đúng định dạng VN (VD: 09xxxxxxxx hoặc +849xxxxxxxx).");
         return password;
     }
 

@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class AuthService {
     // Singleton Pattern
@@ -37,7 +39,16 @@ public class AuthService {
             User user = userDAO.findByUsernameAndPassword(conn, username, hashedPwd);
             
             if (user == null) {
-                throw new BusinessException("AUTH_FAILED", "Tài khoản hoặc mật khẩu không chính xác.");
+                // Kiểm tra tương thích ngược: Tìm xem DB có lưu mật khẩu dạng plaintext cũ không
+                User oldUser = userDAO.findByUsernameAndPassword(conn, username, password);
+                if (oldUser != null) {
+                    // Cập nhật lại mật khẩu sang SHA-256 trong CSDL
+                    userDAO.updatePassword(conn, oldUser.getUserId(), hashedPwd);
+                    user = oldUser;
+                    user.setPasswordHash(hashedPwd);
+                } else {
+                    throw new BusinessException("AUTH_FAILED", "Tài khoản hoặc mật khẩu không chính xác.");
+                }
             }
             
             return user;
@@ -84,6 +95,20 @@ public class AuthService {
     }
 
     private String hashPassword(String rawPassword) {
-        return rawPassword;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(rawPassword.getBytes());
+            StringBuilder hexString = new StringBuilder(2 * hash.length);
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if(hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Lỗi hệ thống: Không tìm thấy thuật toán mã hóa SHA-256", e);
+        }
     }
 }

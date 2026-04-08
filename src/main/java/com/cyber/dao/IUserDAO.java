@@ -9,5 +9,6 @@ public interface IUserDAO {
     User findByUsernameAndPassword(Connection conn, String username, String passwordHash) throws SQLException;
     boolean checkUsernameExist(Connection conn, String username) throws SQLException;
     void registerUser(Connection conn, User user) throws SQLException;
+    void updatePassword(Connection conn, int userId, String newPasswordHash) throws SQLException;
     void deductBalance(Connection conn, int userId, BigDecimal amount) throws SQLException;
 }
