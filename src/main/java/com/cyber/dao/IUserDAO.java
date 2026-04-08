@@ -1,0 +1,13 @@
+package com.cyber.dao;
+import com.cyber.model.User;
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
+
+public interface IUserDAO {
+    User findById(Connection conn, int userId) throws SQLException;
+    User findByUsernameAndPassword(Connection conn, String username, String passwordHash) throws SQLException;
+    boolean checkUsernameExist(Connection conn, String username) throws SQLException;
+    void registerUser(Connection conn, User user) throws SQLException;
+    void deductBalance(Connection conn, int userId, BigDecimal amount) throws SQLException;
+}
