@@ -57,6 +57,14 @@ public class ComputerService {
         }
     }
 
+    public boolean isNameExists(String name) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return computerDAO.checkNameExists(conn, name);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi kiểm tra tên máy: " + e.getMessage());
+        }
+    }
+
     public void updateComputer(Computer computer) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             Computer existing = computerDAO.findById(conn, computer.getComputerId());

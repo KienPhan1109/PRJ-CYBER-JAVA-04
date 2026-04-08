@@ -50,17 +50,18 @@ public class AuthService {
         }
     }
 
-    public void register(String username, String password, String fullName, String phone) throws BusinessException {
+    public void register(User newUser, String rawPassword) throws BusinessException {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
-            if (userDAO.checkUsernameExist(conn, username)) {
+            if (userDAO.checkUsernameExist(conn, newUser.getUsername())) {
                 throw new BusinessException("REGISTER_FAILED", "Tên đăng nhập đã tồn tại.");
             }
             
-            String hashedPwd = hashPassword(password);
-            // We pass null for Role, DAO sets it to default (Customer = 3)
-            User newUser = new User(username, hashedPwd, null, BigDecimal.ZERO, fullName, phone, new Timestamp(System.currentTimeMillis()));
+            String hashedPwd = hashPassword(rawPassword);
+            newUser.setPasswordHash(hashedPwd);
+            newUser.setBalance(BigDecimal.ZERO);
+            newUser.setCreatedAt(new Timestamp(System.currentTimeMillis()));
             
             conn.setAutoCommit(false);
             try {

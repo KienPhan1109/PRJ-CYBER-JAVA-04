@@ -15,14 +15,21 @@ public class User {
 
     public User() {}
 
-    public User(String username, String passwordHash, Role role, BigDecimal balance, String fullName, String phone, Timestamp createdAt) {
-        this.username = username;
-        this.passwordHash = passwordHash;
-        this.role = role;
-        this.balance = balance;
-        this.fullName = fullName;
-        this.phone = phone;
-        this.createdAt = createdAt;
+    public String inputRegisterData() {
+        this.username = com.cyber.util.InputUtils.inputString("Tên đăng nhập: ");
+        String password;
+        while (true) {
+            password = com.cyber.util.InputUtils.inputPassword("Mật khẩu (tối thiểu 6 ký tự): ");
+            String confirmPassword = com.cyber.util.InputUtils.inputPassword("Xác nhận mật khẩu: ");
+            if (!password.equals(confirmPassword)) {
+                System.out.println("\033[31m[LỖI] Mật khẩu xác nhận không khớp. Vui lòng nhập lại!\033[0m\n");
+            } else {
+                break;
+            }
+        }
+        this.fullName = com.cyber.util.InputUtils.inputString("Họ và tên: ");
+        this.phone = com.cyber.util.InputUtils.inputString("Số điện thoại: ", "^\\d{10,15}$", "Số điện thoại chỉ được chứa 10-15 chữ số.");
+        return password;
     }
 
     public int getUserId() {

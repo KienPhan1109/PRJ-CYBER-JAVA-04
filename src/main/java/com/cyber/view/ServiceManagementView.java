@@ -1,5 +1,7 @@
 package com.cyber.view;
 
+import com.cyber.util.PrintUtils;
+
 import com.cyber.exception.BusinessException;
 import com.cyber.model.ServiceItem;
 import com.cyber.service.ServiceItemService;
@@ -69,24 +71,20 @@ public class ServiceManagementView {
             }
             System.out.println("============================================================================================================================");
         } catch (BusinessException e) {
-            System.out.println("\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+            PrintUtils.printError(e.getMessage());
         }
     }
 
     private void handleAdd() {
         System.out.println("\n--- THÊM MÓN MỚI ---");
-        String name = InputUtils.inputString("Nhập tên món: ");
-        String desc = InputUtils.inputString("Nhập mô tả món: ");
-        BigDecimal price = InputUtils.inputBigDecimal("Nhập giá tiền (đ): ", BigDecimal.ZERO);
-        int stock = InputUtils.inputInt("Nhập số lượng tồn kho ban đầu: ", 0, 10000);
-
-        ServiceItem newItem = new ServiceItem(name, desc, price, stock, com.cyber.model.enums.ServiceItemStatus.ACTIVE);
+        ServiceItem newItem = new ServiceItem();
+        newItem.inputData(false);
         
         try {
             serviceService.addServiceItem(newItem);
             System.out.println("\033[32m[THÀNH CÔNG] Thêm món F&B thành công!\033[0m");
         } catch (BusinessException e) {
-            System.out.println("\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+            PrintUtils.printError(e.getMessage());
         }
     }
 
@@ -96,28 +94,19 @@ public class ServiceManagementView {
         try {
             ServiceItem existing = serviceService.getServiceItemById(id);
             if (existing == null) {
-                System.out.println("\033[33m[THÔNG BÁO] Không tìm thấy món F&B nào với ID " + FormatUtils.formatId("S", id) + "\033[0m");
+                PrintUtils.printWarning("Không tìm thấy món F&B nào với ID " + FormatUtils.formatId("S", id) + "");
                 return;
             }
             
             System.out.println("Đang chỉnh sửa: " + existing.getName());
-            String name = InputUtils.inputString("Tên mới (Cũ: " + existing.getName() + "): ");
-            String desc = InputUtils.inputString("Mô tả mới (Cũ: " + existing.getDescription() + "): ");
-            BigDecimal price = InputUtils.inputBigDecimal("Giá tiền mới (Cũ: " + FormatUtils.formatVND(existing.getPrice()) + "): ", BigDecimal.ZERO);
-            int stock = InputUtils.inputInt("Tồn kho mới (Cũ: " + existing.getStockQuantity() + "): ", 0, 10000);
             
-            System.out.println("Trạng thái (Cũ: " + FormatUtils.formatServiceItemStatus(existing.getStatus()) + "): 1. ACTIVE  |  2. OUT_OF_STOCK");
-            int stChoice = InputUtils.inputInt("Lựa chọn (1-2): ", 1, 2);
-            com.cyber.model.enums.ServiceItemStatus status = stChoice == 1 ? com.cyber.model.enums.ServiceItemStatus.ACTIVE : com.cyber.model.enums.ServiceItemStatus.OUT_OF_STOCK;
-
-            ServiceItem updated = new ServiceItem(name, desc, price, stock, status);
-            updated.setItemId(id);
+            existing.inputData(true);
             
-            serviceService.updateServiceItem(updated);
+            serviceService.updateServiceItem(existing);
             System.out.println("\033[32m[THÀNH CÔNG] Cập nhật món thành công!\033[0m");
             
         } catch (BusinessException e) {
-            System.out.println("\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+            PrintUtils.printError(e.getMessage());
         }
     }
 
@@ -131,7 +120,7 @@ public class ServiceManagementView {
                 serviceService.deleteServiceItem(id);
                 System.out.println("\033[32m[THÀNH CÔNG] Xóa món thành công!\033[0m");
             } catch (BusinessException e) {
-                System.out.println("\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+                PrintUtils.printError(e.getMessage());
             }
         } else {
             System.out.println("Đã hủy thao tác xóa.");

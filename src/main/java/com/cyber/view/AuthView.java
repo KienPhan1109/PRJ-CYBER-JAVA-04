@@ -1,5 +1,7 @@
 package com.cyber.view;
 
+import com.cyber.util.PrintUtils;
+
 import com.cyber.exception.BusinessException;
 import com.cyber.model.User;
 import com.cyber.service.AuthService;
@@ -62,7 +64,7 @@ public class AuthView {
                 currentUser = authService.login(username, password);
                 
                 // ANSI Green indicating Success
-                System.out.println("\n\033[32m[THÀNH CÔNG] Đăng nhập thành công!\033[0m");
+                PrintUtils.printSuccess("Đăng nhập thành công!");
                 
                 // Route mapping based on the User's Role capability
                 String role = currentUser.getRole() != null ? currentUser.getRole().getRoleName().toUpperCase() : "CUSTOMER";
@@ -80,7 +82,7 @@ public class AuthView {
                 
             } catch (BusinessException e) {
                 // ANSI Red indicating Error bounds
-                System.out.println("\n\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+                PrintUtils.printError(e.getMessage());
                 System.out.println("Vui lòng nhập lại thông tin!\n");
             }
         }
@@ -92,24 +94,15 @@ public class AuthView {
     private void handleRegister() {
         System.out.println("\n--- ĐĂNG KÝ TÀI KHOẢN ---");
         while (true) {
-            String username = InputUtils.inputString("Tên đăng nhập: ");
-            String password = InputUtils.inputPassword("Mật khẩu (tối thiểu 6 ký tự): ");
-            String confirmPassword = InputUtils.inputPassword("Xác nhận mật khẩu: ");
-            
-            if (!password.equals(confirmPassword)) {
-                System.out.println("\033[31m[LỖI] Mật khẩu xác nhận không khớp. Vui lòng nhập lại!\033[0m\n");
-                continue;
-            }
-            
-            String fullName = InputUtils.inputString("Họ và tên: ");
-            String phone = InputUtils.inputString("Số điện thoại: ", "^\\d{10,15}$", "Số điện thoại chỉ được chứa 10-15 chữ số.");
+            User newUser = new User();
+            String rawPassword = newUser.inputRegisterData();
             
             try {
-                authService.register(username, password, fullName, phone);
-                System.out.println("\n\033[32m[THÀNH CÔNG] Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay bây giờ.\033[0m");
+                authService.register(newUser, rawPassword);
+                PrintUtils.printSuccess("Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay bây giờ.");
                 break;
             } catch (BusinessException e) {
-                System.out.println("\n\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+                PrintUtils.printError(e.getMessage());
                 System.out.println("Vui lòng thử lại!\n");
             }
         }

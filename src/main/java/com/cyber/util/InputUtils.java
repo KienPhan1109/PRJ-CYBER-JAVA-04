@@ -15,7 +15,7 @@ public class InputUtils {
             System.out.print(message);
             String input = SCANNER.nextLine();
             if (input == null || input.trim().isEmpty()) {
-                System.out.println("Lỗi: Dữ liệu không được để trống. Vui lòng nhập lại.");
+                PrintUtils.printError("Dữ liệu không được để trống. Vui lòng nhập lại.");
             } else {
                 return input.trim();
             }
@@ -29,7 +29,7 @@ public class InputUtils {
             if (pattern.matcher(input).matches()) {
                 return input;
             } else {
-                System.out.println("Lỗi: " + errorMsg);
+                PrintUtils.printError(errorMsg);
             }
         }
     }
@@ -39,13 +39,13 @@ public class InputUtils {
             System.out.print(message);
             String input = SCANNER.nextLine();
             if (input == null || input.trim().isEmpty()) {
-                System.out.println("Lỗi: Dữ liệu không được để trống.");
+                PrintUtils.printError("Dữ liệu không được để trống.");
                 continue;
             }
             try {
                 return Integer.parseInt(input.trim());
             } catch (NumberFormatException e) {
-                System.out.println("Lỗi: Vui lòng nhập một số nguyên hợp lệ.");
+                PrintUtils.printError("Vui lòng nhập một số nguyên hợp lệ.");
             }
         }
     }
@@ -56,7 +56,7 @@ public class InputUtils {
             if (value >= min && value <= max) {
                 return value;
             } else {
-                System.out.println("Lỗi: Giá trị phải nằm trong khoảng từ " + min + " đến " + max + ".");
+                PrintUtils.printError("Giá trị phải nằm trong khoảng từ " + min + " đến " + max + ".");
             }
         }
     }
@@ -66,7 +66,7 @@ public class InputUtils {
             System.out.print(message);
             String input = SCANNER.nextLine();
             if (input == null || input.trim().isEmpty()) {
-                System.out.println("Lỗi: Dữ liệu không được để trống.");
+                PrintUtils.printError("Dữ liệu không được để trống.");
                 continue;
             }
             try {
@@ -74,10 +74,10 @@ public class InputUtils {
                 if (value.compareTo(min) >= 0) {
                     return value;
                 } else {
-                    System.out.println("Lỗi: Mức giá trị không được nhỏ hơn " + min.toString() + ".");
+                    PrintUtils.printError("Mức giá trị không được nhỏ hơn " + min.toString() + ".");
                 }
             } catch (NumberFormatException e) {
-                System.out.println("Lỗi: Vui lòng nhập định dạng số thập phân hợp lệ.");
+                PrintUtils.printError("Vui lòng nhập định dạng số thập phân hợp lệ.");
             }
         }
     }
@@ -88,13 +88,13 @@ public class InputUtils {
             System.out.print(message + " (" + pattern + "): ");
             String input = SCANNER.nextLine();
             if (input == null || input.trim().isEmpty()) {
-                System.out.println("Lỗi: Dữ liệu không được để trống.");
+                PrintUtils.printError("Dữ liệu không được để trống.");
                 continue;
             }
             try {
                 return LocalDate.parse(input.trim(), formatter);
             } catch (DateTimeParseException e) {
-                System.out.println("Lỗi: Ngày không hợp lệ hoặc không đúng định dạng " + pattern + ".");
+                PrintUtils.printError("Ngày không hợp lệ hoặc không đúng định dạng " + pattern + ".");
             }
         }
     }
@@ -111,9 +111,98 @@ public class InputUtils {
             }
 
             if (password == null || password.trim().isEmpty()) {
-                System.out.println("Lỗi: Mật khẩu không được để trống.");
+                PrintUtils.printError("Mật khẩu không được để trống.");
             } else if (password.length() < 6) {
-                System.out.println("Lỗi: Mật khẩu phải có tối thiểu 6 ký tự.");
+                PrintUtils.printError("Mật khẩu phải có tối thiểu 6 ký tự.");
+            } else {
+                return password;
+            }
+        }
+    }
+
+    public static String inputStringUpdate(String message, String oldValue) {
+        while (true) {
+            System.out.print(message);
+            String input = SCANNER.nextLine();
+            if (input == null || input.trim().isEmpty()) {
+                return oldValue;
+            } else {
+                return input.trim();
+            }
+        }
+    }
+
+    public static String inputStringUpdate(String message, String oldValue, String regex, String errorMsg) {
+        Pattern pattern = Pattern.compile(regex);
+        while (true) {
+            System.out.print(message);
+            String input = SCANNER.nextLine();
+            if (input == null || input.trim().isEmpty()) {
+                return oldValue;
+            }
+            if (pattern.matcher(input.trim()).matches()) {
+                return input.trim();
+            } else {
+                PrintUtils.printError(errorMsg);
+            }
+        }
+    }
+
+    public static int inputIntUpdate(String message, int oldValue, int min, int max) {
+        while (true) {
+            System.out.print(message);
+            String input = SCANNER.nextLine();
+            if (input == null || input.trim().isEmpty()) {
+                return oldValue;
+            }
+            try {
+                int value = Integer.parseInt(input.trim());
+                if (value >= min && value <= max) {
+                    return value;
+                } else {
+                    PrintUtils.printError("Giá trị phải nằm trong khoảng từ " + min + " đến " + max + ".");
+                }
+            } catch (NumberFormatException e) {
+                PrintUtils.printError("Vui lòng nhập một số nguyên hợp lệ.");
+            }
+        }
+    }
+
+    public static BigDecimal inputBigDecimalUpdate(String message, BigDecimal oldValue, BigDecimal min) {
+        while (true) {
+            System.out.print(message);
+            String input = SCANNER.nextLine();
+            if (input == null || input.trim().isEmpty()) {
+                return oldValue;
+            }
+            try {
+                BigDecimal value = new BigDecimal(input.trim());
+                if (value.compareTo(min) >= 0) {
+                    return value;
+                } else {
+                    PrintUtils.printError("Mức giá trị không được nhỏ hơn " + min.toString() + ".");
+                }
+            } catch (NumberFormatException e) {
+                PrintUtils.printError("Vui lòng nhập định dạng số thập phân hợp lệ.");
+            }
+        }
+    }
+
+    public static String inputPasswordUpdate(String message, String oldPassword) {
+        while (true) {
+            String password;
+            if (System.console() != null) {
+                char[] passwordChars = System.console().readPassword(message);
+                password = (passwordChars == null) ? "" : new String(passwordChars);
+            } else {
+                System.out.print(message);
+                password = SCANNER.nextLine();
+            }
+
+            if (password == null || password.trim().isEmpty()) {
+                return oldPassword;
+            } else if (password.length() < 6) {
+                PrintUtils.printError("Mật khẩu phải có tối thiểu 6 ký tự.");
             } else {
                 return password;
             }

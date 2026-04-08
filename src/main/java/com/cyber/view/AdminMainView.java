@@ -1,5 +1,7 @@
 package com.cyber.view;
 
+import com.cyber.util.PrintUtils;
+
 import com.cyber.model.User;
 import com.cyber.util.InputUtils;
 
@@ -36,7 +38,7 @@ public class AdminMainView {
                     serviceView.displayMenu();
                     break;
                 case 0:
-                    System.out.println("\033[33mĐang đăng xuất khỏi hệ thống Admin...\033[0m");
+                    PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Admin...");
                     return;
             }
         }

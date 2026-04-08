@@ -1,5 +1,7 @@
 package com.cyber.view;
 
+import com.cyber.util.PrintUtils;
+
 import com.cyber.exception.BusinessException;
 import com.cyber.model.Computer;
 import com.cyber.service.ComputerService;
@@ -69,36 +71,33 @@ public class ComputerManagementView {
             }
             System.out.println("==========================================================================================================");
         } catch (BusinessException e) {
-            System.out.println("\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+            PrintUtils.printError(e.getMessage());
         }
     }
 
     private void handleAdd() {
         System.out.println("\n--- THÊM MÁY TRẠM MỚI ---");
-        String name = InputUtils.inputString("Nhập tên máy (vd VIP-03): ");
-        System.out.println("Chọn khu vực: 1. VIP | 2. STANDARD | 3. ESPORT | 4. STREAMING | 5. COUPLE");
-        int zoneChoice = InputUtils.inputInt("Lựa chọn (1-5): ", 1, 5);
-        com.cyber.model.enums.ComputerZone zone;
-        switch (zoneChoice) {
-            case 1: zone = com.cyber.model.enums.ComputerZone.VIP; break;
-            case 2: zone = com.cyber.model.enums.ComputerZone.STANDARD; break;
-            case 3: zone = com.cyber.model.enums.ComputerZone.ESPORT; break;
-            case 4: zone = com.cyber.model.enums.ComputerZone.STREAMING; break;
-            case 5: zone = com.cyber.model.enums.ComputerZone.COUPLE; break;
-            default: zone = com.cyber.model.enums.ComputerZone.STANDARD;
+        String name;
+        while (true) {
+            name = InputUtils.inputString("Nhập tên máy (vd VIP-03): ");
+            try {
+                if (computerService.isNameExists(name)) {
+                    PrintUtils.printWarning("Tên máy '" + name + "' đã tồn tại. Vui lòng nhập tên khác.");
+                } else {
+                    break;
+                }
+            } catch (BusinessException e) {
+                PrintUtils.printError(e.getMessage());
+            }
         }
-        
-        String config = InputUtils.inputString("Nhập cấu hình máy: ");
-        BigDecimal price = InputUtils.inputBigDecimal("Nhập giá/giờ (đ): ", BigDecimal.ZERO);
-
-        // Mặc định tạo mới là AVAILABLE
-        Computer newComp = new Computer(name, zone, config, com.cyber.model.enums.ComputerStatus.AVAILABLE, price);
+        Computer newComp = new Computer();
+        newComp.inputData(false, name);
         
         try {
             computerService.addComputer(newComp);
             System.out.println("\033[32m[THÀNH CÔNG] Thêm máy trạm thành công!\033[0m");
         } catch (BusinessException e) {
-            System.out.println("\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+            PrintUtils.printError(e.getMessage());
         }
     }
 
@@ -108,42 +107,35 @@ public class ComputerManagementView {
         try {
             Computer existing = computerService.getComputerById(id);
             if (existing == null) {
-                System.out.println("\033[33m[THÔNG BÁO] Không tìm thấy máy tính nào với ID " + FormatUtils.formatId("C", id) + "\033[0m");
+                PrintUtils.printWarning("Không tìm thấy máy tính nào với ID " + FormatUtils.formatId("C", id) + "");
                 return;
             }
             System.out.println("Đang chỉnh sửa cho: " + existing.getName());
             
-            String name = InputUtils.inputString("Nhập tên máy mới (Cũ: " + existing.getName() + "): ");
-            
-            System.out.println("Chọn khu vực mới (Cũ: " + (existing.getZone() != null ? existing.getZone().name() : "N/A") + "):");
-            System.out.println("1. VIP | 2. STANDARD | 3. ESPORT | 4. STREAMING | 5. COUPLE");
-            int zoneChoice = InputUtils.inputInt("Lựa chọn mới (1-5): ", 1, 5);
-            com.cyber.model.enums.ComputerZone zone;
-            switch (zoneChoice) {
-                case 1: zone = com.cyber.model.enums.ComputerZone.VIP; break;
-                case 2: zone = com.cyber.model.enums.ComputerZone.STANDARD; break;
-                case 3: zone = com.cyber.model.enums.ComputerZone.ESPORT; break;
-                case 4: zone = com.cyber.model.enums.ComputerZone.STREAMING; break;
-                case 5: zone = com.cyber.model.enums.ComputerZone.COUPLE; break;
-                default: zone = com.cyber.model.enums.ComputerZone.STANDARD;
+            String name;
+            while (true) {
+                name = InputUtils.inputStringUpdate("Nhập tên máy mới (Cũ: " + existing.getName() + ") [Enter để giữ nguyên]: ", existing.getName());
+                if (name.equalsIgnoreCase(existing.getName())) {
+                    break;
+                }
+                try {
+                    if (computerService.isNameExists(name)) {
+                        PrintUtils.printWarning("Tên máy '" + name + "' đã được sử dụng bởi máy khác. Vui lòng nhập tên khác.");
+                    } else {
+                        break;
+                    }
+                } catch (BusinessException e) {
+                    PrintUtils.printError(e.getMessage());
+                }
             }
             
-            String config = InputUtils.inputString("Nhập cấu hình mới (Cũ: " + existing.getHardwareConfig() + "): ");
-            System.out.println("Chọn trạng thái (Cũ: " + FormatUtils.formatComputerStatus(existing.getStatus()) + "): 1. AVAILABLE  |  2. IN_USE  |  3. MAINTENANCE");
-            int stChoice = InputUtils.inputInt("Lựa chọn mới (1-3): ", 1, 3);
-            com.cyber.model.enums.ComputerStatus status = stChoice == 1 ? com.cyber.model.enums.ComputerStatus.AVAILABLE : 
-                    (stChoice == 2 ? com.cyber.model.enums.ComputerStatus.IN_USE : com.cyber.model.enums.ComputerStatus.MAINTENANCE);
+            existing.inputData(true, name);
             
-            BigDecimal price = InputUtils.inputBigDecimal("Nhập giá/giờ (Cũ: " + FormatUtils.formatVND(existing.getPricePerHour()) + "): ", BigDecimal.ZERO);
-
-            Computer updated = new Computer(name, zone, config, status, price);
-            updated.setComputerId(id); // Giữ ID gốc
-            
-            computerService.updateComputer(updated);
+            computerService.updateComputer(existing);
             System.out.println("\033[32m[THÀNH CÔNG] Cập nhật thông tin thành công!\033[0m");
             
         } catch (BusinessException e) {
-            System.out.println("\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+            PrintUtils.printError(e.getMessage());
         }
     }
 
@@ -157,7 +149,7 @@ public class ComputerManagementView {
                 computerService.deleteComputer(id);
                 System.out.println("\033[32m[THÀNH CÔNG] Xóa máy trạm thành công!\033[0m");
             } catch (BusinessException e) {
-                System.out.println("\033[31m[LỖI] " + e.getMessage() + "\033[0m");
+                PrintUtils.printError(e.getMessage());
             }
         } else {
             System.out.println("Đã hủy thao tác xóa.");
