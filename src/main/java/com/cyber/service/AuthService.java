@@ -4,7 +4,6 @@ import com.cyber.connection.DatabaseConnection;
 import com.cyber.dao.IUserDAO;
 import com.cyber.dao.impl.UserDAOImpl;
 import com.cyber.exception.BusinessException;
-import com.cyber.model.Role;
 import com.cyber.model.User;
 
 import java.math.BigDecimal;
@@ -49,6 +48,10 @@ public class AuthService {
                 } else {
                     throw new BusinessException("AUTH_FAILED", "Tài khoản hoặc mật khẩu không chính xác.");
                 }
+            }
+            
+            if (user.getStatus() == com.cyber.model.enums.UserStatus.LOCKED) {
+                throw new BusinessException("ACCOUNT_LOCKED", "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
             }
             
             return user;

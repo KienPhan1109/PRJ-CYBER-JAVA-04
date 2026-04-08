@@ -10,11 +10,13 @@ public class AdminMainView {
     private final User adminUser;
     private final ComputerManagementView computerView;
     private final ServiceManagementView serviceView;
+    private final UserManagementView userView;
 
     public AdminMainView(User adminUser) {
         this.adminUser = adminUser;
         this.computerView = new ComputerManagementView();
         this.serviceView = new ServiceManagementView();
+        this.userView = new UserManagementView();
     }
 
     public void displayMenu() {
@@ -25,10 +27,11 @@ public class AdminMainView {
             System.out.println("==========================================");
             System.out.println("1. Quản lý Máy trạm");
             System.out.println("2. Quản lý Dịch vụ F&B");
+            System.out.println("3. Quản lý hệ thống Người dùng");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-2): ", 0, 2);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-3): ", 0, 3);
 
             switch (choice) {
                 case 1:
@@ -36,6 +39,9 @@ public class AdminMainView {
                     break;
                 case 2:
                     serviceView.displayMenu();
+                    break;
+                case 3:
+                    userView.displayMenu();
                     break;
                 case 0:
                     PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Admin...");

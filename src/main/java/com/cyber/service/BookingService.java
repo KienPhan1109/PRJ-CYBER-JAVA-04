@@ -14,15 +14,11 @@ public class BookingService {
     // Singleton Pattern
     private static BookingService instance;
     private IBookingDAO bookingDAO;
-    private IFbOrderDAO orderDAO;
     private IUserDAO userDAO;
-    private IServiceItemDAO itemDAO;
 
     private BookingService() {
         this.bookingDAO = BookingDAOImpl.getInstance();
-        this.orderDAO = FbOrderDAOImpl.getInstance();
         this.userDAO = UserDAOImpl.getInstance();
-        this.itemDAO = ServiceItemDAOImpl.getInstance();
     }
 
     public static synchronized BookingService getInstance() {
@@ -32,7 +28,7 @@ public class BookingService {
         return instance;
     }
 
-    public void bookComputerWithFood(int userId, Booking booking, FbOrder order, List<OrderDetail> orderDetails) throws BusinessException {
+    public void bookComputer(int userId, Booking booking) throws BusinessException {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
@@ -40,48 +36,45 @@ public class BookingService {
 
             User currentUser = userDAO.findById(conn, userId);
             if (currentUser == null) throw new RuntimeException("ERR_USER_NOT_FOUND");
+            if (currentUser.getStatus() == com.cyber.model.enums.UserStatus.LOCKED) throw new RuntimeException("ERR_USER_LOCKED");
 
             if (!bookingDAO.isComputerAvailable(conn, booking.getComputerId(), booking.getStartTime(), booking.getEndTime())) {
-                throw new RuntimeException("ERR_COMPUTER_NOT_AVAILABLE");
+                throw new RuntimeException("Máy trạm này đã được đặt trong khoảng thời gian trên.");
             }
 
-            BigDecimal totalCost = BigDecimal.ZERO;
-            if (booking.getTotalFee() != null) totalCost = totalCost.add(booking.getTotalFee());
-            if (order != null && order.getTotalAmount() != null) totalCost = totalCost.add(order.getTotalAmount());
-
+            BigDecimal totalCost = booking.getTotalFee() != null ? booking.getTotalFee() : BigDecimal.ZERO;
             if (currentUser.getBalance().compareTo(totalCost) < 0) {
-                throw new RuntimeException("ERR_INSUFFICIENT_BALANCE");
+                throw new BusinessException("ERR_INSUFFICIENT_BALANCE", "Bạn không đủ tiền để thuê máy. Vui lòng nạp thêm!");
             }
             userDAO.deductBalance(conn, userId, totalCost);
 
             booking.setUserId(userId);
-            int newBookingId = bookingDAO.createBooking(conn, booking);
-
-            if (order != null && orderDetails != null && !orderDetails.isEmpty()) {
-                order.setBookingId(newBookingId);
-                int newOrderId = orderDAO.createOrder(conn, order);
-
-                for (OrderDetail detail : orderDetails) {
-                    detail.setOrderId(newOrderId);
-                    ServiceItem itemInfo = itemDAO.findById(conn, detail.getItemId());
-                    if (itemInfo == null || itemInfo.getStockQuantity() < detail.getQuantity()) {
-                        throw new RuntimeException("ERR_OUT_OF_STOCK");
-                    }
-                    itemDAO.deductStock(conn, detail.getItemId(), detail.getQuantity());
-                }
-                orderDAO.createOrderDetails(conn, orderDetails);
+            bookingDAO.createBooking(conn, booking);
+            
+            // Note: Since computer is booked now, should we change computer status to IN_USE?
+            com.cyber.dao.IComputerDAO computerDAO = com.cyber.dao.impl.ComputerDAOImpl.getInstance();
+            Computer comp = computerDAO.findById(conn, booking.getComputerId());
+            if (comp != null) {
+                comp.setStatus(com.cyber.model.enums.ComputerStatus.IN_USE);
+                computerDAO.updateComputer(conn, comp);
             }
+            
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException rollbackEx) {}
             }
-            throw new BusinessException("ERR_SQL_EXCEPTION", "Lỗi CSDL khi thao tác: " + e.getMessage());
-        } catch (RuntimeException be) {
+            throw new BusinessException("DB_ERROR", "Lỗi CSDL khi đặt máy: " + e.getMessage());
+        } catch (BusinessException be) {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException rollbackEx) {}
             }
-            throw new BusinessException("ERR_BUSINESS", be.getMessage());
+            throw be;
+        } catch (RuntimeException re) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException rollbackEx) {}
+            }
+            throw new BusinessException("ERR_BUSINESS", re.getMessage().startsWith("ERR_") ? "Lỗi: " + re.getMessage() : re.getMessage());
         } finally {
             if (conn != null) {
                 try {

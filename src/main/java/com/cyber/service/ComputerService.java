@@ -38,6 +38,25 @@ public class ComputerService {
         }
     }
 
+    public List<Computer> getAvailableComputersByZone(com.cyber.model.enums.ComputerZone zone, java.sql.Timestamp start, java.sql.Timestamp end) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            com.cyber.dao.IBookingDAO bookingDAO = com.cyber.dao.impl.BookingDAOImpl.getInstance();
+            return computerDAO.getAllComputers(conn).stream()
+                .filter(c -> c.getStatus() == com.cyber.model.enums.ComputerStatus.AVAILABLE 
+                          && (zone == null || c.getZone() == zone))
+                .filter(c -> {
+                    try {
+                        return bookingDAO.isComputerAvailable(conn, c.getComputerId(), start, end);
+                    } catch (SQLException e) {
+                        return false;
+                    }
+                })
+                .collect(java.util.stream.Collectors.toList());
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách máy: " + e.getMessage());
+        }
+    }
+
     public void addComputer(Computer computer) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             if (computerDAO.checkNameExists(conn, computer.getName())) {

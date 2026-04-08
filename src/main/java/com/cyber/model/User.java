@@ -2,6 +2,7 @@ package com.cyber.model;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import com.cyber.model.enums.UserStatus;
 
 public class User {
     private int userId;
@@ -11,6 +12,7 @@ public class User {
     private BigDecimal balance;
     private String fullName;
     private String phone;
+    private UserStatus status;
     private Timestamp createdAt;
 
     public User() {}
@@ -94,5 +96,13 @@ public class User {
 
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(UserStatus status) {
+        this.status = status;
     }
 }

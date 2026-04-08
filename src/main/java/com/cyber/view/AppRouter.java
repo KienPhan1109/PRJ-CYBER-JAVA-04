@@ -20,12 +20,12 @@ public class AppRouter {
                     adminView.displayMenu(); // Loops inside until choice == 0 (Logout)
                 } 
                 else if ("STAFF".equals(roleName)) {
-                    PrintUtils.printWarning("Các tính năng dành cho Staff đang được phát triển.");
-                    break;
+                    StaffMainView staffView = new StaffMainView(loggedInUser);
+                    staffView.displayMenu();
                 }
                 else {
-                    PrintUtils.printWarning("Các tính năng dành cho Customer đang được phát triển.");
-                    break;
+                    CustomerMainView customerView = new CustomerMainView(loggedInUser);
+                    customerView.displayMenu();
                 }
             } else {
                 // If AuthView exits via "0" or returns null

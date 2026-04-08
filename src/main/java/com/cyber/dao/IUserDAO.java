@@ -11,4 +11,8 @@ public interface IUserDAO {
     void registerUser(Connection conn, User user) throws SQLException;
     void updatePassword(Connection conn, int userId, String newPasswordHash) throws SQLException;
     void deductBalance(Connection conn, int userId, BigDecimal amount) throws SQLException;
+    void addBalance(Connection conn, int userId, BigDecimal amount) throws SQLException;
+    java.util.List<User> getAllUsers(Connection conn) throws SQLException;
+    void updateUserStatus(Connection conn, int userId, com.cyber.model.enums.UserStatus status) throws SQLException;
+    void updateUser(Connection conn, User user) throws SQLException;
 }

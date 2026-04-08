@@ -19,10 +19,15 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
 
     @Override
     public int createOrder(Connection conn, FbOrder order) throws SQLException {
-        String sql = "INSERT INTO fb_orders (booking_id, status, total_amount) VALUES (?, 'PENDING', ?)";
+        String sql = "INSERT INTO fb_orders (user_id, booking_id, status, total_amount) VALUES (?, ?, 'PENDING', ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setInt(1, order.getBookingId());
-            stmt.setBigDecimal(2, order.getTotalAmount());
+            stmt.setInt(1, order.getUserId());
+            if (order.getBookingId() != null) {
+                stmt.setInt(2, order.getBookingId());
+            } else {
+                stmt.setNull(2, java.sql.Types.INTEGER);
+            }
+            stmt.setBigDecimal(3, order.getTotalAmount());
             stmt.executeUpdate();
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) return rs.getInt(1);
@@ -54,6 +59,41 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }
+        }
+    }
+
+    @Override
+    public List<FbOrder> findAllOrdersByStatus(Connection conn, String status) throws SQLException {
+        List<FbOrder> orders = new java.util.ArrayList<>();
+        String sql = "SELECT * FROM fb_orders WHERE status = ? ORDER BY created_at ASC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, status);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int bookingIdVal = rs.getInt("booking_id");
+                    Integer bId = rs.wasNull() ? null : bookingIdVal;
+                    FbOrder order = new FbOrder(
+                        rs.getInt("user_id"),
+                        bId,
+                        rs.getString("status"),
+                        rs.getBigDecimal("total_amount")
+                    );
+                    order.setOrderId(rs.getInt("order_id"));
+                    // User ID if needed in the future
+                    orders.add(order);
+                }
+            }
+        }
+        return orders;
+    }
+
+    @Override
+    public void updateOrderStatus(Connection conn, int orderId, String newStatus) throws SQLException {
+        String sql = "UPDATE fb_orders SET status = ? WHERE order_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, newStatus);
+            stmt.setInt(2, orderId);
+            stmt.executeUpdate();
         }
     }
 }

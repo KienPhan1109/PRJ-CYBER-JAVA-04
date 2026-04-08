@@ -99,6 +99,51 @@ public class UserDAOImpl implements IUserDAO {
         }
     }
 
+    @Override
+    public void addBalance(Connection conn, int userId, BigDecimal amount) throws SQLException {
+        String sql = "UPDATE users SET balance = balance + ? WHERE user_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setBigDecimal(1, amount);
+            stmt.setInt(2, userId);
+            stmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public java.util.List<User> getAllUsers(Connection conn) throws SQLException {
+        java.util.List<User> users = new java.util.ArrayList<>();
+        String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                users.add(mapRowToUser(rs));
+            }
+        }
+        return users;
+    }
+
+    @Override
+    public void updateUserStatus(Connection conn, int userId, com.cyber.model.enums.UserStatus status) throws SQLException {
+        String sql = "UPDATE users SET status = ? WHERE user_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, status.name());
+            stmt.setInt(2, userId);
+            stmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public void updateUser(Connection conn, User user) throws SQLException {
+        String sql = "UPDATE users SET full_name = ?, phone = ?, role_id = ? WHERE user_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, user.getFullName());
+            stmt.setString(2, user.getPhone());
+            stmt.setInt(3, user.getRole() != null ? user.getRole().getRoleId() : 3);
+            stmt.setInt(4, user.getUserId());
+            stmt.executeUpdate();
+        }
+    }
+
     private User mapRowToUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setUserId(rs.getInt("user_id"));
@@ -111,6 +156,14 @@ public class UserDAOImpl implements IUserDAO {
         
         Role role = new Role(rs.getInt("role_id"), rs.getString("role_name"));
         user.setRole(role);
+        
+        String statusStr = rs.getString("status");
+        if (statusStr != null) {
+            user.setStatus(com.cyber.model.enums.UserStatus.valueOf(statusStr));
+        } else {
+            user.setStatus(com.cyber.model.enums.UserStatus.ACTIVE);
+        }
+        
         return user;
     }
 }

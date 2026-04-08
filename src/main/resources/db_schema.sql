@@ -17,6 +17,7 @@ CREATE TABLE users (
     balance DECIMAL(12, 2) DEFAULT 0.00,
     full_name VARCHAR(100) NOT NULL,
     phone VARCHAR(15),
+    status ENUM('ACTIVE', 'LOCKED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE RESTRICT
 );
@@ -60,10 +61,12 @@ CREATE TABLE bookings (
 -- 6. Table F&B Order
 CREATE TABLE fb_orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
-    booking_id INT NOT NULL,
+    user_id INT NOT NULL,
+    booking_id INT,
     status ENUM('PENDING', 'PREPARING', 'DELIVERED', 'CANCELLED') DEFAULT 'PENDING',
     total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
     FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE
 );
 
@@ -86,11 +89,11 @@ CREATE TABLE order_details (
 INSERT INTO roles (role_name) VALUES ('ADMIN'), ('STAFF'), ('CUSTOMER');
 
 -- Thêm Users
-INSERT INTO users (username, password_hash, role_id, balance, full_name, phone) VALUES
-('admin', 'hash123', 1, 0.00, 'Quản trị viên', '0901234567'),
-('staff1', 'hash123', 2, 0.00, 'Nhân viên 1', '0901234568'),
-('customer1', 'hash123', 3, 500000.00, 'Khách hàng VIP 1', '0901234569'),
-('customer2', 'hash123', 3, 20000.00, 'Khách hàng Thường 1', '0901234570');
+INSERT INTO users (username, password_hash, role_id, balance, full_name, phone, status) VALUES
+('admin', 'hash123', 1, 0.00, 'Quản trị viên', '0901234567', 'ACTIVE'),
+('staff1', 'hash123', 2, 0.00, 'Nhân viên 1', '0901234568', 'ACTIVE'),
+('customer1', 'hash123', 3, 500000.00, 'Khách hàng VIP 1', '0901234569', 'ACTIVE'),
+('customer2', 'hash123', 3, 20000.00, 'Khách hàng Thường 1', '0901234570', 'ACTIVE');
 
 -- Thêm Máy tính
 INSERT INTO computers (name, zone, hardware_config, status, price_per_hour) VALUES
@@ -112,8 +115,8 @@ INSERT INTO bookings (user_id, computer_id, start_time, end_time, status, total_
 (3, 1, DATE_ADD(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 4 HOUR), 'PENDING', 75000.00);
 
 -- Khách hàng này cũng order thêm 1 Mì tôm trứng và 1 Sting Dâu
-INSERT INTO fb_orders (booking_id, status, total_amount) VALUES
-(1, 'PENDING', 40000.00);
+INSERT INTO fb_orders (user_id, booking_id, status, total_amount) VALUES
+(3, 1, 'PENDING', 40000.00);
 
 INSERT INTO order_details (order_id, item_id, quantity, unit_price) VALUES
 (1, 1, 1, 25000.00), -- Mì tôm trứng

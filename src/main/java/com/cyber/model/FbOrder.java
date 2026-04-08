@@ -3,11 +3,13 @@ import java.math.BigDecimal;
 
 public class FbOrder {
     private int orderId;
-    private int bookingId;
+    private int userId;
+    private Integer bookingId;
     private String status;
     private BigDecimal totalAmount;
 
-    public FbOrder(int bookingId, String status, BigDecimal totalAmount) {
+    public FbOrder(int userId, Integer bookingId, String status, BigDecimal totalAmount) {
+        this.userId = userId;
         this.bookingId = bookingId;
         this.status = status;
         this.totalAmount = totalAmount;
@@ -21,11 +23,19 @@ public class FbOrder {
         this.orderId = orderId;
     }
 
-    public int getBookingId() {
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public Integer getBookingId() {
         return bookingId;
     }
 
-    public void setBookingId(int bookingId) {
+    public void setBookingId(Integer bookingId) {
         this.bookingId = bookingId;
     }
 

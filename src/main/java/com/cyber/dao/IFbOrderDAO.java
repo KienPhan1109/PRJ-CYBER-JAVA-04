@@ -9,4 +9,6 @@ public interface IFbOrderDAO {
     int createOrder(Connection conn, FbOrder order) throws SQLException;
     void createOrderDetails(Connection conn, List<OrderDetail> details) throws SQLException;
     boolean hasDependentOrders(Connection conn, int itemId) throws SQLException;
+    List<FbOrder> findAllOrdersByStatus(Connection conn, String status) throws SQLException;
+    void updateOrderStatus(Connection conn, int orderId, String newStatus) throws SQLException;
 }

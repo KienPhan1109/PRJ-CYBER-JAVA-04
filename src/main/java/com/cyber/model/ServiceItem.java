@@ -34,12 +34,25 @@ public class ServiceItem {
                     PrintUtils.printError("Định dạng không hợp lệ, giữ nguyên trạng thái cũ.");
                 }
             }
+            
+            // Đồng bộ trạng thái và tồn kho
+            if (this.stockQuantity == 0) {
+                this.status = com.cyber.model.enums.ServiceItemStatus.OUT_OF_STOCK;
+            } else if (this.status == com.cyber.model.enums.ServiceItemStatus.OUT_OF_STOCK) {
+                this.stockQuantity = 0;
+            }
+
         } else {
             this.name = com.cyber.util.InputUtils.inputString("Nhập tên món: ");
             this.description = com.cyber.util.InputUtils.inputString("Nhập mô tả món: ");
             this.price = com.cyber.util.InputUtils.inputBigDecimal("Nhập giá tiền (đ): ", java.math.BigDecimal.ZERO);
             this.stockQuantity = com.cyber.util.InputUtils.inputInt("Nhập số lượng tồn kho ban đầu: ", 0, 10000);
-            this.status = com.cyber.model.enums.ServiceItemStatus.ACTIVE;
+            
+            if (this.stockQuantity == 0) {
+                this.status = com.cyber.model.enums.ServiceItemStatus.OUT_OF_STOCK;
+            } else {
+                this.status = com.cyber.model.enums.ServiceItemStatus.ACTIVE;
+            }
         }
     }
 
