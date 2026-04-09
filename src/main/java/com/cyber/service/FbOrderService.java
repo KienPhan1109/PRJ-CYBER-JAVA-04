@@ -65,6 +65,17 @@ public class FbOrderService {
         }
     }
 
+    /**
+     * Lấy TẤT CẢ đơn hàng của user (bao gồm DELIVERED, CANCELLED).
+     */
+    public List<FbOrder> getAllOrdersByUserId(int userId) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return orderDAO.findAllOrdersByUserIdWithDetails(conn, userId);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy lịch sử đơn hàng: " + e.getMessage());
+        }
+    }
+
     public List<Map<String, Object>> getOrderDetails(int orderId) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             return orderDetailDAO.findDetailsByOrderId(conn, orderId);
@@ -80,7 +91,25 @@ public class FbOrderService {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
 
+            FbOrder order = orderDAO.findOrderById(conn, orderId);
+            if (order == null) {
+                throw new BusinessException("NOT_FOUND", "Không tìm thấy đơn hàng ID=" + orderId);
+            }
+            if (order.getStatus() == FbOrderStatus.CANCELLED) {
+                throw new BusinessException("INVALID_ACTION", "Đơn hàng đã hủy, không thể thay đổi trạng thái.");
+            }
+
             orderDAO.updateOrderStatus(conn, orderId, newStatus);
+
+            // Hoàn tiền nếu staff huỷ đơn
+            if (newStatus == FbOrderStatus.CANCELLED) {
+                com.cyber.dao.IUserDAO userDAO = com.cyber.dao.impl.UserDAOImpl.getInstance();
+                userDAO.addBalance(conn, order.getUserId(), order.getTotalAmount());
+                
+                String refundAction = String.format("Hoàn tiền đơn hàng huỷ: %s", 
+                    com.cyber.util.FormatUtils.formatVND(order.getTotalAmount()));
+                logService.log(conn, LogType.USER, actor, refundAction, order.getUserId());
+            }
 
             // Ghi log trong cùng transaction
             String action = String.format("Đổi trạng thái Đơn #%d -> %s", orderId, newStatus.name());
@@ -158,6 +187,13 @@ public class FbOrderService {
 
                 menuItemDAO.deductStock(conn, cartItem.getMenuItemId(), cartItem.getQuantity());
 
+                // Trừ tồn kho topping (nếu có trong configJson)
+                if (cartItem.getToppingIds() != null) {
+                    for (int toppingId : cartItem.getToppingIds()) {
+                        optionDAO.deductToppingStock(conn, toppingId, cartItem.getQuantity());
+                    }
+                }
+
                 orderDetailDAO.insertOrderDetail(
                         conn,
                         newOrderId,
@@ -217,6 +253,7 @@ public class FbOrderService {
         private final String     itemConfigJson;
         private BigDecimal       discountApplied;
         private String           discountStrategyName;
+        private java.util.List<Integer> toppingIds;  // Danh sách topping ID để trừ stock
 
         public FbAdvancedCartItem(int menuItemId, int quantity, BigDecimal finalPrice,
                                   String itemDescription, String itemConfigJson,
@@ -237,12 +274,16 @@ public class FbOrderService {
         public String     getItemConfigJson()        { return itemConfigJson; }
         public BigDecimal getDiscountApplied()       { return discountApplied; }
         public String     getDiscountStrategyName()  { return discountStrategyName; }
+        public java.util.List<Integer> getToppingIds() { return toppingIds; }
 
         public void setDiscountApplied(BigDecimal discountApplied) {
             this.discountApplied = discountApplied;
         }
         public void setDiscountStrategyName(String discountStrategyName) {
             this.discountStrategyName = discountStrategyName;
+        }
+        public void setToppingIds(java.util.List<Integer> toppingIds) {
+            this.toppingIds = toppingIds;
         }
     }
 }

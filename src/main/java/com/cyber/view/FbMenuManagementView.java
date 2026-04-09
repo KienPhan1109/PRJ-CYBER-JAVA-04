@@ -36,7 +36,7 @@ public class FbMenuManagementView {
             System.out.println("1. Xem danh sách Menu");
             System.out.println("2. Thêm món mới vào Menu");
             System.out.println("3. Sửa thông tin món");
-            System.out.println("4. Xoá món");
+            System.out.println("4. Ẩn / Hiện món");
             System.out.println("5. Quản lý Topping");
             System.out.println("0. Quay lại");
 
@@ -55,42 +55,48 @@ public class FbMenuManagementView {
     }
 
     // -------------------------------------------------------
-    // 1. Hiển thị danh sách Menu
+    // 1. Hiển thị danh sách Menu (có cột Mô tả)
     // -------------------------------------------------------
     private void displayMenuList() {
         try {
             List<FbMenuItem> items = menuService.getAllMenuItemsForAdmin();
-            System.out.println("\n====================================================================================================================================================");
-            System.out.println("                                                              DANH SÁCH MÓN TOÀN HỆ THỐNG                                                             ");
-            System.out.println("====================================================================================================================================================");
-            System.out.printf("%-6s | %-10s | %-25s | %-12s | %-8s | %-6s | %-20s | %-10s | %-11s | %-24s\n",
-                    "ID", "Danh mục", "Tên món", "Giá gốc", "Tồn kho", "T.gian", "Tags", "Nhiệt độ", "Giờ phục vụ", "Trạng thái");
-            System.out.println("----------------------------------------------------------------------------------------------------------------------------------------------------");
+            System.out.println("\n" + "=".repeat(170));
+            System.out.println("                                                    DANH SÁCH MÓN TOÀN HỆ THỐNG (ADMIN)");
+            System.out.println("=".repeat(170));
+            System.out.printf("%-6s | %-10s | %-20s | %-30s | %-12s | %-8s | %-6s | %-15s | %-10s | %-10s | %-15s%n",
+                    "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Tồn kho", "T.gian", "Tags", "Nhiệt độ", "Giờ P.vụ", "Trạng thái");
+            System.out.println("-".repeat(170));
             if (items.isEmpty()) {
                 System.out.println("  Chưa có món nào trong menu.");
             } else {
                 for (FbMenuItem item : items) {
-                    System.out.printf("%-6s | %-10s | %-25s | %-12s | %-8d | %-6d | %-20s | %-19s | %-11s | %-24s\n",
+                    String desc = item.getDescription() != null ? item.getDescription() : "(Không có)";
+                    if (desc.length() > 28) desc = desc.substring(0, 25) + "...";
+                    String tags = item.getItemTags() != null ? item.getItemTags() : "(Không)";
+                    if (tags.length() > 13) tags = tags.substring(0, 10) + "...";
+
+                    System.out.printf("%-6s | %-10s | %-20s | %-30s | %-12s | %-8d | %-6d | %-15s | %-10s | %-10s | %-15s%n",
                             FormatUtils.formatId("IT", item.getMenuItemId()),
                             item.getCategoryName() != null ? item.getCategoryName() : "N/A",
-                            item.getName(),
+                            item.getName().length() > 18 ? item.getName().substring(0, 15) + "..." : item.getName(),
+                            desc,
                             FormatUtils.formatVND(item.getBasePrice()),
                             item.getStockQuantity(),
                             item.getPrepTimeInMinutes(),
-                            item.getItemTags() != null ? item.getItemTags() : "N/A",
+                            tags,
                             FormatUtils.formatFbTemperature(item.getTemperatureLevel()),
                             item.getAvailability() != null ? item.getAvailability() : "ALL",
                             FormatUtils.formatFbStatus(item.getStatus()));
                 }
             }
-            System.out.println("====================================================================================================================================================");
+            System.out.println("=".repeat(170));
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }
     }
 
     // -------------------------------------------------------
-    // 2. Thêm món mới
+    // 2. Thêm món mới (desc & tags cho phép null)
     // -------------------------------------------------------
     private void handleAddItem() {
         System.out.println("\n--- THÊM MÓN MỚI VÀO MENU ---");
@@ -99,11 +105,19 @@ public class FbMenuManagementView {
         int categoryId = InputUtils.inputInt("Lựa chọn (1-3): ", 1, 3);
 
         String name = InputUtils.inputString("Tên món: ");
-        String desc = InputUtils.inputString("Mô tả: ");
+
+        // Mô tả: cho phép null (Enter để bỏ qua)
+        String desc = InputUtils.inputStringOptional("Mô tả (Enter để bỏ qua): ");
+        if (desc.isEmpty()) desc = null;
+
         BigDecimal price = InputUtils.inputBigDecimal("Giá gốc (VND): ", BigDecimal.ZERO);
-        int stock = InputUtils.inputInt("Tồn kho ban đầu: ", 1, 99999);
+        int stock = InputUtils.inputInt("Tồn kho ban đầu: ", 0, 99999);
         int prepTime = InputUtils.inputInt("Thời gian chuẩn bị (phút): ", 0, 120);
-        String tags = InputUtils.inputString("Tags (VD: Spicy,Vegan,BestSeller): ");
+
+        // Tags: cho phép null (Enter để bỏ qua)
+        String tags = InputUtils.inputStringOptional("Tags (VD: Spicy,Vegan,BestSeller) [Enter để bỏ qua]: ");
+        if (tags.isEmpty()) tags = null;
+
         String availability = InputUtils.inputString("Khung giờ phục vụ (ALL hoặc VD: 06:00-22:00): ");
 
         System.out.println("Chọn nhiệt độ:");
@@ -137,7 +151,7 @@ public class FbMenuManagementView {
     }
 
     // -------------------------------------------------------
-    // 3. Sửa món
+    // 3. Sửa món (desc & tags cho phép để trống → null)
     // -------------------------------------------------------
     private void handleEditItem() {
         System.out.println("\n--- SỬA THÔNG TIN MÓN ---");
@@ -149,16 +163,26 @@ public class FbMenuManagementView {
 
             String name = InputUtils.inputStringUpdate(
                     "Tên mới (Cũ: " + existing.getName() + ") [Enter giữ nguyên]: ", existing.getName());
+
+            // Mô tả: cho phép để trống
+            String oldDesc = existing.getDescription() != null ? existing.getDescription() : "";
             String desc = InputUtils.inputStringUpdate(
-                    "Mô tả mới [Enter giữ nguyên]: ", existing.getDescription());
+                    "Mô tả mới (Cũ: " + (oldDesc.isEmpty() ? "Không có" : oldDesc) + ") [Enter giữ nguyên]: ", oldDesc);
+            if (desc != null && desc.isBlank()) desc = null;
+
             BigDecimal price = InputUtils.inputBigDecimalUpdate(
                     "Giá gốc mới [Enter giữ nguyên]: ", existing.getBasePrice(), BigDecimal.ZERO);
             int stock = InputUtils.inputIntUpdate(
                     "Tồn kho mới [Enter giữ nguyên]: ", existing.getStockQuantity(), 0, 99999);
             int prepTime = InputUtils.inputIntUpdate(
                     "Thời gian chuẩn bị (phút) [Enter giữ nguyên]: ", existing.getPrepTimeInMinutes(), 0, 120);
+
+            // Tags: cho phép để trống
+            String oldTags = existing.getItemTags() != null ? existing.getItemTags() : "";
             String tags = InputUtils.inputStringUpdate(
-                    "Tags [Enter giữ nguyên]: ", existing.getItemTags() != null ? existing.getItemTags() : "");
+                    "Tags (Cũ: " + (oldTags.isEmpty() ? "Không có" : oldTags) + ") [Enter giữ nguyên]: ", oldTags);
+            if (tags != null && tags.isBlank()) tags = null;
+
             String avail = InputUtils.inputStringUpdate(
                     "Khung giờ [Enter giữ nguyên]: ", existing.getAvailability() != null ? existing.getAvailability() : "ALL");
 
@@ -179,17 +203,17 @@ public class FbMenuManagementView {
     }
 
     // -------------------------------------------------------
-    // 4. Ẩn/Xoá mềm món
+    // 4. Ẩn/Hiện món (Toggle HIDDEN <-> ACTIVE)
     // -------------------------------------------------------
     private void handleDeleteItem() {
-        System.out.println("\n--- ẨN/XOÁ MỀM MÓN ---");
-        int id = InputUtils.inputInt("Nhập Menu Item ID cần ẩn: ", 1, Integer.MAX_VALUE);
-        String confirm = InputUtils.inputString("Xác nhận ẩn món này? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
+        System.out.println("\n--- ẨN / HIỆN MÓN (TOGGLE) ---");
+        int id = InputUtils.inputInt("Nhập Menu Item ID cần thay đổi trạng thái: ", 1, Integer.MAX_VALUE);
+        String confirm = InputUtils.inputString("Xác nhận thay đổi trạng thái món này? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
 
         if (confirm.equalsIgnoreCase("Y")) {
             try {
-                menuService.deleteMenuItem(id);
-                PrintUtils.printSuccess("Đã ẩn món ID=%d khỏi menu (status = HIDDEN).", id);
+                menuService.toggleMenuItemStatus(id);
+                PrintUtils.printSuccess("Đã thay đổi trạng thái món ID=%d thành công.", id);
             } catch (BusinessException e) {
                 PrintUtils.printError(e.getMessage());
             }
@@ -199,7 +223,7 @@ public class FbMenuManagementView {
     }
 
     // -------------------------------------------------------
-    // 5. Quản lý Topping
+    // 5. Quản lý Topping (có stock_quantity + status)
     // -------------------------------------------------------
     private void manageToppings() {
         while (true) {
@@ -207,7 +231,7 @@ public class FbMenuManagementView {
             System.out.println("1. Xem danh sách Topping");
             System.out.println("2. Thêm Topping mới");
             System.out.println("3. Sửa Topping");
-            System.out.println("4. Xoá Topping");
+            System.out.println("4. Ẩn / Hiện Topping (Toggle)");
             System.out.println("0. Quay lại");
 
             int choice = InputUtils.inputInt("Chọn (0-4): ", 0, 4);
@@ -223,21 +247,34 @@ public class FbMenuManagementView {
 
     private void displayToppingList() {
         try {
-            List<Map<String, Object>> toppings = menuService.getAllToppings();
-            System.out.println("\n" + "-".repeat(50));
-            System.out.printf("%-5s | %-25s | %-12s%n", "ID", "Tên Topping", "Phụ phí");
-            System.out.println("-".repeat(50));
+            // Admin xem toàn bộ kể cả HIDDEN/OUT_OF_STOCK
+            List<Map<String, Object>> toppings = menuService.getAllToppingsForAdmin();
+            System.out.println("\n" + "=".repeat(80));
+            System.out.println("                          DANH SÁCH TOPPING (ADMIN)");
+            System.out.println("=".repeat(80));
+            System.out.printf("%-5s | %-25s | %-12s | %-10s | %-15s%n",
+                    "ID", "Tên Topping", "Phụ phí", "Tồn kho", "Trạng thái");
+            System.out.println("-".repeat(80));
             if (toppings.isEmpty()) {
                 System.out.println("  Chưa có topping nào.");
             } else {
                 for (Map<String, Object> t : toppings) {
-                    System.out.printf("%-5d | %-25s | %-12s%n",
+                    String status = (String) t.get("status");
+                    String statusDisplay = switch (status) {
+                        case "ACTIVE"       -> "\033[32mACTIVE\033[0m";
+                        case "OUT_OF_STOCK" -> "\033[33mHẾT HÀNG\033[0m";
+                        case "HIDDEN"       -> "\033[31mĐÃ KHOÁ\033[0m";
+                        default             -> status;
+                    };
+                    System.out.printf("%-5d | %-25s | %-12s | %-10d | %-15s%n",
                             t.get("topping_id"),
                             t.get("name"),
-                            FormatUtils.formatVND((BigDecimal) t.get("extra_price")));
+                            FormatUtils.formatVND((BigDecimal) t.get("extra_price")),
+                            (int) t.get("stock_quantity"),
+                            statusDisplay);
                 }
             }
-            System.out.println("-".repeat(50));
+            System.out.println("=".repeat(80));
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }
@@ -247,11 +284,12 @@ public class FbMenuManagementView {
         System.out.println("\n--- THÊM TOPPING MỚI ---");
         String name = InputUtils.inputString("Tên topping: ");
         BigDecimal price = InputUtils.inputBigDecimal("Phụ phí (VND, nhập 0 nếu miễn phí): ", BigDecimal.ZERO);
+        int stockQty = InputUtils.inputInt("Tồn kho ban đầu: ", 0, 99999);
 
         try {
-            int newId = menuService.createTopping(name, price, adminUser);
-            PrintUtils.printSuccess("Đã thêm topping '%s' (ID=%d) với phụ phí %s.",
-                    name, newId, FormatUtils.formatVND(price));
+            int newId = menuService.createTopping(name, price, stockQty, adminUser);
+            PrintUtils.printSuccess("Đã thêm topping '%s' (ID=%d) với phụ phí %s, tồn kho: %d.",
+                    name, newId, FormatUtils.formatVND(price), stockQty);
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }
@@ -261,8 +299,7 @@ public class FbMenuManagementView {
         System.out.println("\n--- SỬA TOPPING ---");
         int id = InputUtils.inputInt("Nhập Topping ID cần sửa: ");
         try {
-            // Lấy danh sách để check xem có tồn tại không
-            List<Map<String, Object>> list = menuService.getAllToppings();
+            List<Map<String, Object>> list = menuService.getAllToppingsForAdmin();
             Map<String, Object> existing = list.stream()
                     .filter(t -> (int)t.get("topping_id") == id)
                     .findFirst().orElse(null);
@@ -274,11 +311,13 @@ public class FbMenuManagementView {
 
             String currentName = (String) existing.get("name");
             BigDecimal currentPrice = (BigDecimal) existing.get("extra_price");
+            int currentStock = (int) existing.get("stock_quantity");
 
             String name = InputUtils.inputStringUpdate("Tên mới (Cũ: " + currentName + ") [Enter giữ nguyên]: ", currentName);
             BigDecimal price = InputUtils.inputBigDecimalUpdate("Phụ phí mới [Enter giữ nguyên]: ", currentPrice, BigDecimal.ZERO);
+            int stockQty = InputUtils.inputIntUpdate("Tồn kho mới (Cũ: " + currentStock + ") [Enter giữ nguyên]: ", currentStock, 0, 99999);
 
-            menuService.updateTopping(id, name, price, adminUser);
+            menuService.updateTopping(id, name, price, stockQty, adminUser);
             PrintUtils.printSuccess("Cập nhật Topping thành công!");
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
@@ -286,13 +325,13 @@ public class FbMenuManagementView {
     }
 
     private void handleDeleteTopping() {
-        System.out.println("\n--- XOÁ TOPPING ---");
-        int id = InputUtils.inputInt("Nhập Topping ID cần xoá: ");
-        String confirm = InputUtils.inputString("Xác nhận xoá (vô hiệu hoá) topping này? (Y/N): ");
+        System.out.println("\n--- ẨN / HIỆN TOPPING (TOGGLE) ---");
+        int id = InputUtils.inputInt("Nhập Topping ID cần thay đổi trạng thái: ");
+        String confirm = InputUtils.inputString("Xác nhận thay đổi trạng thái topping này? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
         if (confirm.equalsIgnoreCase("y")) {
             try {
-                menuService.deleteTopping(id, adminUser);
-                PrintUtils.printSuccess("Đã xoá Topping ID=" + id);
+                menuService.toggleToppingStatus(id, adminUser);
+                PrintUtils.printSuccess("Đã thay đổi trạng thái Topping ID=%d thành công.", id);
             } catch (BusinessException e) {
                 PrintUtils.printError(e.getMessage());
             }

@@ -17,14 +17,19 @@ public class BookingDAOImpl implements IBookingDAO {
 
     @Override
     public int createBooking(Connection conn, Booking booking) throws SQLException {
-        String sql = "INSERT INTO bookings (user_id, computer_id, start_time, end_time, status, total_fee, hourly_rate_snapshot) VALUES (?, ?, ?, ?, 'PENDING', ?, ?)";
+        String sql = "INSERT INTO bookings (user_id, computer_id, start_time, end_time, status, total_fee, hourly_rate_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setInt(1, booking.getUserId());
             stmt.setInt(2, booking.getComputerId());
             stmt.setTimestamp(3, booking.getStartTime());
-            stmt.setTimestamp(4, booking.getEndTime());
-            stmt.setBigDecimal(5, booking.getTotalFee());
-            stmt.setBigDecimal(6, booking.getHourlyRateSnapshot());
+            if (booking.getEndTime() != null) {
+                stmt.setTimestamp(4, booking.getEndTime());
+            } else {
+                stmt.setNull(4, Types.TIMESTAMP);
+            }
+            stmt.setString(5, booking.getStatus() != null ? booking.getStatus() : "ACTIVE");
+            stmt.setBigDecimal(6, booking.getTotalFee());
+            stmt.setBigDecimal(7, booking.getHourlyRateSnapshot());
             stmt.executeUpdate();
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) return rs.getInt(1);

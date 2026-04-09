@@ -63,7 +63,21 @@ public class StaffMainView {
 
     private void topUpUser() throws BusinessException {
         System.out.println("\n--- NẠP TIỀN KHÁCH HÀNG ---");
-        int id = InputUtils.inputInt("Nhập ID người dùng cần nạp: ", 1, Integer.MAX_VALUE);
+        String keyword = InputUtils.inputStringOptional("Nhập từ khóa tên/username (Enter = hiện tất cả): ");
+        List<User> list = userService.searchUsersByName(keyword);
+        if (list.isEmpty()) {
+            PrintUtils.printWarning("Không tìm thấy khách hàng nào khớp với từ khóa.");
+            return;
+        }
+        System.out.println("Kết quả tìm kiếm:");
+        for (User u : list) {
+            System.out.printf(" - ID: %d | Username: %s | Tên: %s | SĐT: %s | Số dư: %s\n",
+                    u.getUserId(), u.getUsername(), u.getFullName(), u.getPhone() != null ? u.getPhone() : "N/A", FormatUtils.formatVND(u.getBalance()));
+        }
+
+        int id = InputUtils.inputInt("Nhập chính xác ID người dùng cần nạp (0 để hủy): ", 0, Integer.MAX_VALUE);
+        if (id == 0) return;
+        
         BigDecimal amount = InputUtils.inputBigDecimal("Nhập số tiền muốn nạp (VND): ", BigDecimal.ONE);
 
         // Truyền staffUser (actor) để ghi vào system_logs
@@ -133,17 +147,15 @@ public class StaffMainView {
     private void viewLogsMenu() throws BusinessException {
         System.out.println("\n--- XEM LỊCH SỬ LOG ---");
         System.out.println("1. USER log  (chỉ log do bạn thực hiện)");
-        System.out.println("2. FB log    (toàn bộ đơn hàng)");
-        System.out.println("3. COMPUTER log (toàn bộ máy trạm)");
+        System.out.println("2. FB log    (chỉ log do bạn thực hiện)");
         System.out.println("0. Quay lại");
 
-        int choice = InputUtils.inputInt("Chọn (0-3): ", 0, 3);
+        int choice = InputUtils.inputInt("Chọn (0-2): ", 0, 2);
         if (choice == 0) return;
 
         LogType logType = switch (choice) {
             case 1 -> LogType.USER;
-            case 2 -> LogType.FB;
-            default -> LogType.COMPUTER;
+            default -> LogType.FB;
         };
 
         List<SystemLog> logs = logService.getLogsWithPermission(logType, staffUser);

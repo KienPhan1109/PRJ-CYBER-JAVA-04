@@ -51,14 +51,14 @@ public class Computer {
         // STATUS (only allow manual status for edit, add defaults to AVAILABLE)
         if (isEdit) {
             System.out.println("Chọn trạng thái (Cũ: " + com.cyber.util.FormatUtils.formatComputerStatus(this.status) + "):");
-            System.out.println("1. AVAILABLE  |  2. IN_USE  |  3. MAINTENANCE");
-            String stInput = com.cyber.util.InputUtils.inputStringUpdate("Lựa chọn mới (1-3) [Enter để giữ nguyên]: ", "").trim();
+            System.out.println("1. AVAILABLE  |  2. MAINTENANCE");
+            String stInput = com.cyber.util.InputUtils.inputStringUpdate("Lựa chọn mới (1-2) [Enter để giữ nguyên]: ", "").trim();
             if (!stInput.isEmpty()) {
                 try {
                     int stChoice = Integer.parseInt(stInput);
                     if (stChoice == 1) this.status = com.cyber.model.enums.ComputerStatus.AVAILABLE;
-                    else if (stChoice == 2) this.status = com.cyber.model.enums.ComputerStatus.IN_USE;
-                    else if (stChoice == 3) this.status = com.cyber.model.enums.ComputerStatus.MAINTENANCE;
+                    else if (stChoice == 2) this.status = com.cyber.model.enums.ComputerStatus.MAINTENANCE;
+                    else PrintUtils.printError("Chỉ chọn 1 hoặc 2, giữ nguyên trạng thái cũ.");
                 } catch (Exception e) {
                     PrintUtils.printError("Định dạng không hợp lệ, giữ nguyên trạng thái cũ.");
                 }

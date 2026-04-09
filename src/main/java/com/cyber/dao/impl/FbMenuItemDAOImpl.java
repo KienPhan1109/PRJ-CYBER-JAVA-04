@@ -66,7 +66,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             "WHERE menu_item_id=?";
 
     private static final String SQL_SOFT_DELETE =
-            "UPDATE fb_menu_items SET is_deleted = 1 WHERE menu_item_id=?";
+            "UPDATE fb_menu_items SET status = 'HIDDEN' WHERE menu_item_id=?";
 
     private static final String SQL_DEDUCT_STOCK =
             "UPDATE fb_menu_items " +

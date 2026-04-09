@@ -11,5 +11,7 @@ public interface IFbOrderDAO {
     List<FbOrder> findAllOrdersByStatus(Connection conn, FbOrderStatus status) throws SQLException;
     List<FbOrder> findAllActiveOrdersWithDetails(Connection conn) throws SQLException;
     List<FbOrder> findActiveOrdersByUserIdWithDetails(Connection conn, int userId) throws SQLException;
+    List<FbOrder> findAllOrdersByUserIdWithDetails(Connection conn, int userId) throws SQLException;
+    FbOrder findOrderById(Connection conn, int orderId) throws SQLException;
     void updateOrderStatus(Connection conn, int orderId, FbOrderStatus newStatus) throws SQLException;
 }

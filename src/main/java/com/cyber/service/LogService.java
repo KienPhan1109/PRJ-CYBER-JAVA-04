@@ -113,18 +113,13 @@ public class LogService {
                 : "";
 
         try {
-            if (logType == LogType.USER) {
-                if ("ADMIN".equalsIgnoreCase(roleName)) {
-                    // Admin xem toàn bộ USER log
-                    return logDAO.getLogsByType(LogType.USER);
-                } else {
-                    // Staff chỉ xem USER log do chính mình thực hiện
-                    return logDAO.getLogsByTypeAndActor(LogType.USER,
-                            currentUser.getUserId());
-                }
-            } else {
-                // COMPUTER và FB → mọi role đều xem full
+            if ("ADMIN".equalsIgnoreCase(roleName)) {
+                // Admin xem toàn bộ mọi loại log
                 return logDAO.getLogsByType(logType);
+            } else {
+                // Staff: chỉ xem log do chính mình thực hiện (USER + FB)
+                return logDAO.getLogsByTypeAndActor(logType,
+                        currentUser.getUserId());
             }
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR",

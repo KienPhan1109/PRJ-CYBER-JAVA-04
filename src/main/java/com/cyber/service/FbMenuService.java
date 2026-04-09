@@ -84,13 +84,24 @@ public class FbMenuService {
     }
 
     /**
-     * Lấy danh sách Topping đang active.
+     * Lấy danh sách Topping đang ACTIVE (cho Customer).
      */
     public List<Map<String, Object>> getAllToppings() throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             return optionDAO.findAllToppings(conn);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách topping: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Lấy toàn bộ Topping kể cả HIDDEN/OUT_OF_STOCK (cho Admin).
+     */
+    public List<Map<String, Object>> getAllToppingsForAdmin() throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return optionDAO.findAllToppingsForAdmin(conn);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách topping (admin): " + e.getMessage());
         }
     }
 
@@ -134,9 +145,17 @@ public class FbMenuService {
         try (Connection conn = DatabaseConnection.getConnection()) {
             FbMenuItem existing = menuItemDAO.findById(conn, item.getMenuItemId());
             if (existing == null) {
-                throw new BusinessException("ERR_ITEM_NOT_FOUND",
-                        "Không tìm thấy món cần cập nhật (ID=" + item.getMenuItemId() + ")");
+                throw new BusinessException("ERR_ITEM_NOT_FOUND", "Không tìm thấy món cần sửa!");
             }
+            if (existing.getStatus() == com.cyber.model.enums.FBStatus.HIDDEN) {
+                throw new BusinessException("ERR_ITEM_HIDDEN", "Món ăn đang bị ẩn, không thể sửa thông tin mòn ăn.");
+            }
+            
+            // Auto OUT_OF_STOCK if stock == 0 and currently ACTIVE
+            if (item.getStockQuantity() == 0 && item.getStatus() == com.cyber.model.enums.FBStatus.ACTIVE) {
+                item.setStatus(com.cyber.model.enums.FBStatus.OUT_OF_STOCK);
+            }
+            
             menuItemDAO.update(conn, item);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi cập nhật món: " + e.getMessage());
@@ -144,32 +163,39 @@ public class FbMenuService {
     }
 
     /**
-     * Xoá mềm (soft-delete) một MenuItem: đổi status = HIDDEN.
-     *
+     * Thay đổi trạng thái Món ăn (Toggle): Ẩn <-> Hiện.
      * @throws BusinessException ERR_ITEM_NOT_FOUND
      */
-    public void deleteMenuItem(int menuItemId) throws BusinessException {
+    public void toggleMenuItemStatus(int menuItemId) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             FbMenuItem existing = menuItemDAO.findById(conn, menuItemId);
             if (existing == null) {
                 throw new BusinessException("ERR_ITEM_NOT_FOUND",
-                        "Không tìm thấy món cần xoá (ID=" + menuItemId + ")");
+                        "Không tìm thấy món (ID=" + menuItemId + ")");
             }
-            menuItemDAO.deleteItem(conn, menuItemId);
+            if (existing.getStatus() == com.cyber.model.enums.FBStatus.HIDDEN) {
+                existing.setStatus(existing.getStockQuantity() > 0 ? com.cyber.model.enums.FBStatus.ACTIVE : com.cyber.model.enums.FBStatus.OUT_OF_STOCK);
+            } else {
+                existing.setStatus(com.cyber.model.enums.FBStatus.HIDDEN);
+            }
+            menuItemDAO.update(conn, existing);
         } catch (SQLException e) {
-            throw new BusinessException("DB_ERROR", "Lỗi xoá món: " + e.getMessage());
+            throw new BusinessException("DB_ERROR", "Lỗi thay đổi trạng thái món: " + e.getMessage());
         }
     }
 
     /**
      * Tạo topping mới (có ghi log).
      */
-    public int createTopping(String name, BigDecimal extraPrice, com.cyber.model.User actor) throws BusinessException {
+    public int createTopping(String name, BigDecimal extraPrice, int stockQuantity, com.cyber.model.User actor) throws BusinessException {
         if (name == null || name.isBlank()) {
             throw new BusinessException("ERR_VALIDATION", "Tên topping không được để trống.");
         }
         if (extraPrice == null || extraPrice.compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessException("ERR_VALIDATION", "Giá topping không được âm.");
+        }
+        if (stockQuantity < 0) {
+            throw new BusinessException("ERR_VALIDATION", "Tồn kho topping không được âm.");
         }
         
         Connection conn = null;
@@ -177,10 +203,10 @@ public class FbMenuService {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
             
-            int newId = optionDAO.createTopping(conn, name.trim(), extraPrice);
+            int newId = optionDAO.createTopping(conn, name.trim(), extraPrice, stockQuantity);
             
             // Ghi log
-            String action = String.format("Thêm Topping mới: %s (Giá: %s)", name, com.cyber.util.FormatUtils.formatVND(extraPrice));
+            String action = String.format("Thêm Topping mới: %s (Giá: %s, Tồn kho: %d)", name, com.cyber.util.FormatUtils.formatVND(extraPrice), stockQuantity);
             LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
             
             conn.commit();
@@ -198,12 +224,15 @@ public class FbMenuService {
     /**
      * Cập nhật thông tin Topping (có ghi log).
      */
-    public void updateTopping(int toppingId, String name, BigDecimal extraPrice, com.cyber.model.User actor) throws BusinessException {
+    public void updateTopping(int toppingId, String name, BigDecimal extraPrice, int stockQuantity, com.cyber.model.User actor) throws BusinessException {
         if (name == null || name.isBlank()) {
             throw new BusinessException("ERR_VALIDATION", "Tên topping không được để trống.");
         }
         if (extraPrice == null || extraPrice.compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessException("ERR_VALIDATION", "Giá topping không được âm.");
+        }
+        if (stockQuantity < 0) {
+            throw new BusinessException("ERR_VALIDATION", "Tồn kho topping không được âm.");
         }
 
         Connection conn = null;
@@ -216,13 +245,18 @@ public class FbMenuService {
                 throw new BusinessException("ERR_NOT_FOUND", "Không tìm thấy Topping ID=" + toppingId);
             }
 
-            optionDAO.updateTopping(conn, toppingId, name.trim(), extraPrice);
+            // Auto set status = OUT_OF_STOCK when stock == 0
+            if (stockQuantity == 0 && "ACTIVE".equals(existing.get("status"))) {
+                optionDAO.updateToppingStatus(conn, toppingId, "OUT_OF_STOCK");
+            }
+            optionDAO.updateTopping(conn, toppingId, name.trim(), extraPrice, stockQuantity);
             
             // Ghi log
-            String action = String.format("Cập nhật Topping ID %d: %s -> %s (Giá: %s -> %s)", 
+            String action = String.format("Cập nhật Topping ID %d: %s -> %s (Giá: %s -> %s, Tồn kho: %d)", 
                     toppingId, existing.get("name"), name, 
                     com.cyber.util.FormatUtils.formatVND((BigDecimal)existing.get("extra_price")),
-                    com.cyber.util.FormatUtils.formatVND(extraPrice));
+                    com.cyber.util.FormatUtils.formatVND(extraPrice),
+                    stockQuantity);
             LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
             
             conn.commit();
@@ -237,9 +271,9 @@ public class FbMenuService {
     }
 
     /**
-     * Xoá (vô hiệu hoá) Topping (có ghi log).
+     * Thay đổi trạng thái Topping (Toggle): Ẩn <-> Hiện (có ghi log).
      */
-    public void deleteTopping(int toppingId, com.cyber.model.User actor) throws BusinessException {
+    public void toggleToppingStatus(int toppingId, com.cyber.model.User actor) throws BusinessException {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
@@ -250,16 +284,28 @@ public class FbMenuService {
                 throw new BusinessException("ERR_NOT_FOUND", "Không tìm thấy Topping ID=" + toppingId);
             }
 
-            optionDAO.deactivateTopping(conn, toppingId);
+            String currentStatus = (String) existing.get("status");
+            String newStatus;
+            String actionVerb;
+            if ("HIDDEN".equals(currentStatus)) {
+                int stock = (int) existing.get("stock_quantity");
+                newStatus = stock > 0 ? "ACTIVE" : "OUT_OF_STOCK";
+                actionVerb = "Hiện";
+            } else {
+                newStatus = "HIDDEN";
+                actionVerb = "Ẩn";
+            }
+
+            optionDAO.updateToppingStatus(conn, toppingId, newStatus);
             
             // Ghi log
-            String action = String.format("Xoá (Vô hiệu hoá) Topping: %s (ID: %d)", existing.get("name"), toppingId);
+            String action = String.format("%s Topping: %s (ID: %d)", actionVerb, existing.get("name"), toppingId);
             LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
             
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw new BusinessException("DB_ERROR", "Lỗi xoá topping: " + e.getMessage());
+            throw new BusinessException("DB_ERROR", "Lỗi thay đổi trạng thái topping: " + e.getMessage());
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
@@ -287,5 +333,6 @@ public class FbMenuService {
         if (item.getCategoryId() <= 0) {
             throw new BusinessException("ERR_VALIDATION", "Chưa chọn danh mục hợp lệ.");
         }
+        // description và tags cho phép null — không validate
     }
 }

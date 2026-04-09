@@ -57,8 +57,8 @@ public class CustomerMainView {
             System.out.println("==========================================");
             System.out.println("1. Đặt máy trạm (Booking)");
             System.out.println("2. Đặt đồ ăn / Thức uống (F&B)");
-            System.out.println("3. Xem trạng thái dịch vụ (Máy & Món đã đặt)");
-            System.out.println("4. Tra cứu phiên chơi hiện tại (Session Status)");
+            System.out.println("3. Xem lịch sử / trạng thái món đã đặt (F&B)");
+            System.out.println("4. Tra cứu & Ngắt máy trạm (Session Status)");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
 
@@ -103,28 +103,60 @@ public class CustomerMainView {
             for (Booking active : activeBookings) {
                 BigDecimal hourly = active.getHourlyRateSnapshot();
                 if (hourly == null) hourly = BigDecimal.ZERO;
-                BigDecimal ratePerMinute = hourly.divide(new BigDecimal(60), 2, java.math.RoundingMode.HALF_UP);
+                BigDecimal ratePerSecond = hourly.divide(new BigDecimal(3600), 4, java.math.RoundingMode.HALF_UP);
                 
                 long diffInMillis = System.currentTimeMillis() - active.getStartTime().getTime();
-                long minutesUsed = diffInMillis / (1000 * 60);
-                if (minutesUsed < 0) minutesUsed = 0;
+                long secondsUsed = diffInMillis / 1000;
+                if (secondsUsed < 0) secondsUsed = 0;
                 
-                BigDecimal spent = ratePerMinute.multiply(new BigDecimal(minutesUsed)).setScale(2, java.math.RoundingMode.HALF_UP);
+                BigDecimal spent = ratePerSecond.multiply(new BigDecimal(secondsUsed)).setScale(2, java.math.RoundingMode.HALF_UP);
                 
-                long expectedRemainingMins = 0;
-                if (ratePerMinute.compareTo(BigDecimal.ZERO) > 0) {
-                    expectedRemainingMins = customerUser.getBalance().divide(ratePerMinute, 0, java.math.RoundingMode.DOWN).longValue();
+                // Thuật toán: Chia tổng số dư cho tổng số tiền / giây của TẤT CẢ các máy đang dùng
+                BigDecimal totalRatePerSecond = BigDecimal.ZERO;
+                for (Booking bg : activeBookings) {
+                    BigDecimal bgHourly = bg.getHourlyRateSnapshot();
+                    if (bgHourly == null) bgHourly = BigDecimal.ZERO;
+                    totalRatePerSecond = totalRatePerSecond.add(bgHourly.divide(new BigDecimal(3600), 4, java.math.RoundingMode.HALF_UP));
+                }
+                
+                long expectedRemainingSecs = 0;
+                if (totalRatePerSecond.compareTo(BigDecimal.ZERO) > 0) {
+                    expectedRemainingSecs = customerUser.getBalance().divide(totalRatePerSecond, 0, java.math.RoundingMode.DOWN).longValue();
                 }
 
                 PrintUtils.printTableSeparator(70);
                 System.out.printf("| %-30s | %-33s |\n", "Tên máy", active.getComputerName() != null ? active.getComputerName() : active.getComputerId());
                 System.out.printf("| %-30s | %-33s |\n", "Thời gian bắt đầu", active.getStartTime().toString());
-                System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", minutesUsed + " phút");
-                System.out.printf("| %-30s | %-33s |\n", "Tiền giờ đã chi", FormatUtils.formatVND(spent));
-                System.out.printf("| %-30s | %-33s |\n", "Thời gian còn lại dự kiến", expectedRemainingMins + " phút");
+                System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", secondsUsed + " giây (" + (secondsUsed/60) + " phút)");
+                System.out.printf("| %-30s | %-33s |\n", "Tiền giờ đã chi (ước tính)", FormatUtils.formatVND(spent));
+                System.out.printf("| %-30s | %-33s |\n", "Thời gian còn lại dự kiến", expectedRemainingSecs + " giây (" + (expectedRemainingSecs/60) + " phút)");
             }
             PrintUtils.printTableSeparator(70);
             System.out.println("  Số dư khả dụng hiện tại: " + FormatUtils.formatVND(customerUser.getBalance()));
+
+            System.out.println("\n-------------------------------------------");
+            System.out.println("Bạn có muốn ngắt (trả) máy trạm nào không?");
+            int checkoutId = InputUtils.inputInt("Nhập ID của máy (booking_id hoặc computer_id đều được, nhập 0 để bỏ qua): ", 0, Integer.MAX_VALUE);
+            
+            if (checkoutId != 0) {
+                Booking targetToCheckout = null;
+                for (Booking b : activeBookings) {
+                    if (b.getBookingId() == checkoutId || b.getComputerId() == checkoutId) {
+                        targetToCheckout = b;
+                        break;
+                    }
+                }
+                
+                if (targetToCheckout == null) {
+                    PrintUtils.printWarning("Không tìm thấy ID hợp lệ trong danh sách máy đang thuê.");
+                } else {
+                    String confirm = InputUtils.inputString("Xác nhận ngắt máy " + targetToCheckout.getComputerName() + "? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N");
+                    if (confirm.equalsIgnoreCase("y")) {
+                        bookingService.endSession(targetToCheckout.getBookingId());
+                        PrintUtils.printSuccess("Đã ngắt máy " + targetToCheckout.getComputerName() + " thành công!");
+                    }
+                }
+            }
 
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
@@ -137,6 +169,13 @@ public class CustomerMainView {
 
     private void bookComputerFlow() throws BusinessException {
         System.out.println("\n--- ĐẶT MÁY TRẠM ---");
+        
+        List<Booking> activeBookings = bookingService.getActiveBookingsByUserId(customerUser.getUserId());
+        if (!activeBookings.isEmpty()) {
+            PrintUtils.printWarning("Bạn đang sử dụng 1 máy trạm rồi. Vui lòng ngắt máy hiện tại trước khi thuê máy mới!");
+            return;
+        }
+        
         System.out.println("Lưu ý: Tiền máy sẽ được hệ thống trừ dần tự động mỗi 10 giây.");
 
         System.out.println("Chọn khu vực:");
@@ -196,32 +235,27 @@ public class CustomerMainView {
     }
 
     private void viewCurrentStatus() throws BusinessException {
-        System.out.println("\n--- TRẠNG THÁI DỊCH VỤ HIỆN TẠI ---");
+        System.out.println("\n--- TRẠNG THÁI DỊCH VỤ F&B HIỆN TẠI ---");
 
-        // 1. Xem Máy
-        List<Booking> activeBookings = bookingService.getActiveBookingsByUserId(customerUser.getUserId());
-        if (activeBookings.isEmpty()) {
-            System.out.println("Máy trạm: Không có máy nào đang đặt.");
+        // Xem TẤT CẢ đơn hàng F&B (bao gồm DELIVERED, CANCELLED)
+        List<FbOrder> allOrders = orderService.getAllOrdersByUserId(customerUser.getUserId());
+        if (allOrders.isEmpty()) {
+            System.out.println("\nĐồ ăn & Thức uống: Chưa có đơn hàng nào.");
         } else {
-            System.out.println("Máy trạm đang đặt:");
-            for (Booking b : activeBookings) {
-                System.out.printf(" - %s | Từ: %s Đến: %s | Trạng thái: %s\n",
-                        b.getComputerName(), b.getStartTime(), b.getEndTime(), b.getStatus());
-            }
-        }
-
-        // 2. Xem Đồ ăn (F&B Orders)
-        List<FbOrder> myOrders = orderService.getActiveOrdersByUserId(customerUser.getUserId());
-        if (myOrders.isEmpty()) {
-            System.out.println("\nĐồ ăn & Thức uống: Không có đơn hàng nào chờ.");
-        } else {
-            System.out.println("\nĐồ ăn & Thức uống đang xử lý:");
-            for (FbOrder o : myOrders) {
-                System.out.printf(" - Đơn #%d | Bàn: %s | Tiền: %s | Trạng thái: %s\n",
+            System.out.println("\nTẤT CẢ đơn hàng F&B:");
+            for (FbOrder o : allOrders) {
+                String statusColor = switch (o.getStatus().name()) {
+                    case "PENDING"   -> "\033[33mPENDING\033[0m";
+                    case "PREPARING" -> "\033[34mPREPARING\033[0m";
+                    case "DELIVERED" -> "\033[32mDELIVERED\033[0m";
+                    case "CANCELLED" -> "\033[31mCANCELLED\033[0m";
+                    default          -> o.getStatus().name();
+                };
+                System.out.printf(" - Đơn #%d | Máy: %s | Tiền: %s | Trạng thái: %s\n",
                         o.getOrderId(),
                         o.getComputerName(),
                         FormatUtils.formatVND(o.getTotalAmount()),
-                        o.getStatus());
+                        statusColor);
                         
                 // Hiển thị món ăn
                 List<Map<String, Object>> details = orderService.getOrderDetails(o.getOrderId());
@@ -407,28 +441,31 @@ public class CustomerMainView {
      * In bảng menu ra console.
      */
     private void printMenuTable(List<FbMenuItem> menuItems) {
-        System.out.println("\n" + "=".repeat(100));
+        System.out.println("\n" + "=".repeat(130));
         System.out.println("  MENU F&B");
-        System.out.println("=".repeat(100));
-        System.out.printf("%-5s | %-10s | %-28s | %-12s | %-8s | %-6s | %-15s%n",
-                "ID", "Danh mục", "Tên món", "Giá gốc", "Tồn kho", "T.gian", "Tags");
-        System.out.println("-".repeat(100));
+        System.out.println("=".repeat(130));
+        System.out.printf("%-5s | %-10s | %-22s | %-25s | %-12s | %-8s | %-6s | %-15s%n",
+                "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Tồn kho", "T.gian", "Tags");
+        System.out.println("-".repeat(130));
         for (FbMenuItem m : menuItems) {
             String stockStr = m.getStockQuantity() > 0 ? String.valueOf(m.getStockQuantity()) : "[HẾT HÀNG]";
             String nameCol = m.getStatus() == FBStatus.OUT_OF_STOCK 
                              ? PrintUtils.colorText(m.getName(), "YELLOW") 
                              : m.getName();
+            String desc = m.getDescription() != null ? m.getDescription() : "(Không có)";
+            if (desc.length() > 23) desc = desc.substring(0, 20) + "...";
 
-            System.out.printf("%-5d | %-10s | %-28s | %-12s | %-8s | %-6d' | %-15s%n",
+            System.out.printf("%-5d | %-10s | %-22s | %-25s | %-12s | %-8s | %-6d' | %-15s%n",
                     m.getMenuItemId(),
                     m.getCategoryName() != null ? m.getCategoryName() : "-",
                     nameCol,
+                    desc,
                     FormatUtils.formatVND(m.getBasePrice()),
                     stockStr,
                     m.getPrepTimeInMinutes(),
                     m.getItemTags() != null ? m.getItemTags() : "-");
         }
-        System.out.println("=".repeat(100));
+        System.out.println("=".repeat(130));
     }
 
     private void printCartSummary(List<FbAdvancedCartItem> cart, BigDecimal preDiscountTotal,

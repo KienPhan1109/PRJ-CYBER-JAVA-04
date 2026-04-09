@@ -124,6 +124,18 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
     }
 
     @Override
+    public List<FbOrder> findAllOrdersByUserIdWithDetails(Connection conn, int userId) throws SQLException {
+        String sql = "SELECT o.*, u.full_name as user_name, c.name as computer_name " +
+                     "FROM fb_orders o " +
+                     "JOIN users u ON o.user_id = u.user_id " +
+                     "LEFT JOIN bookings b ON o.booking_id = b.booking_id " +
+                     "LEFT JOIN computers c ON b.computer_id = c.computer_id " +
+                     "WHERE o.user_id = ? " +
+                     "ORDER BY o.created_at DESC";
+        return executeActiveOrdersQuery(conn, sql, userId);
+    }
+
+    @Override
     public void updateOrderStatus(Connection conn, int orderId, FbOrderStatus newStatus) throws SQLException {
         String sql = "UPDATE fb_orders SET status = ? WHERE order_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -131,5 +143,31 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
             stmt.setInt(2, orderId);
             stmt.executeUpdate();
         }
+    }
+
+    @Override
+    public FbOrder findOrderById(Connection conn, int orderId) throws SQLException {
+        String sql = "SELECT * FROM fb_orders WHERE order_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, orderId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int bookingIdVal = rs.getInt("booking_id");
+                    Integer bId = rs.wasNull() ? null : bookingIdVal;
+                    String statusStr = rs.getString("status");
+                    FbOrderStatus s = FbOrderStatus.valueOf(statusStr.toUpperCase());
+                    
+                    FbOrder order = new FbOrder(
+                        rs.getInt("user_id"),
+                        bId,
+                        s,
+                        rs.getBigDecimal("total_amount")
+                    );
+                    order.setOrderId(rs.getInt("order_id"));
+                    return order;
+                }
+            }
+        }
+        return null;
     }
 }

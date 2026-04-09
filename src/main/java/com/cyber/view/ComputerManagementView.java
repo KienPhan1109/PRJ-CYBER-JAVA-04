@@ -4,6 +4,7 @@ import com.cyber.util.PrintUtils;
 
 import com.cyber.exception.BusinessException;
 import com.cyber.model.Computer;
+import com.cyber.model.User;
 import com.cyber.service.ComputerService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
@@ -12,9 +13,11 @@ import java.util.List;
 
 public class ComputerManagementView {
     private final ComputerService computerService;
+    private final User adminUser;
 
-    public ComputerManagementView() {
+    public ComputerManagementView(User adminUser) {
         this.computerService = ComputerService.getInstance();
+        this.adminUser = adminUser;
     }
 
     public void displayMenu() {
@@ -90,7 +93,7 @@ public class ComputerManagementView {
         newComp.inputData(false, name);
         
         try {
-            computerService.addComputer(newComp);
+            computerService.addComputer(newComp, adminUser);
             System.out.println("\033[32m[THÀNH CÔNG] Thêm máy trạm thành công!\033[0m");
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
@@ -130,7 +133,7 @@ public class ComputerManagementView {
             
             existing.inputData(true, name);
             
-            computerService.updateComputer(existing);
+            computerService.updateComputer(existing, adminUser);
             System.out.println("\033[32m[THÀNH CÔNG] Cập nhật thông tin thành công!\033[0m");
             
         } catch (BusinessException e) {
@@ -145,7 +148,7 @@ public class ComputerManagementView {
         
         if (confirm.equalsIgnoreCase("Y")) {
             try {
-                computerService.deleteComputer(id);
+                computerService.deleteComputer(id, adminUser);
                 System.out.println("\033[32m[THÀNH CÔNG] Xóa máy trạm thành công!\033[0m");
             } catch (BusinessException e) {
                 PrintUtils.printError(e.getMessage());

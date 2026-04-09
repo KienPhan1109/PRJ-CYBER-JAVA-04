@@ -7,6 +7,8 @@ import com.cyber.dao.impl.BookingDAOImpl;
 import com.cyber.dao.impl.ComputerDAOImpl;
 import com.cyber.exception.BusinessException;
 import com.cyber.model.Computer;
+import com.cyber.model.User;
+import com.cyber.model.enums.LogType;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -17,10 +19,12 @@ public class ComputerService {
     private static ComputerService instance;
     private final IComputerDAO computerDAO;
     private final IBookingDAO bookingDAO;
+    private final LogService logService;
 
     private ComputerService() {
         this.computerDAO = ComputerDAOImpl.getInstance();
         this.bookingDAO = BookingDAOImpl.getInstance();
+        this.logService = LogService.getInstance();
     }
 
     public static synchronized ComputerService getInstance() {
@@ -57,14 +61,35 @@ public class ComputerService {
         }
     }
 
-    public void addComputer(Computer computer) throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
+    public void addComputer(Computer computer, User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
             if (computerDAO.checkNameExists(conn, computer.getName())) {
                 throw new BusinessException("DUPLICATE_NAME", "Tên máy '" + computer.getName() + "' đã tồn tại.");
             }
             computerDAO.addComputer(conn, computer);
+
+            // Ghi log COMPUTER
+            String action = String.format("Thêm máy trạm mới: %s (Khu vực: %s, Giá: %s/h)",
+                    computer.getName(),
+                    computer.getZone() != null ? computer.getZone().name() : "N/A",
+                    com.cyber.util.FormatUtils.formatVND(computer.getPricePerHour()));
+            logService.log(conn, LogType.COMPUTER, actor, action, null);
+
+            conn.commit();
         } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw new BusinessException("DB_ERROR", "Lỗi thêm máy: " + e.getMessage());
+        } catch (BusinessException be) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
+            throw be;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
         }
     }
     
@@ -84,8 +109,12 @@ public class ComputerService {
         }
     }
 
-    public void updateComputer(Computer computer) throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
+    public void updateComputer(Computer computer, User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
             Computer existing = computerDAO.findById(conn, computer.getComputerId());
             if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("NOT_FOUND", "Không tìm thấy máy có ID = " + computer.getComputerId());
@@ -101,13 +130,32 @@ public class ComputerService {
                 throw new BusinessException("DUPLICATE_NAME", "Tên máy '" + computer.getName() + "' đã được sử dụng bởi máy khác.");
             }
             computerDAO.updateComputer(conn, computer);
+
+            // Ghi log COMPUTER
+            String action = String.format("Cập nhật máy trạm: %s (ID: %d)",
+                    computer.getName(), computer.getComputerId());
+            logService.log(conn, LogType.COMPUTER, actor, action, computer.getComputerId());
+
+            conn.commit();
         } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw new BusinessException("DB_ERROR", "Lỗi cập nhật máy: " + e.getMessage());
+        } catch (BusinessException be) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
+            throw be;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
         }
     }
 
-    public void deleteComputer(int id) throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
+    public void deleteComputer(int id, User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
             Computer existing = computerDAO.findById(conn, id);
             if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("NOT_FOUND", "Không tìm thấy máy có ID = " + id);
@@ -118,10 +166,25 @@ public class ComputerService {
                 throw new BusinessException("IN_USE", "Lỗi: Máy đang có khách sử dụng. Khách phải đăng xuất thì Admin mới được phép Sửa/Xóa/Bảo trì máy này!");
             }
 
-            // Soft delete: Bỏ qua kiểm tra Dependency (hasDependentBookings) vì chỉ là đổi cờ is_deleted.
+            // Soft delete
             computerDAO.deleteComputer(conn, id);
+
+            // Ghi log COMPUTER
+            String action = String.format("Xóa (thanh lý) máy trạm: %s (ID: %d)",
+                    existing.getName(), id);
+            logService.log(conn, LogType.COMPUTER, actor, action, id);
+
+            conn.commit();
         } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw new BusinessException("DB_ERROR", "Lỗi xóa máy (có thể máy đang có booking): " + e.getMessage());
+        } catch (BusinessException be) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
+            throw be;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
         }
     }
 }

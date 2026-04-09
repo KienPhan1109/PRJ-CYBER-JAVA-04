@@ -29,24 +29,39 @@ public class FbOptionDAOImpl implements IFbOptionDAO {
     // -------------------------------------------------------
     // SQL
     // -------------------------------------------------------
+
+    /** Chỉ lấy topping ACTIVE (cho Customer) */
     private static final String SQL_ALL_TOPPINGS =
-            "SELECT topping_id, name, extra_price FROM fb_toppings WHERE is_active = TRUE ORDER BY name";
+            "SELECT topping_id, name, extra_price, stock_quantity, status " +
+            "FROM fb_toppings WHERE status = 'ACTIVE' ORDER BY name";
+
+    /** Lấy tất cả topping kể cả HIDDEN/OUT_OF_STOCK (cho Admin) */
+    private static final String SQL_ALL_TOPPINGS_ADMIN =
+            "SELECT topping_id, name, extra_price, stock_quantity, status " +
+            "FROM fb_toppings ORDER BY name";
 
     private static final String SQL_TOPPING_BY_ID =
-            "SELECT topping_id, name, extra_price FROM fb_toppings WHERE topping_id = ? AND is_active = TRUE";
+            "SELECT topping_id, name, extra_price, stock_quantity, status " +
+            "FROM fb_toppings WHERE topping_id = ?";
 
     private static final String SQL_OPTIONS_BY_ITEM =
             "SELECT option_id, option_type, option_label, extra_price " +
             "FROM fb_item_options WHERE menu_item_id = ? ORDER BY option_type, option_label";
 
     private static final String SQL_CREATE_TOPPING =
-            "INSERT INTO fb_toppings (name, extra_price) VALUES (?, ?)";
+            "INSERT INTO fb_toppings (name, extra_price, stock_quantity, status) VALUES (?, ?, ?, 'ACTIVE')";
 
     private static final String SQL_UPDATE_TOPPING =
-            "UPDATE fb_toppings SET name=?, extra_price=? WHERE topping_id=?";
+            "UPDATE fb_toppings SET name=?, extra_price=?, stock_quantity=? WHERE topping_id=?";
 
-    private static final String SQL_DEACTIVATE_TOPPING =
-            "UPDATE fb_toppings SET is_active=FALSE WHERE topping_id=?";
+    private static final String SQL_UPDATE_STATUS =
+            "UPDATE fb_toppings SET status=? WHERE topping_id=?";
+
+    private static final String SQL_DEDUCT_TOPPING_STOCK =
+            "UPDATE fb_toppings " +
+            "SET stock_quantity = stock_quantity - ?, " +
+            "    status = CASE WHEN stock_quantity - ? = 0 THEN 'OUT_OF_STOCK' ELSE status END " +
+            "WHERE topping_id = ? AND stock_quantity >= ?";
 
     // -------------------------------------------------------
     // Implementations
@@ -56,6 +71,18 @@ public class FbOptionDAOImpl implements IFbOptionDAO {
     public List<Map<String, Object>> findAllToppings(Connection conn) throws SQLException {
         List<Map<String, Object>> result = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(SQL_ALL_TOPPINGS);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                result.add(toToppingMap(rs));
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<Map<String, Object>> findAllToppingsForAdmin(Connection conn) throws SQLException {
+        List<Map<String, Object>> result = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(SQL_ALL_TOPPINGS_ADMIN);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 result.add(toToppingMap(rs));
@@ -95,10 +122,11 @@ public class FbOptionDAOImpl implements IFbOptionDAO {
     }
 
     @Override
-    public int createTopping(Connection conn, String name, BigDecimal extraPrice) throws SQLException {
+    public int createTopping(Connection conn, String name, BigDecimal extraPrice, int stockQuantity) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(SQL_CREATE_TOPPING, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString    (1, name);
             ps.setBigDecimal(2, extraPrice);
+            ps.setInt       (3, stockQuantity);
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) return keys.getInt(1);
@@ -108,20 +136,37 @@ public class FbOptionDAOImpl implements IFbOptionDAO {
     }
 
     @Override
-    public void updateTopping(Connection conn, int toppingId, String name, BigDecimal extraPrice) throws SQLException {
+    public void updateTopping(Connection conn, int toppingId, String name, BigDecimal extraPrice, int stockQuantity) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(SQL_UPDATE_TOPPING)) {
             ps.setString    (1, name);
             ps.setBigDecimal(2, extraPrice);
-            ps.setInt       (3, toppingId);
+            ps.setInt       (3, stockQuantity);
+            ps.setInt       (4, toppingId);
             ps.executeUpdate();
         }
     }
 
     @Override
-    public void deactivateTopping(Connection conn, int toppingId) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(SQL_DEACTIVATE_TOPPING)) {
-            ps.setInt(1, toppingId);
+    public void updateToppingStatus(Connection conn, int toppingId, String status) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(SQL_UPDATE_STATUS)) {
+            ps.setString(1, status);
+            ps.setInt(2, toppingId);
             ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public void deductToppingStock(Connection conn, int toppingId, int quantity) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(SQL_DEDUCT_TOPPING_STOCK)) {
+            ps.setInt(1, quantity);
+            ps.setInt(2, quantity); // For CASE check
+            ps.setInt(3, toppingId);
+            ps.setInt(4, quantity); // WHERE stock_quantity >= quantity
+            int rows = ps.executeUpdate();
+            if (rows == 0) {
+                throw new SQLException("Không đủ tồn kho cho topping_id=" + toppingId
+                        + " (yêu cầu: " + quantity + ")");
+            }
         }
     }
 
@@ -130,9 +175,11 @@ public class FbOptionDAOImpl implements IFbOptionDAO {
     // -------------------------------------------------------
     private Map<String, Object> toToppingMap(ResultSet rs) throws SQLException {
         Map<String, Object> map = new HashMap<>();
-        map.put("topping_id",  rs.getInt("topping_id"));
-        map.put("name",        rs.getString("name"));
-        map.put("extra_price", rs.getBigDecimal("extra_price"));
+        map.put("topping_id",     rs.getInt("topping_id"));
+        map.put("name",           rs.getString("name"));
+        map.put("extra_price",    rs.getBigDecimal("extra_price"));
+        map.put("stock_quantity", rs.getInt("stock_quantity"));
+        map.put("status",        rs.getString("status"));
         return map;
     }
 }

@@ -99,6 +99,17 @@ public class InputUtils {
         }
     }
 
+    /**
+     * Nhập chuỗi cho phép trống. Nếu user nhấn Enter không nhập gì → trả về chuỗi rỗng "".
+     * Dùng cho các trường không bắt buộc như mô tả, tags, từ khóa tìm kiếm.
+     */
+    public static String inputStringOptional(String message) {
+        System.out.print(message);
+        String input = SCANNER.nextLine();
+        if (input == null) return "";
+        return input.trim();
+    }
+
     public static String inputPassword(String message) {
         // Hàm này gọi khi login, không cần validate format
         while (true) {

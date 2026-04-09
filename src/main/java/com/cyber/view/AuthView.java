@@ -77,7 +77,12 @@ public class AuthView {
             } catch (BusinessException e) {
                 // ANSI Red indicating Error bounds
                 PrintUtils.printError(e.getMessage());
-                System.out.println("Vui lòng nhập lại thông tin!\n");
+                System.out.println("1. Thử lại");
+                System.out.println("2. Quay lại menu chính");
+                int retryChoice = InputUtils.inputInt("Chọn (1-2): ", 1, 2);
+                if (retryChoice == 2) {
+                    return; // Quay lại displayAuthMenu()
+                }
             }
         }
     }

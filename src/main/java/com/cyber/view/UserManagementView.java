@@ -38,10 +38,9 @@ public class UserManagementView {
             System.out.println("3. Sửa thông tin người dùng");
             System.out.println("4. Khóa / Mở khóa tài khoản");
             System.out.println("5. Nạp tiền cho tài khoản");
-            System.out.println("6. Xem Lịch sử Log (Audit)");
             System.out.println("0. Quay Lại");
 
-            int choice = InputUtils.inputInt("Chọn (0-6): ", 0, 6);
+            int choice = InputUtils.inputInt("Chọn (0-5): ", 0, 5);
             try {
                 switch (choice) {
                     case 1: showAllUsers();    break;
@@ -49,7 +48,6 @@ public class UserManagementView {
                     case 3: editUser();         break;
                     case 4: toggleUserStatus(); break;
                     case 5: topUpBalance();     break;
-                    case 6: viewLogsMenu();     break;
                     case 0: return;
                 }
             } catch (BusinessException e) {
@@ -103,6 +101,15 @@ public class UserManagementView {
         if (existing == null) {
             throw new BusinessException("NOT_FOUND", "Không tìm thấy User với ID " + id);
         }
+        
+        if (existing.getRole() != null && existing.getRole().getRoleId() == 1) {
+            PrintUtils.printWarning("Không được phép sửa thông tin của Quản trị viên (ADMIN).");
+            return;
+        }
+        if (existing.getStatus() == UserStatus.LOCKED) {
+            PrintUtils.printWarning("Tài khoản đang bị khóa, không được phép chỉnh sửa.");
+            return;
+        }
 
         System.out.println("Sửa thông tin cho Username: " + existing.getUsername());
         
@@ -155,7 +162,7 @@ public class UserManagementView {
 
     private void topUpBalance() throws BusinessException {
         System.out.println("\n[NẠP TIỀN CHO KHÁCH HÀNG]");
-        String keyword = InputUtils.inputString("Nhập từ khóa tên/username khách hàng cần nạp: ");
+        String keyword = InputUtils.inputStringOptional("Nhập từ khóa tên/username (Enter = hiện tất cả): ");
         List<User> list = userService.searchUsersByName(keyword);
         if (list.isEmpty()) {
             PrintUtils.printWarning("Không tìm thấy khách hàng nào khớp với từ khóa.");
@@ -170,62 +177,20 @@ public class UserManagementView {
         int id = InputUtils.inputInt("Nhập chính xác ID người dùng (0 để hủy): ", 0, Integer.MAX_VALUE);
         if (id == 0) return;
         
+        User targetUser = list.stream().filter(u -> u.getUserId() == id).findFirst().orElse(null);
+        if (targetUser == null) {
+            PrintUtils.printWarning("ID không tồn tại trong danh sách tìm kiếm.");
+            return;
+        }
+        if (targetUser.getStatus() == UserStatus.LOCKED) {
+            PrintUtils.printWarning("Tài khoản đang bị khóa, không được phép nạp tiền.");
+            return;
+        }
+        
         BigDecimal amount = InputUtils.inputBigDecimal("Nhập số tiền muốn nạp (VND): ", BigDecimal.ONE);
         
         // Truyền adminUser (actor) để ghi vào system_logs
         userService.topUpUser(id, amount, adminUser);
         PrintUtils.printSuccess("Đã nạp " + FormatUtils.formatVND(amount) + " thành công cho User ID: " + id);
-    }
-
-    // -------------------------------------------------------
-    // Xem Audit Log (Admin — xem toàn bộ)
-    // -------------------------------------------------------
-
-    private void viewLogsMenu() throws BusinessException {
-        System.out.println("\n--- XEM LỊCH SỬ LOG (ADMIN) ---");
-        System.out.println("1. USER log   (toàn bộ hành động user)");
-        System.out.println("2. FB log     (toàn bộ đơn F&B)");
-        System.out.println("3. COMPUTER log");
-        System.out.println("0. Quay lại");
-
-        int choice = InputUtils.inputInt("Chọn (0-3): ", 0, 3);
-        if (choice == 0) return;
-
-        LogType logType = switch (choice) {
-            case 1 -> LogType.USER;
-            case 2 -> LogType.FB;
-            default -> LogType.COMPUTER;
-        };
-
-        // Admin xem toàn bộ
-        List<SystemLog> logs = logService.getLogsWithPermission(logType, adminUser);
-        printLogTable(logs, logType.name());
-    }
-
-    private void printLogTable(List<SystemLog> logs, String title) {
-        System.out.println("\n" + "=".repeat(110));
-        System.out.println("  AUDIT LOG — " + title);
-        System.out.println("=".repeat(110));
-        System.out.printf("%-6s | %-8s | %-10s | %-60s | %-20s%n",
-                "ID", "Type", "Actor ID", "Hành động", "Thời gian");
-        System.out.println("-".repeat(110));
-        if (logs.isEmpty()) {
-            System.out.println("  Không có bản ghi nào.");
-        } else {
-            for (SystemLog log : logs) {
-                System.out.printf("%-6d | %-8s | %-10d | %-60s | %-20s%n",
-                        log.getId(),
-                        log.getLogType().name(),
-                        log.getActorId(),
-                        truncate(log.getAction(), 60),
-                        log.getCreatedAt() != null ? log.getCreatedAt().toString().substring(0, 19) : "N/A");
-            }
-        }
-        System.out.println("=".repeat(110));
-    }
-
-    private String truncate(String s, int maxLen) {
-        if (s == null) return "";
-        return s.length() <= maxLen ? s : s.substring(0, maxLen - 3) + "...";
     }
 }
