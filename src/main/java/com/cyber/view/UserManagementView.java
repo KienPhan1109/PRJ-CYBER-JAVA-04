@@ -155,7 +155,21 @@ public class UserManagementView {
 
     private void topUpBalance() throws BusinessException {
         System.out.println("\n[NẠP TIỀN CHO KHÁCH HÀNG]");
-        int id = InputUtils.inputInt("Nhập ID người dùng cần nạp: ", 1, Integer.MAX_VALUE);
+        String keyword = InputUtils.inputString("Nhập từ khóa tên/username khách hàng cần nạp: ");
+        List<User> list = userService.searchUsersByName(keyword);
+        if (list.isEmpty()) {
+            PrintUtils.printWarning("Không tìm thấy khách hàng nào khớp với từ khóa.");
+            return;
+        }
+        System.out.println("Kết quả tìm kiếm:");
+        for (User u : list) {
+            System.out.printf(" - ID: %d | Username: %s | Tên: %s | SĐT: %s | Số dư: %s\n",
+                    u.getUserId(), u.getUsername(), u.getFullName(), u.getPhone() != null ? u.getPhone() : "N/A", FormatUtils.formatVND(u.getBalance()));
+        }
+
+        int id = InputUtils.inputInt("Nhập chính xác ID người dùng (0 để hủy): ", 0, Integer.MAX_VALUE);
+        if (id == 0) return;
+        
         BigDecimal amount = InputUtils.inputBigDecimal("Nhập số tiền muốn nạp (VND): ", BigDecimal.ONE);
         
         // Truyền adminUser (actor) để ghi vào system_logs

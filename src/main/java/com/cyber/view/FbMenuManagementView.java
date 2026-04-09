@@ -21,9 +21,11 @@ import java.util.Map;
 public class FbMenuManagementView {
 
     private final FbMenuService menuService;
+    private final com.cyber.model.User adminUser;
 
-    public FbMenuManagementView() {
+    public FbMenuManagementView(com.cyber.model.User adminUser) {
         this.menuService = FbMenuService.getInstance();
+        this.adminUser = adminUser;
     }
 
     public void displayMenu() {
@@ -204,12 +206,16 @@ public class FbMenuManagementView {
             System.out.println("\n--- QUẢN LÝ TOPPING ---");
             System.out.println("1. Xem danh sách Topping");
             System.out.println("2. Thêm Topping mới");
+            System.out.println("3. Sửa Topping");
+            System.out.println("4. Xoá Topping");
             System.out.println("0. Quay lại");
 
-            int choice = InputUtils.inputInt("Chọn (0-2): ", 0, 2);
+            int choice = InputUtils.inputInt("Chọn (0-4): ", 0, 4);
             switch (choice) {
                 case 1: displayToppingList(); break;
                 case 2: handleAddTopping();   break;
+                case 3: handleEditTopping();  break;
+                case 4: handleDeleteTopping(); break;
                 case 0: return;
             }
         }
@@ -243,11 +249,55 @@ public class FbMenuManagementView {
         BigDecimal price = InputUtils.inputBigDecimal("Phụ phí (VND, nhập 0 nếu miễn phí): ", BigDecimal.ZERO);
 
         try {
-            int newId = menuService.createTopping(name, price);
+            int newId = menuService.createTopping(name, price, adminUser);
             PrintUtils.printSuccess("Đã thêm topping '%s' (ID=%d) với phụ phí %s.",
                     name, newId, FormatUtils.formatVND(price));
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
+        }
+    }
+
+    private void handleEditTopping() {
+        System.out.println("\n--- SỬA TOPPING ---");
+        int id = InputUtils.inputInt("Nhập Topping ID cần sửa: ");
+        try {
+            // Lấy danh sách để check xem có tồn tại không
+            List<Map<String, Object>> list = menuService.getAllToppings();
+            Map<String, Object> existing = list.stream()
+                    .filter(t -> (int)t.get("topping_id") == id)
+                    .findFirst().orElse(null);
+            
+            if (existing == null) {
+                PrintUtils.printWarning("Không tìm thấy Topping ID=" + id);
+                return;
+            }
+
+            String currentName = (String) existing.get("name");
+            BigDecimal currentPrice = (BigDecimal) existing.get("extra_price");
+
+            String name = InputUtils.inputStringUpdate("Tên mới (Cũ: " + currentName + ") [Enter giữ nguyên]: ", currentName);
+            BigDecimal price = InputUtils.inputBigDecimalUpdate("Phụ phí mới [Enter giữ nguyên]: ", currentPrice, BigDecimal.ZERO);
+
+            menuService.updateTopping(id, name, price, adminUser);
+            PrintUtils.printSuccess("Cập nhật Topping thành công!");
+        } catch (BusinessException e) {
+            PrintUtils.printError(e.getMessage());
+        }
+    }
+
+    private void handleDeleteTopping() {
+        System.out.println("\n--- XOÁ TOPPING ---");
+        int id = InputUtils.inputInt("Nhập Topping ID cần xoá: ");
+        String confirm = InputUtils.inputString("Xác nhận xoá (vô hiệu hoá) topping này? (Y/N): ");
+        if (confirm.equalsIgnoreCase("y")) {
+            try {
+                menuService.deleteTopping(id, adminUser);
+                PrintUtils.printSuccess("Đã xoá Topping ID=" + id);
+            } catch (BusinessException e) {
+                PrintUtils.printError(e.getMessage());
+            }
+        } else {
+            System.out.println("Đã hủy thao tác.");
         }
     }
 }

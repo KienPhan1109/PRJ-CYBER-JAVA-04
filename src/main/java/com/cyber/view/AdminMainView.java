@@ -14,7 +14,7 @@ public class AdminMainView {
     public AdminMainView(User adminUser) {
         this.adminUser    = adminUser;
         this.computerView = new ComputerManagementView();
-        this.fbMenuView   = new FbMenuManagementView();
+        this.fbMenuView   = new FbMenuManagementView(adminUser);
         this.userView     = new UserManagementView(adminUser); // truyền actor
     }
 

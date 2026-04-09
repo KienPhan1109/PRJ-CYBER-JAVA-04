@@ -106,6 +106,9 @@ public class ComputerManagementView {
                 PrintUtils.printWarning("Không tìm thấy máy tính nào với ID " + FormatUtils.formatId("C", id) + "");
                 return;
             }
+            if (existing.getStatus() == com.cyber.model.enums.ComputerStatus.IN_USE) {
+                throw new BusinessException("IN_USE", "Máy đang có khách sử dụng (IN_USE), không thể chỉnh sửa lúc này.");
+            }
             System.out.println("Đang chỉnh sửa cho: " + existing.getName());
             
             String name;

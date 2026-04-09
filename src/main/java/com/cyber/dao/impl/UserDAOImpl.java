@@ -116,6 +116,22 @@ public class UserDAOImpl implements IUserDAO {
     }
 
     @Override
+    public java.util.List<User> searchUsersByName(Connection conn, String name) throws SQLException {
+        java.util.List<User> users = new java.util.ArrayList<>();
+        String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.is_deleted = 0 AND (u.full_name LIKE ? OR u.username LIKE ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, "%" + name + "%");
+            stmt.setString(2, "%" + name + "%");
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    users.add(mapRowToUser(rs));
+                }
+            }
+        }
+        return users;
+    }
+
+    @Override
     public void updateUserStatus(Connection conn, int userId, com.cyber.model.enums.UserStatus status) throws SQLException {
         String sql = "UPDATE users SET status = ? WHERE user_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {

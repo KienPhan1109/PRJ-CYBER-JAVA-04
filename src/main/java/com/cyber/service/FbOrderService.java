@@ -215,8 +215,8 @@ public class FbOrderService {
         private final BigDecimal finalPrice;
         private final String     itemDescription;
         private final String     itemConfigJson;
-        private final BigDecimal discountApplied;
-        private final String     discountStrategyName;
+        private BigDecimal       discountApplied;
+        private String           discountStrategyName;
 
         public FbAdvancedCartItem(int menuItemId, int quantity, BigDecimal finalPrice,
                                   String itemDescription, String itemConfigJson,
@@ -237,5 +237,12 @@ public class FbOrderService {
         public String     getItemConfigJson()        { return itemConfigJson; }
         public BigDecimal getDiscountApplied()       { return discountApplied; }
         public String     getDiscountStrategyName()  { return discountStrategyName; }
+
+        public void setDiscountApplied(BigDecimal discountApplied) {
+            this.discountApplied = discountApplied;
+        }
+        public void setDiscountStrategyName(String discountStrategyName) {
+            this.discountStrategyName = discountStrategyName;
+        }
     }
 }

@@ -13,6 +13,7 @@ public interface IUserDAO {
     void deductBalance(Connection conn, int userId, BigDecimal amount) throws SQLException;
     void addBalance(Connection conn, int userId, BigDecimal amount) throws SQLException;
     java.util.List<User> getAllUsers(Connection conn) throws SQLException;
+    java.util.List<User> searchUsersByName(Connection conn, String name) throws SQLException;
     void updateUserStatus(Connection conn, int userId, com.cyber.model.enums.UserStatus status) throws SQLException;
     void updateUser(Connection conn, User user) throws SQLException;
     int updateBalance(Connection conn, int userId, BigDecimal amount) throws SQLException;

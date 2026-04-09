@@ -99,33 +99,32 @@ public class CustomerMainView {
                 return;
             }
 
-            Booking active = activeBookings.get(0);
-            
-            BigDecimal hourly = active.getHourlyRateSnapshot();
-            if (hourly == null) hourly = BigDecimal.ZERO;
-            BigDecimal ratePerMinute = hourly.divide(new BigDecimal(60), 2, java.math.RoundingMode.HALF_UP);
-            
-            long diffInMillis = System.currentTimeMillis() - active.getStartTime().getTime();
-            long minutesUsed = diffInMillis / (1000 * 60);
-            
-            BigDecimal spent = ratePerMinute.multiply(new BigDecimal(minutesUsed)).setScale(2, java.math.RoundingMode.HALF_UP);
-            
-            long expectedRemainingMins = 0;
-            if (ratePerMinute.compareTo(BigDecimal.ZERO) > 0) {
-                expectedRemainingMins = customerUser.getBalance().divide(ratePerMinute, 0, java.math.RoundingMode.DOWN).longValue();
-            }
+            System.out.println("\n--- TRẠNG THÁI CÁC PHIÊN CHƠI HIỆN TẠI ---");
+            for (Booking active : activeBookings) {
+                BigDecimal hourly = active.getHourlyRateSnapshot();
+                if (hourly == null) hourly = BigDecimal.ZERO;
+                BigDecimal ratePerMinute = hourly.divide(new BigDecimal(60), 2, java.math.RoundingMode.HALF_UP);
+                
+                long diffInMillis = System.currentTimeMillis() - active.getStartTime().getTime();
+                long minutesUsed = diffInMillis / (1000 * 60);
+                if (minutesUsed < 0) minutesUsed = 0;
+                
+                BigDecimal spent = ratePerMinute.multiply(new BigDecimal(minutesUsed)).setScale(2, java.math.RoundingMode.HALF_UP);
+                
+                long expectedRemainingMins = 0;
+                if (ratePerMinute.compareTo(BigDecimal.ZERO) > 0) {
+                    expectedRemainingMins = customerUser.getBalance().divide(ratePerMinute, 0, java.math.RoundingMode.DOWN).longValue();
+                }
 
-            System.out.println("\n--- TRẠNG THÁI PHIÊN CHƠI HIỆN TẠI ---");
+                PrintUtils.printTableSeparator(70);
+                System.out.printf("| %-30s | %-33s |\n", "Tên máy", active.getComputerName() != null ? active.getComputerName() : active.getComputerId());
+                System.out.printf("| %-30s | %-33s |\n", "Thời gian bắt đầu", active.getStartTime().toString());
+                System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", minutesUsed + " phút");
+                System.out.printf("| %-30s | %-33s |\n", "Tiền giờ đã chi", FormatUtils.formatVND(spent));
+                System.out.printf("| %-30s | %-33s |\n", "Thời gian còn lại dự kiến", expectedRemainingMins + " phút");
+            }
             PrintUtils.printTableSeparator(70);
-            System.out.printf("| %-30s | %-33s |\n", "Thông số", "Giá trị");
-            PrintUtils.printTableSeparator(70);
-            System.out.printf("| %-30s | %-33s |\n", "Tên máy", active.getComputerName() != null ? active.getComputerName() : active.getComputerId());
-            System.out.printf("| %-30s | %-33s |\n", "Thời gian bắt đầu", active.getStartTime().toString());
-            System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", minutesUsed + " phút");
-            System.out.printf("| %-30s | %-33s |\n", "Tiền giờ đã chi", FormatUtils.formatVND(spent));
-            System.out.printf("| %-30s | %-33s |\n", "Số dư còn lại (Realtime)", FormatUtils.formatVND(customerUser.getBalance()));
-            System.out.printf("| %-30s | %-33s |\n", "Thời gian còn lại dự kiến", expectedRemainingMins + " phút");
-            PrintUtils.printTableSeparator(70);
+            System.out.println("  Số dư khả dụng hiện tại: " + FormatUtils.formatVND(customerUser.getBalance()));
 
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
@@ -138,8 +137,7 @@ public class CustomerMainView {
 
     private void bookComputerFlow() throws BusinessException {
         System.out.println("\n--- ĐẶT MÁY TRẠM ---");
-        System.out.println("Lưu ý: Tiền cọc sẽ được trừ ngay lập tức vào số dư.");
-        int hours = InputUtils.inputInt("Bạn muốn đặt máy trong mấy giờ? (Tối thiểu 1h): ", 1, 24);
+        System.out.println("Lưu ý: Tiền máy sẽ được hệ thống trừ dần tự động mỗi 10 giây.");
 
         System.out.println("Chọn khu vực:");
         System.out.println("1. VIP | 2. STANDARD | 3. ESPORT | 4. STREAMING | 5. COUPLE | 6. BẤT KỲ");
@@ -155,8 +153,9 @@ public class CustomerMainView {
         }
 
         Timestamp start = new Timestamp(System.currentTimeMillis());
-        Timestamp end   = new Timestamp(System.currentTimeMillis() + (hours * 3600000L));
-        List<Computer> availableComputers = computerService.getAvailableComputersByZone(zone, start, end);
+        Timestamp end   = null;
+        // Kiểm tra xem hiện tại máy còn trống không (start, null)
+        List<Computer> availableComputers = computerService.getAvailableComputersByZone(zone, start, start);
         if (availableComputers.isEmpty()) {
             PrintUtils.printWarning("Rất tiếc! Hiện tại không có máy trống nào phù hợp ở khu vực bạn chọn.");
             return;
@@ -179,18 +178,17 @@ public class CustomerMainView {
                 .filter(c -> c.getComputerId() == computerId).findFirst().orElse(null);
         if (targetComputer == null) { PrintUtils.printError("ID máy không hợp lệ."); return; }
 
-        BigDecimal fee = targetComputer.getPricePerHour().multiply(new BigDecimal(hours));
-        System.out.println("\nDỰ TOÁN THUÊ MÁY:");
-        System.out.printf("  Máy: %s | Thời gian: %d giờ | Chi phí: %s%n",
-                targetComputer.getName(), hours, FormatUtils.formatVND(fee));
-        System.out.println("  Số dư của bạn: " + FormatUtils.formatVND(customerUser.getBalance()));
+        System.out.println("\nĐẶT MÁY (PAY AS YOU GO):");
+        System.out.printf("  Máy: %s | Đơn giá: %s/h%n",
+                targetComputer.getName(), FormatUtils.formatVND(targetComputer.getPricePerHour()));
+        System.out.println("  Số dư khả dụng: " + FormatUtils.formatVND(customerUser.getBalance()));
 
-        String confirm = InputUtils.inputString("Xác nhận Đặt và Trừ Tiền? (Y/N): ");
+        String confirm = InputUtils.inputString("Xác nhận Bật Máy? (Y/N): ");
         if (confirm.equalsIgnoreCase("y")) {
             Booking newBooking = new Booking(0, customerUser.getUserId(),
-                    targetComputer.getComputerId(), start, end, "IN_PROGRESS", fee, targetComputer.getPricePerHour());
+                    targetComputer.getComputerId(), start, end, "ACTIVE", BigDecimal.ZERO, targetComputer.getPricePerHour());
             this.currentBookingId = bookingService.bookComputer(customerUser.getUserId(), newBooking);
-            customerUser.setBalance(customerUser.getBalance().subtract(fee));
+            // set computer status to IN_USE happens inside service
             PrintUtils.printSuccess("Đặt máy thành công! Bắt đầu sử dụng máy " + targetComputer.getName());
         } else {
             System.out.println("Đã hủy đặt máy.");
@@ -281,8 +279,8 @@ public class CustomerMainView {
 
             int qty = InputUtils.inputInt("Số lượng: ", 1, selectedItem.getStockQuantity());
 
-            // Món lẻ flow
-            FbAdvancedCartItem singleCartItem = buildSingleItem(selectedItem, allToppings, strategy, qty);
+            // Món lẻ flow (KHÔNG áp dụng strategy lúc này)
+            FbAdvancedCartItem singleCartItem = buildSingleItem(selectedItem, allToppings, com.cyber.domain.fb.discount.NoDiscountStrategy.getInstance(), qty);
             cart.add(singleCartItem);
             cartTotal = cartTotal.add(singleCartItem.getFinalPrice());
             PrintUtils.printSuccess("Đã thêm [%s] vào giỏ. Đơn giá: %s",
@@ -300,8 +298,9 @@ public class CustomerMainView {
 
         String payConfirm = InputUtils.inputString("Xác nhận thanh toán? (Y/N): ");
         if (payConfirm.equalsIgnoreCase("y")) {
+            BigDecimal finalPay = strategy.applyDiscount(cartTotal);
             orderService.orderFoodAdvanced(customerUser.getUserId(), currentBookingId, cart);
-            customerUser.setBalance(customerUser.getBalance().subtract(cartTotal));
+            customerUser.setBalance(customerUser.getBalance().subtract(finalPay));
             PrintUtils.printSuccess("Đặt đồ ăn thành công! Đơn hàng đang chờ xử lý.");
         } else {
             System.out.println("Đã hủy đơn F&B.");
@@ -432,34 +431,38 @@ public class CustomerMainView {
         System.out.println("=".repeat(100));
     }
 
-    /**
-     * In hoá đơn tổng trước khi xác nhận thanh toán.
-     */
-    private void printCartSummary(List<FbAdvancedCartItem> cart, BigDecimal total,
+    private void printCartSummary(List<FbAdvancedCartItem> cart, BigDecimal preDiscountTotal,
                                   IDiscountStrategy strategy) {
         System.out.println("\n" + "=".repeat(80));
         System.out.println("  HOÁ ĐƠN DỰ KIẾN");
         System.out.println("=".repeat(80));
-        BigDecimal totalDiscount = BigDecimal.ZERO;
+        
         for (FbAdvancedCartItem item : cart) {
             System.out.printf("  %-45s x%-3d = %s%n",
                     truncate(item.getItemDescription(), 45),
                     item.getQuantity(),
                     FormatUtils.formatVND(item.getFinalPrice()));
-            if (item.getDiscountApplied().compareTo(BigDecimal.ZERO) > 0) {
-                System.out.printf("    → Giảm (%s): -%s%n",
-                        item.getDiscountStrategyName(),
-                        FormatUtils.formatVND(item.getDiscountApplied()));
-                totalDiscount = totalDiscount.add(item.getDiscountApplied());
-            }
         }
         System.out.println("-".repeat(80));
-        if (totalDiscount.compareTo(BigDecimal.ZERO) > 0) {
-            System.out.printf("  %-48s %s%n", "Tổng giảm giá:", "-" + FormatUtils.formatVND(totalDiscount));
+
+        BigDecimal totalDiscountAmt = strategy.calculateDiscountAmount(preDiscountTotal);
+        BigDecimal newTotal = strategy.applyDiscount(preDiscountTotal);
+
+        System.out.printf("  %-48s %s%n", "Tiền trước giảm:", FormatUtils.formatVND(preDiscountTotal));
+        if (totalDiscountAmt.compareTo(BigDecimal.ZERO) > 0) {
+            System.out.printf("  %-48s %s%n", "Tổng giảm giá (" + strategy.getStrategyName() + "):", "-" + FormatUtils.formatVND(totalDiscountAmt));
         }
-        System.out.printf("  %-48s %s%n", "TỔNG THANH TOÁN:", FormatUtils.formatVND(total));
+        System.out.printf("  %-48s %s%n", "TỔNG TIỀN HIỆN TẠI (SAU GIẢM):", FormatUtils.formatVND(newTotal));
         System.out.println("  Số dư hiện tại: " + FormatUtils.formatVND(customerUser.getBalance()));
         System.out.println("=".repeat(80));
+        
+        // Cập nhật lại list cart với chiết khấu để lưu DB khớp doanh thu.
+        // Gán TOÀN BỘ giảm giá vào item đầu tiên (để chênh lệch về 0)
+        if (!cart.isEmpty() && totalDiscountAmt.compareTo(BigDecimal.ZERO) > 0) {
+            FbAdvancedCartItem first = cart.get(0);
+            first.setDiscountApplied(totalDiscountAmt);
+            first.setDiscountStrategyName(strategy.getStrategyName());
+        }
     }
 
     /**

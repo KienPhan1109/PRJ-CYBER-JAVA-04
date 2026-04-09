@@ -184,19 +184,21 @@ public class BookingService {
         }
     }
 
-    public void processHeartbeatSession() {
+    public void processHeartbeatSession(int intervalMs) {
         try (Connection conn = DatabaseConnection.getConnection()) {
             List<Booking> activeBookings = bookingDAO.findAllActiveBookings(conn);
             for (Booking b : activeBookings) {
                 BigDecimal hourly = b.getHourlyRateSnapshot();
                 if (hourly == null) hourly = BigDecimal.ZERO;
-                BigDecimal ratePerMinute = hourly.divide(new BigDecimal(60), 2, java.math.RoundingMode.HALF_UP);
+                
+                // Tiền tính cho intervalMs (1h = 3600000ms)
+                BigDecimal rateForInterval = hourly.multiply(new BigDecimal(intervalMs)).divide(new BigDecimal(3600000), 2, java.math.RoundingMode.HALF_UP);
                 
                 boolean outOfMoney = false;
                 
                 conn.setAutoCommit(false);
                 try {
-                    int rows = userDAO.updateBalance(conn, b.getUserId(), ratePerMinute.negate());
+                    int rows = userDAO.updateBalance(conn, b.getUserId(), rateForInterval.negate());
                     if (rows == 0) {
                         outOfMoney = true;
                     }

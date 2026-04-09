@@ -51,7 +51,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             "SELECT m.*, c.category_name " +
             "FROM fb_menu_items m " +
             "JOIN fb_categories c ON m.category_id = c.category_id " +
-            "WHERE m.category_id = ? AND m.status = 'ACTIVE' " +
+            "WHERE m.category_id = ? AND m.status = 'ACTIVE' AND m.is_deleted = 0 " +
             "ORDER BY m.name";
 
     private static final String SQL_CREATE =

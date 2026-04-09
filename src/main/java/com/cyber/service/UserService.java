@@ -39,6 +39,14 @@ public class UserService {
         }
     }
 
+    public List<User> searchUsersByName(String name) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return userDAO.searchUsersByName(conn, name);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách User: " + e.getMessage());
+        }
+    }
+
     /**
      * Lấy thông tin User theo ID (realtime từ DB).
      * Dùng khi View cần refresh dữ liệu mà không vi phạm 3-Tier.

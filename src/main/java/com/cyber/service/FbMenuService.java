@@ -162,19 +162,108 @@ public class FbMenuService {
     }
 
     /**
-     * Tạo topping mới.
+     * Tạo topping mới (có ghi log).
      */
-    public int createTopping(String name, BigDecimal extraPrice) throws BusinessException {
+    public int createTopping(String name, BigDecimal extraPrice, com.cyber.model.User actor) throws BusinessException {
         if (name == null || name.isBlank()) {
             throw new BusinessException("ERR_VALIDATION", "Tên topping không được để trống.");
         }
         if (extraPrice == null || extraPrice.compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessException("ERR_VALIDATION", "Giá topping không được âm.");
         }
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            return optionDAO.createTopping(conn, name.trim(), extraPrice);
+        
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+            
+            int newId = optionDAO.createTopping(conn, name.trim(), extraPrice);
+            
+            // Ghi log
+            String action = String.format("Thêm Topping mới: %s (Giá: %s)", name, com.cyber.util.FormatUtils.formatVND(extraPrice));
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
+            
+            conn.commit();
+            return newId;
         } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
             throw new BusinessException("DB_ERROR", "Lỗi tạo topping: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+            }
+        }
+    }
+
+    /**
+     * Cập nhật thông tin Topping (có ghi log).
+     */
+    public void updateTopping(int toppingId, String name, BigDecimal extraPrice, com.cyber.model.User actor) throws BusinessException {
+        if (name == null || name.isBlank()) {
+            throw new BusinessException("ERR_VALIDATION", "Tên topping không được để trống.");
+        }
+        if (extraPrice == null || extraPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("ERR_VALIDATION", "Giá topping không được âm.");
+        }
+
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+            
+            Map<String, Object> existing = optionDAO.findToppingById(conn, toppingId);
+            if (existing == null) {
+                throw new BusinessException("ERR_NOT_FOUND", "Không tìm thấy Topping ID=" + toppingId);
+            }
+
+            optionDAO.updateTopping(conn, toppingId, name.trim(), extraPrice);
+            
+            // Ghi log
+            String action = String.format("Cập nhật Topping ID %d: %s -> %s (Giá: %s -> %s)", 
+                    toppingId, existing.get("name"), name, 
+                    com.cyber.util.FormatUtils.formatVND((BigDecimal)existing.get("extra_price")),
+                    com.cyber.util.FormatUtils.formatVND(extraPrice));
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
+            
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw new BusinessException("DB_ERROR", "Lỗi cập nhật topping: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+            }
+        }
+    }
+
+    /**
+     * Xoá (vô hiệu hoá) Topping (có ghi log).
+     */
+    public void deleteTopping(int toppingId, com.cyber.model.User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+            
+            Map<String, Object> existing = optionDAO.findToppingById(conn, toppingId);
+            if (existing == null) {
+                throw new BusinessException("ERR_NOT_FOUND", "Không tìm thấy Topping ID=" + toppingId);
+            }
+
+            optionDAO.deactivateTopping(conn, toppingId);
+            
+            // Ghi log
+            String action = String.format("Xoá (Vô hiệu hoá) Topping: %s (ID: %d)", existing.get("name"), toppingId);
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
+            
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw new BusinessException("DB_ERROR", "Lỗi xoá topping: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+            }
         }
     }
 

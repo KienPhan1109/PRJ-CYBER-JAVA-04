@@ -22,17 +22,20 @@ public class SessionHeartbeatManager {
     }
 
     public void startHeartbeat() {
-        // Run every 10 seconds for demo purposes
+        int intervalMs = com.cyber.util.EnvUtils.getInt("HEARTBEAT_INTERVAL_MS", 10000);
+        int intervalSeconds = intervalMs / 1000;
+        if (intervalSeconds == 0) intervalSeconds = 1;
+
         Runnable task = () -> {
             try {
-                BookingService.getInstance().processHeartbeatSession();
+                BookingService.getInstance().processHeartbeatSession(intervalMs);
             } catch (Exception e) {
                 // Log silently to not disrupt the console too much
                 System.err.println("[Heartbeat Error] Lỗi xử lý phiên chạy ngầm: " + e.getMessage());
             }
         };
         // Schedule fixed rate
-        scheduler.scheduleAtFixedRate(task, 10, 10, TimeUnit.SECONDS); 
+        scheduler.scheduleAtFixedRate(task, intervalSeconds, intervalSeconds, TimeUnit.SECONDS); 
     }
 
     public void shutdown() {

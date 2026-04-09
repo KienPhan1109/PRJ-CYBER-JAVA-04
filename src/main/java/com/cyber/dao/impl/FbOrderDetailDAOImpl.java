@@ -31,8 +31,8 @@ public class FbOrderDetailDAOImpl implements IFbOrderDetailDAO {
     // -------------------------------------------------------
     private static final String SQL_SAVE =
             "INSERT INTO fb_order_details " +
-            "(order_id, menu_item_id, quantity, unit_price_snapshot, item_name_snapshot, item_description, item_config_json, discount_applied, discount_strategy_name) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "(order_id, menu_item_id, quantity, unit_price, unit_price_snapshot, item_name_snapshot, item_description, item_config_json, discount_applied, discount_strategy_name) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String SQL_FIND_BY_ORDER =
             "SELECT d.* " +
@@ -64,12 +64,13 @@ public class FbOrderDetailDAOImpl implements IFbOrderDetailDAO {
             ps.setInt       (1, orderId);
             ps.setInt       (2, menuItemId);
             ps.setInt       (3, quantity);
-            ps.setBigDecimal(4, unitPriceSnapshot);
-            ps.setString    (5, itemNameSnapshot);
-            ps.setString    (6, itemDescription);
-            ps.setString    (7, itemConfigJson);
-            ps.setBigDecimal(8, discountApplied != null ? discountApplied : BigDecimal.ZERO);
-            ps.setString    (9, discountStrategyName);
+            ps.setBigDecimal(4, unitPriceSnapshot); // unit_price
+            ps.setBigDecimal(5, unitPriceSnapshot); // unit_price_snapshot
+            ps.setString    (6, itemNameSnapshot);
+            ps.setString    (7, itemDescription);
+            ps.setString    (8, itemConfigJson);
+            ps.setBigDecimal(9, discountApplied != null ? discountApplied : BigDecimal.ZERO);
+            ps.setString    (10, discountStrategyName);
             ps.executeUpdate();
         }
     }
