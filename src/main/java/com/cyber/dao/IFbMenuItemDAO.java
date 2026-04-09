@@ -15,12 +15,12 @@ public interface IFbMenuItemDAO {
     /**
      * Lấy tất cả món đang ACTIVE hoặc OUT_OF_STOCK (kèm categoryName bằng JOIN).
      */
-    List<FbMenuItem> findAllActive(Connection conn) throws SQLException;
+    List<FbMenuItem> getAllActiveItems(Connection conn) throws SQLException;
 
     /**
-     * Lấy tất cả món (bao gồm cả HIDDEN).
+     * Lấy tất cả món (bao gồm cả is_deleted = 1).
      */
-    List<FbMenuItem> findAll(Connection conn) throws SQLException;
+    List<FbMenuItem> getAllItemsForAdmin(Connection conn) throws SQLException;
 
     /**
      * Tìm món theo ID (bất kể status).
@@ -45,9 +45,9 @@ public interface IFbMenuItemDAO {
     void update(Connection conn, FbMenuItem item) throws SQLException;
 
     /**
-     * Soft-delete: Đổi status = 'HIDDEN' thay vì xoá vật lý.
+     * Soft-delete: Đổi is_deleted = 1 thay vì xoá vật lý.
      */
-    void softDelete(Connection conn, int menuItemId) throws SQLException;
+    void deleteItem(Connection conn, int menuItemId) throws SQLException;
 
     /**
      * Trừ tồn kho khi đặt hàng thành công.

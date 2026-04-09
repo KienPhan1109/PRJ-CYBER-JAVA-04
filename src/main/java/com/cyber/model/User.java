@@ -14,6 +14,7 @@ public class User {
     private String phone;
     private UserStatus status;
     private Timestamp createdAt;
+    private boolean isDeleted;
 
     public User() {}
 
@@ -104,5 +105,13 @@ public class User {
 
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
     }
 }

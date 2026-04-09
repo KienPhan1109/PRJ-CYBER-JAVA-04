@@ -14,6 +14,7 @@ public class Computer {
     private String hardwareConfig;
     private ComputerStatus status;
     private BigDecimal pricePerHour;
+    private boolean isDeleted;
 
     public Computer() {}
 
@@ -131,5 +132,13 @@ public class Computer {
 
     public void setPricePerHour(BigDecimal pricePerHour) {
         this.pricePerHour = pricePerHour;
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
     }
 }

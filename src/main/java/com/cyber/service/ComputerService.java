@@ -32,7 +32,7 @@ public class ComputerService {
 
     public List<Computer> getAllComputers() throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            return computerDAO.getAllComputers(conn);
+            return computerDAO.getAllActiveComputers(conn);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách máy: " + e.getMessage());
         }
@@ -41,7 +41,7 @@ public class ComputerService {
     public List<Computer> getAvailableComputersByZone(com.cyber.model.enums.ComputerZone zone, java.sql.Timestamp start, java.sql.Timestamp end) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             com.cyber.dao.IBookingDAO bookingDAO = com.cyber.dao.impl.BookingDAOImpl.getInstance();
-            return computerDAO.getAllComputers(conn).stream()
+            return computerDAO.getAllActiveComputers(conn).stream()
                 .filter(c -> c.getStatus() == com.cyber.model.enums.ComputerStatus.AVAILABLE 
                           && (zone == null || c.getZone() == zone))
                 .filter(c -> {
@@ -87,9 +87,15 @@ public class ComputerService {
     public void updateComputer(Computer computer) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             Computer existing = computerDAO.findById(conn, computer.getComputerId());
-            if (existing == null) {
+            if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("NOT_FOUND", "Không tìm thấy máy có ID = " + computer.getComputerId());
             }
+
+            // Quy tắc vàng (Hard Validation): Không cho sửa nếu đang IN_USE
+            if (existing.getStatus() == com.cyber.model.enums.ComputerStatus.IN_USE) {
+                throw new BusinessException("IN_USE", "Lỗi: Máy đang có khách sử dụng. Khách phải đăng xuất thì Admin mới được phép Sửa/Xóa/Bảo trì máy này!");
+            }
+
             // Check name duplicate if name changed
             if (!existing.getName().equals(computer.getName()) && computerDAO.checkNameExists(conn, computer.getName())) {
                 throw new BusinessException("DUPLICATE_NAME", "Tên máy '" + computer.getName() + "' đã được sử dụng bởi máy khác.");
@@ -103,12 +109,16 @@ public class ComputerService {
     public void deleteComputer(int id) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             Computer existing = computerDAO.findById(conn, id);
-            if (existing == null) {
+            if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("NOT_FOUND", "Không tìm thấy máy có ID = " + id);
             }
-            if (bookingDAO.hasDependentBookings(conn, id)) {
-                throw new BusinessException("DEPENDENCY_ERROR", "Không thể xóa. Máy trạm này đã từng hoặc đang được Order/Booking.");
+
+            // Quy tắc vàng (Hard Validation): Không cho xóa nếu đang IN_USE
+            if (existing.getStatus() == com.cyber.model.enums.ComputerStatus.IN_USE) {
+                throw new BusinessException("IN_USE", "Lỗi: Máy đang có khách sử dụng. Khách phải đăng xuất thì Admin mới được phép Sửa/Xóa/Bảo trì máy này!");
             }
+
+            // Soft delete: Bỏ qua kiểm tra Dependency (hasDependentBookings) vì chỉ là đổi cờ is_deleted.
             computerDAO.deleteComputer(conn, id);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi xóa máy (có thể máy đang có booking): " + e.getMessage());

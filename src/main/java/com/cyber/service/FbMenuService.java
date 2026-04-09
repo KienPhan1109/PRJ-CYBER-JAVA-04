@@ -49,7 +49,7 @@ public class FbMenuService {
      */
     public List<FbMenuItem> getAllActiveMenuItems() throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            return menuItemDAO.findAllActive(conn);
+            return menuItemDAO.getAllActiveItems(conn);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách menu: " + e.getMessage());
         }
@@ -60,7 +60,7 @@ public class FbMenuService {
      */
     public List<FbMenuItem> getAllMenuItemsForAdmin() throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            return menuItemDAO.findAll(conn);
+            return menuItemDAO.getAllItemsForAdmin(conn);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách menu toàn bộ: " + e.getMessage());
         }
@@ -155,7 +155,7 @@ public class FbMenuService {
                 throw new BusinessException("ERR_ITEM_NOT_FOUND",
                         "Không tìm thấy món cần xoá (ID=" + menuItemId + ")");
             }
-            menuItemDAO.softDelete(conn, menuItemId);
+            menuItemDAO.deleteItem(conn, menuItemId);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi xoá món: " + e.getMessage());
         }

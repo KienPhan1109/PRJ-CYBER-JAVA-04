@@ -13,6 +13,7 @@ import com.cyber.exception.BusinessException;
 import com.cyber.model.FbOrder;
 import com.cyber.model.User;
 import com.cyber.model.enums.FbOrderStatus;
+import com.cyber.model.enums.LogType;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -27,12 +28,14 @@ public class FbOrderService {
     private final IFbMenuItemDAO    menuItemDAO;
     private final IFbOptionDAO      optionDAO;
     private final IFbOrderDetailDAO orderDetailDAO;
+    private final LogService        logService;
 
     private FbOrderService() {
         this.orderDAO       = FbOrderDAOImpl.getInstance();
         this.menuItemDAO    = FbMenuItemDAOImpl.getInstance();
         this.optionDAO      = FbOptionDAOImpl.getInstance();
         this.orderDetailDAO = FbOrderDetailDAOImpl.getInstance();
+        this.logService     = LogService.getInstance();
     }
 
     public static synchronized FbOrderService getInstance() {
@@ -70,11 +73,26 @@ public class FbOrderService {
         }
     }
 
-    public void updateOrderStatus(int orderId, FbOrderStatus newStatus) throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
+    public void updateOrderStatus(int orderId, FbOrderStatus newStatus,
+                                   User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
             orderDAO.updateOrderStatus(conn, orderId, newStatus);
+
+            // Ghi log trong cùng transaction
+            String action = String.format("Đổi trạng thái Đơn #%d -> %s", orderId, newStatus.name());
+            logService.log(conn, LogType.FB, actor, action, orderId);
+
+            conn.commit();
         } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw new BusinessException("DB_ERROR", "Lỗi cập nhật Order: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {} }
         }
     }
 
@@ -131,22 +149,35 @@ public class FbOrderService {
             FbOrder newOrder = new FbOrder(userId, bookingId, FbOrderStatus.PENDING, totalAmount);
             int newOrderId = orderDAO.createOrder(conn, newOrder);
 
-            // 5. Lưu từng cart item + trừ stock
+            // 5. Kiểm tra tính hợp lệ & Lưu từng cart item + trừ stock
             for (FbAdvancedCartItem cartItem : cartItems) {
+                com.cyber.domain.fb.FbMenuItem dbItem = menuItemDAO.findById(conn, cartItem.getMenuItemId());
+                if (dbItem == null || dbItem.isDeleted()) {
+                    throw new BusinessException("ITEM_INVALID", "Món ăn ID=" + cartItem.getMenuItemId() + " không tồn tại hoặc đã bị xóa.");
+                }
+
                 menuItemDAO.deductStock(conn, cartItem.getMenuItemId(), cartItem.getQuantity());
 
-                orderDetailDAO.saveOrderDetail(
+                orderDetailDAO.insertOrderDetail(
                         conn,
                         newOrderId,
                         cartItem.getMenuItemId(),
                         cartItem.getQuantity(),
-                        cartItem.getFinalPrice(),
+                        cartItem.getFinalPrice(),       // Snapshot giá
+                        dbItem.getName(),               // Snapshot tên món gốc
                         cartItem.getItemDescription(),
                         cartItem.getItemConfigJson(),
                         cartItem.getDiscountApplied(),
                         cartItem.getDiscountStrategyName()
                 );
             }
+
+            // 6. Ghi log FB trong cùng transaction
+            String fbAction = String.format("Đặt đồ ăn đơn #%d (%d món) | Tổng: %s",
+                    newOrderId,
+                    cartItems.size(),
+                    com.cyber.util.FormatUtils.formatVND(totalAmount));
+            logService.log(conn, LogType.FB, currentUser, fbAction, newOrderId);
 
             conn.commit();
         } catch (SQLException e) {

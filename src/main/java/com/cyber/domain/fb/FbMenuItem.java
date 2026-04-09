@@ -21,14 +21,15 @@ public class FbMenuItem {
     private String availability;        // "ALL" hoặc "06:00-22:00"
     private FbTemperature temperatureLevel;    // HOT / COLD / ICED / NONE
     private FBStatus status;              // ACTIVE / OUT_OF_STOCK / HIDDEN
+    private boolean isDeleted;            // Soft Delete flag
 
     public FbMenuItem() {}
 
     public FbMenuItem(int menuItemId, int categoryId, String name,
                       String description, BigDecimal basePrice,
                       int stockQuantity, int prepTimeInMinutes,
-                      String itemTags, String availability,
-                      FbTemperature temperatureLevel, FBStatus status) {
+                      String availability,
+                      FbTemperature temperatureLevel, FBStatus status, boolean isDeleted) {
         this.menuItemId       = menuItemId;
         this.categoryId       = categoryId;
         this.name             = name;
@@ -40,6 +41,7 @@ public class FbMenuItem {
         this.availability     = availability;
         this.temperatureLevel = temperatureLevel;
         this.status           = status;
+        this.isDeleted        = isDeleted;
     }
 
     // -------------------------------------------------------
@@ -80,4 +82,7 @@ public class FbMenuItem {
 
     public FBStatus getStatus() { return status; }
     public void setStatus(FBStatus status) { this.status = status; }
+
+    public boolean isDeleted() { return isDeleted; }
+    public void setDeleted(boolean deleted) { isDeleted = deleted; }
 }

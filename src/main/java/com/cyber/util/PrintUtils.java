@@ -47,4 +47,11 @@ public class PrintUtils {
         String formattedMessage = args != null && args.length > 0 ? String.format(message, args) : message;
         System.out.println(ANSI_YELLOW + "[CẢNH BÁO] " + formattedMessage + ANSI_RESET);
     }
+
+    /**
+     * In đường kẻ ngang phân cách bảng với chiều rộng chỉ định.
+     */
+    public static void printTableSeparator(int width) {
+        System.out.println("+" + "-".repeat(width - 2) + "+");
+    }
 }

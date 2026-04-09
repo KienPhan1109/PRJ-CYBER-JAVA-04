@@ -58,16 +58,18 @@ public class CustomerMainView {
             System.out.println("1. Đặt máy trạm (Booking)");
             System.out.println("2. Đặt đồ ăn / Thức uống (F&B)");
             System.out.println("3. Xem trạng thái dịch vụ (Máy & Món đã đặt)");
+            System.out.println("4. Tra cứu phiên chơi hiện tại (Session Status)");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-3): ", 0, 3);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-4): ", 0, 4);
 
             try {
                 switch (choice) {
                     case 1: bookComputerFlow(); break;
                     case 2: orderFoodFlow();    break;
                     case 3: viewCurrentStatus(); break;
+                    case 4: displayCurrentSession(); break;
                     case 0:
                         PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Khách hàng...");
                         return;
@@ -77,6 +79,56 @@ public class CustomerMainView {
             } catch (Exception e) {
                 PrintUtils.printError("Lỗi hệ thống: " + e.getMessage());
             }
+        }
+    }
+
+    private void displayCurrentSession() {
+        try {
+            // Lấy balance realtime qua Service (tuân thủ 3-Tier)
+            try {
+                User currentUserRealtime = com.cyber.service.UserService.getInstance()
+                        .getUserById(customerUser.getUserId());
+                customerUser.setBalance(currentUserRealtime.getBalance());
+            } catch (BusinessException ex) {
+                // Nếu lỗi thì giữ balance cũ, không crash
+            }
+
+            List<Booking> activeBookings = bookingService.getActiveBookingsByUserId(customerUser.getUserId());
+            if (activeBookings.isEmpty()) {
+                PrintUtils.printWarning("Bạn không có phiên chơi nào đang hoạt động.");
+                return;
+            }
+
+            Booking active = activeBookings.get(0);
+            
+            BigDecimal hourly = active.getHourlyRateSnapshot();
+            if (hourly == null) hourly = BigDecimal.ZERO;
+            BigDecimal ratePerMinute = hourly.divide(new BigDecimal(60), 2, java.math.RoundingMode.HALF_UP);
+            
+            long diffInMillis = System.currentTimeMillis() - active.getStartTime().getTime();
+            long minutesUsed = diffInMillis / (1000 * 60);
+            
+            BigDecimal spent = ratePerMinute.multiply(new BigDecimal(minutesUsed)).setScale(2, java.math.RoundingMode.HALF_UP);
+            
+            long expectedRemainingMins = 0;
+            if (ratePerMinute.compareTo(BigDecimal.ZERO) > 0) {
+                expectedRemainingMins = customerUser.getBalance().divide(ratePerMinute, 0, java.math.RoundingMode.DOWN).longValue();
+            }
+
+            System.out.println("\n--- TRẠNG THÁI PHIÊN CHƠI HIỆN TẠI ---");
+            PrintUtils.printTableSeparator(70);
+            System.out.printf("| %-30s | %-33s |\n", "Thông số", "Giá trị");
+            PrintUtils.printTableSeparator(70);
+            System.out.printf("| %-30s | %-33s |\n", "Tên máy", active.getComputerName() != null ? active.getComputerName() : active.getComputerId());
+            System.out.printf("| %-30s | %-33s |\n", "Thời gian bắt đầu", active.getStartTime().toString());
+            System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", minutesUsed + " phút");
+            System.out.printf("| %-30s | %-33s |\n", "Tiền giờ đã chi", FormatUtils.formatVND(spent));
+            System.out.printf("| %-30s | %-33s |\n", "Số dư còn lại (Realtime)", FormatUtils.formatVND(customerUser.getBalance()));
+            System.out.printf("| %-30s | %-33s |\n", "Thời gian còn lại dự kiến", expectedRemainingMins + " phút");
+            PrintUtils.printTableSeparator(70);
+
+        } catch (BusinessException e) {
+            PrintUtils.printError(e.getMessage());
         }
     }
 
@@ -136,7 +188,7 @@ public class CustomerMainView {
         String confirm = InputUtils.inputString("Xác nhận Đặt và Trừ Tiền? (Y/N): ");
         if (confirm.equalsIgnoreCase("y")) {
             Booking newBooking = new Booking(0, customerUser.getUserId(),
-                    targetComputer.getComputerId(), start, end, "IN_PROGRESS", fee);
+                    targetComputer.getComputerId(), start, end, "IN_PROGRESS", fee, targetComputer.getPricePerHour());
             this.currentBookingId = bookingService.bookComputer(customerUser.getUserId(), newBooking);
             customerUser.setBalance(customerUser.getBalance().subtract(fee));
             PrintUtils.printSuccess("Đặt máy thành công! Bắt đầu sử dụng máy " + targetComputer.getName());

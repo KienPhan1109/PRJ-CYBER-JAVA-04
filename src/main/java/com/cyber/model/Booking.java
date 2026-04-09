@@ -10,11 +10,12 @@ public class Booking {
     private Timestamp endTime;
     private String status;
     private BigDecimal totalFee;
+    private BigDecimal hourlyRateSnapshot;
     
     // Additional field for display
     private String computerName;
 
-    public Booking(int bookingId, int userId, int computerId, Timestamp startTime, Timestamp endTime, String status, BigDecimal totalFee) {
+    public Booking(int bookingId, int userId, int computerId, Timestamp startTime, Timestamp endTime, String status, BigDecimal totalFee, BigDecimal hourlyRateSnapshot) {
         this.bookingId = bookingId;
         this.userId = userId;
         this.computerId = computerId;
@@ -22,6 +23,7 @@ public class Booking {
         this.endTime = endTime;
         this.status = status;
         this.totalFee = totalFee;
+        this.hourlyRateSnapshot = hourlyRateSnapshot;
     }
 
     public int getBookingId() {
@@ -86,5 +88,13 @@ public class Booking {
 
     public void setComputerName(String computerName) {
         this.computerName = computerName;
+    }
+
+    public BigDecimal getHourlyRateSnapshot() {
+        return hourlyRateSnapshot;
+    }
+
+    public void setHourlyRateSnapshot(BigDecimal hourlyRateSnapshot) {
+        this.hourlyRateSnapshot = hourlyRateSnapshot;
     }
 }

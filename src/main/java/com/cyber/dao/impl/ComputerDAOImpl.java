@@ -23,9 +23,9 @@ public class ComputerDAOImpl implements IComputerDAO {
     }
 
     @Override
-    public List<Computer> getAllComputers(Connection conn) throws SQLException {
+    public List<Computer> getAllActiveComputers(Connection conn) throws SQLException {
         List<Computer> computers = new ArrayList<>();
-        String sql = "SELECT * FROM computers ORDER BY computer_id ASC";
+        String sql = "SELECT * FROM computers WHERE is_deleted = 0 ORDER BY computer_id ASC";
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
@@ -94,7 +94,7 @@ public class ComputerDAOImpl implements IComputerDAO {
 
     @Override
     public void deleteComputer(Connection conn, int computerId) throws SQLException {
-        String sql = "DELETE FROM computers WHERE computer_id = ?";
+        String sql = "UPDATE computers SET is_deleted = 1 WHERE computer_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, computerId);
             stmt.executeUpdate();
@@ -115,6 +115,7 @@ public class ComputerDAOImpl implements IComputerDAO {
         if (statusStr != null) computer.setStatus(com.cyber.model.enums.ComputerStatus.valueOf(statusStr.toUpperCase()));
         
         computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
+        computer.setDeleted(rs.getBoolean("is_deleted"));
         return computer;
     }
 }

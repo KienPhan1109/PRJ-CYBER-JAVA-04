@@ -197,3 +197,41 @@ INSERT INTO fb_item_options (menu_item_id, option_type, option_label, extra_pric
 INSERT INTO fb_item_options (menu_item_id, option_type, option_label, extra_price) VALUES
 (5, 'SIZE', 'Lon 330ml', 0.00),
 (5, 'SIZE', 'Chai 500ml', 8000.00);
+
+-- ==============================================
+-- AUDIT LOG SCHEMA (Phase 2)
+-- ==============================================
+
+-- Bảng ghi lịch sử mọi hành động trong hệ thống
+CREATE TABLE system_logs (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    log_type   ENUM('USER', 'COMPUTER', 'FB') NOT NULL    COMMENT 'Nhóm log: USER, COMPUTER, FB',
+    actor_id   INT          NOT NULL                       COMMENT 'ID tài khoản thực hiện (Admin/Staff đang login)',
+    action     VARCHAR(255) NOT NULL                       COMMENT 'Mô tả ngắn, VD: Nạp 50,000 VND cho KH#5',
+    target_id  INT          NULL                           COMMENT 'ID đối tượng bị tác động (nullable)',
+    created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_log_type        (log_type),
+    INDEX idx_actor_id        (actor_id),
+    INDEX idx_created_at      (created_at)
+);
+
+-- ==============================================
+-- DATA INTEGRITY UPDATE (Phase 2 - Soft Delete & Snapshot)
+-- ==============================================
+
+ALTER TABLE fb_menu_items ADD COLUMN is_deleted TINYINT(1) DEFAULT 0 COMMENT '0: Bình thường, 1: Đã xóa mềm';
+ALTER TABLE fb_order_details ADD COLUMN unit_price_snapshot DECIMAL(12, 2) COMMENT 'Chốt giá tại thời điểm đặt';
+ALTER TABLE fb_order_details ADD COLUMN item_name_snapshot VARCHAR(255) COMMENT 'Chốt tên tại thời điểm đặt';
+
+-- ==============================================
+-- COMPUTER DATA INTEGRITY UPDATE (Soft Delete & Session Snapshot)
+-- ==============================================
+
+ALTER TABLE computers ADD COLUMN is_deleted TINYINT(1) DEFAULT 0 COMMENT '1: Đã thanh lý';
+ALTER TABLE bookings ADD COLUMN hourly_rate_snapshot DECIMAL(10, 2) COMMENT 'Chốt giá 1 giờ chơi thời điểm mở máy';
+
+-- ==============================================
+-- USER WALLET DATA INTEGRITY UPDATE (Soft Delete)
+-- ==============================================
+
+ALTER TABLE users ADD COLUMN is_deleted TINYINT(1) DEFAULT 0 COMMENT '0: Hoạt động, 1: Đã xóa mềm';

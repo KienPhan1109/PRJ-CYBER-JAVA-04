@@ -32,7 +32,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             "SELECT m.*, c.category_name " +
             "FROM fb_menu_items m " +
             "JOIN fb_categories c ON m.category_id = c.category_id " +
-            "WHERE m.status IN ('ACTIVE', 'OUT_OF_STOCK') " +
+            "WHERE m.status IN ('ACTIVE', 'OUT_OF_STOCK') AND m.is_deleted = 0 " +
             "ORDER BY c.category_name, m.name";
 
     private static final String SQL_FIND_ALL =
@@ -66,7 +66,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             "WHERE menu_item_id=?";
 
     private static final String SQL_SOFT_DELETE =
-            "UPDATE fb_menu_items SET status='HIDDEN' WHERE menu_item_id=?";
+            "UPDATE fb_menu_items SET is_deleted = 1 WHERE menu_item_id=?";
 
     private static final String SQL_DEDUCT_STOCK =
             "UPDATE fb_menu_items " +
@@ -79,7 +79,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     // -------------------------------------------------------
 
     @Override
-    public List<FbMenuItem> findAllActive(Connection conn) throws SQLException {
+    public List<FbMenuItem> getAllActiveItems(Connection conn) throws SQLException {
         List<FbMenuItem> result = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(SQL_FIND_ALL_ACTIVE);
              ResultSet rs = ps.executeQuery()) {
@@ -91,7 +91,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     }
 
     @Override
-    public List<FbMenuItem> findAll(Connection conn) throws SQLException {
+    public List<FbMenuItem> getAllItemsForAdmin(Connection conn) throws SQLException {
         List<FbMenuItem> result = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(SQL_FIND_ALL);
              ResultSet rs = ps.executeQuery()) {
@@ -169,7 +169,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     }
 
     @Override
-    public void softDelete(Connection conn, int menuItemId) throws SQLException {
+    public void deleteItem(Connection conn, int menuItemId) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(SQL_SOFT_DELETE)) {
             ps.setInt(1, menuItemId);
             ps.executeUpdate();
@@ -208,6 +208,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
         item.setPrepTimeInMinutes(rs.getInt  ("prep_time_minutes"));
         item.setItemTags        (rs.getString("item_tags"));
         item.setAvailability    (rs.getString("availability"));
+        item.setDeleted         (rs.getBoolean("is_deleted"));
         
         String tempStr = rs.getString("temperature_level");
         if (tempStr != null && !tempStr.isEmpty()) {

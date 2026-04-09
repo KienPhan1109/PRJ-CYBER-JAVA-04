@@ -18,26 +18,27 @@ public interface IFbOrderDetailDAO {
      * @param orderId              FK trỏ vào fb_orders
      * @param menuItemId           FK trỏ vào fb_menu_items
      * @param quantity             Số lượng
-     * @param unitPrice            Giá đã tính (sau Decorator + Strategy)
-     * @param itemDescription      Mô tả đầy đủ (getDescription())
+     * @param unitPriceSnapshot    Giá đã chốt (snapshot)
+     * @param itemDescription      Mô tả đầy đủ (cũng đóng vai trò snapshot tên ban đầu nếu không có option)
+     * @param itemNameSnapshot     Tên món chốt tải thời điểm đặt
      * @param itemConfigJson       Chuỗi JSON cấu hình Decorator
      * @param discountApplied      Số tiền đã giảm
      * @param discountStrategyName Tên Strategy đã dùng
      */
-    void saveOrderDetail(Connection conn,
-                         int orderId,
-                         int menuItemId,
-                         int quantity,
-                         BigDecimal unitPrice,
-                         String itemDescription,
-                         String itemConfigJson,
-                         BigDecimal discountApplied,
-                         String discountStrategyName) throws SQLException;
+    void insertOrderDetail(Connection conn, int orderId, int menuItemId, int quantity,
+                           BigDecimal unitPriceSnapshot, String itemNameSnapshot,
+                           String itemDescription, String itemConfigJson,
+                           BigDecimal discountApplied, String discountStrategyName) throws SQLException;
 
     /**
-     * Lấy toàn bộ chi tiết của một đơn hàng (kèm Join với fb_menu_items).
+     * Lấy toàn bộ chi tiết của một đơn hàng.
      *
      * @return Danh sách Map, mỗi phần tử là một dòng trong fb_order_details
      */
     List<Map<String, Object>> findDetailsByOrderId(Connection conn, int orderId) throws SQLException;
+
+    /**
+     * Tính tổng tiền của đơn hàng dựa trên unit_price_snapshot thay vì join.
+     */
+    BigDecimal calculateTotalOrder(Connection conn, int orderId) throws SQLException;
 }

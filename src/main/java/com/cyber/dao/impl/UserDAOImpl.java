@@ -21,7 +21,7 @@ public class UserDAOImpl implements IUserDAO {
 
     @Override
     public User findById(Connection conn, int userId) throws SQLException {
-        String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ?";
+        String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ? AND u.is_deleted = 0";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -35,7 +35,7 @@ public class UserDAOImpl implements IUserDAO {
 
     @Override
     public User findByUsernameAndPassword(Connection conn, String username, String passwordHash) throws SQLException {
-        String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.username = ? AND u.password_hash = ?";
+        String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.username = ? AND u.password_hash = ? AND u.is_deleted = 0";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, username);
             stmt.setString(2, passwordHash);
@@ -81,11 +81,9 @@ public class UserDAOImpl implements IUserDAO {
 
     @Override
     public void deductBalance(Connection conn, int userId, BigDecimal amount) throws SQLException {
-        String sql = "UPDATE users SET balance = balance - ? WHERE user_id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setBigDecimal(1, amount);
-            stmt.setInt(2, userId);
-            stmt.executeUpdate();
+        int rows = updateBalance(conn, userId, amount.negate());
+        if (rows == 0) {
+            throw new SQLException("Không đủ số dư để thanh toán!");
         }
     }
 
@@ -101,18 +99,13 @@ public class UserDAOImpl implements IUserDAO {
 
     @Override
     public void addBalance(Connection conn, int userId, BigDecimal amount) throws SQLException {
-        String sql = "UPDATE users SET balance = balance + ? WHERE user_id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setBigDecimal(1, amount);
-            stmt.setInt(2, userId);
-            stmt.executeUpdate();
-        }
+        updateBalance(conn, userId, amount);
     }
 
     @Override
     public java.util.List<User> getAllUsers(Connection conn) throws SQLException {
         java.util.List<User> users = new java.util.ArrayList<>();
-        String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id";
+        String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.is_deleted = 0";
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
@@ -163,7 +156,38 @@ public class UserDAOImpl implements IUserDAO {
         } else {
             user.setStatus(com.cyber.model.enums.UserStatus.ACTIVE);
         }
+        user.setDeleted(rs.getBoolean("is_deleted"));
         
         return user;
+    }
+
+    @Override
+    public int updateBalance(Connection conn, int userId, BigDecimal amount) throws SQLException {
+        String sql;
+        if (amount.compareTo(BigDecimal.ZERO) >= 0) {
+            sql = "UPDATE users SET balance = balance + ? WHERE user_id = ? AND is_deleted = 0";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setBigDecimal(1, amount);
+                stmt.setInt(2, userId);
+                return stmt.executeUpdate();
+            }
+        } else {
+            sql = "UPDATE users SET balance = balance + ? WHERE user_id = ? AND is_deleted = 0 AND balance >= ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setBigDecimal(1, amount);
+                stmt.setInt(2, userId);
+                stmt.setBigDecimal(3, amount.abs());
+                return stmt.executeUpdate();
+            }
+        }
+    }
+
+    @Override
+    public void deleteUser(Connection conn, int userId) throws SQLException {
+        String sql = "UPDATE users SET is_deleted = 1 WHERE user_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            stmt.executeUpdate();
+        }
     }
 }
