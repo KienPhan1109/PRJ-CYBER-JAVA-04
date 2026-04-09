@@ -1,22 +1,21 @@
 package com.cyber.view;
 
-import com.cyber.util.PrintUtils;
-
 import com.cyber.model.User;
 import com.cyber.util.InputUtils;
+import com.cyber.util.PrintUtils;
 
 public class AdminMainView {
 
     private final User adminUser;
-    private final ComputerManagementView computerView;
-    private final ServiceManagementView serviceView;
-    private final UserManagementView userView;
+    private final ComputerManagementView  computerView;
+    private final FbMenuManagementView    fbMenuView;       // Quản lý Menu F&B nâng cao Phase 2
+    private final UserManagementView      userView;
 
     public AdminMainView(User adminUser) {
-        this.adminUser = adminUser;
+        this.adminUser    = adminUser;
         this.computerView = new ComputerManagementView();
-        this.serviceView = new ServiceManagementView();
-        this.userView = new UserManagementView();
+        this.fbMenuView   = new FbMenuManagementView();
+        this.userView     = new UserManagementView();
     }
 
     public void displayMenu() {
@@ -26,7 +25,7 @@ public class AdminMainView {
             System.out.println("        Xin chào: " + adminUser.getFullName());
             System.out.println("==========================================");
             System.out.println("1. Quản lý Máy trạm");
-            System.out.println("2. Quản lý Dịch vụ F&B");
+            System.out.println("2. Quản lý Menu F&B (Nâng cao)");
             System.out.println("3. Quản lý hệ thống Người dùng");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
@@ -34,15 +33,9 @@ public class AdminMainView {
             int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-3): ", 0, 3);
 
             switch (choice) {
-                case 1:
-                    computerView.displayMenu();
-                    break;
-                case 2:
-                    serviceView.displayMenu();
-                    break;
-                case 3:
-                    userView.displayMenu();
-                    break;
+                case 1: computerView.displayMenu(); break;
+                case 2: fbMenuView.displayMenu();   break;
+                case 3: userView.displayMenu();     break;
                 case 0:
                     PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Admin...");
                     return;

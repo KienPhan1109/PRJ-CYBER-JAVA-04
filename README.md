@@ -37,7 +37,7 @@
 <summary><b>🛡️ Role: Admin (Quản trị viên)</b></summary>
 
 - Quản lý danh mục Máy Trạm (Thêm, sửa, xoá, bảo trì, cấu hình giá).
-- Quản lý Kho Dịch vụ F&B (Món ăn, nước uống, thẻ cào, combo).
+- Quản lý Kho Dịch vụ F&B (Món ăn, nước uống, thẻ cào, ăn vặt).
 - Phân quyền nhân viên và xem báo cáo tổng quát.
 </details>
 

@@ -1,8 +1,10 @@
 package com.cyber.dao.impl;
+
 import com.cyber.dao.IFbOrderDAO;
 import com.cyber.model.FbOrder;
-import com.cyber.model.OrderDetail;
+
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class FbOrderDAOImpl implements IFbOrderDAO {
@@ -37,34 +39,8 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
     }
 
     @Override
-    public void createOrderDetails(Connection conn, List<OrderDetail> details) throws SQLException {
-        String sql = "INSERT INTO order_details (order_id, item_id, quantity, unit_price) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            for (OrderDetail detail : details) {
-                stmt.setInt(1, detail.getOrderId());
-                stmt.setInt(2, detail.getItemId());
-                stmt.setInt(3, detail.getQuantity());
-                stmt.setBigDecimal(4, detail.getUnitPrice());
-                stmt.addBatch();
-            }
-            stmt.executeBatch();
-        }
-    }
-
-    @Override
-    public boolean hasDependentOrders(Connection conn, int itemId) throws SQLException {
-        String sql = "SELECT 1 FROM order_details WHERE item_id = ? LIMIT 1";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, itemId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                return rs.next();
-            }
-        }
-    }
-
-    @Override
     public List<FbOrder> findAllOrdersByStatus(Connection conn, String status) throws SQLException {
-        List<FbOrder> orders = new java.util.ArrayList<>();
+        List<FbOrder> orders = new ArrayList<>();
         String sql = "SELECT * FROM fb_orders WHERE status = ? ORDER BY created_at ASC";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, status);
@@ -80,6 +56,58 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
                     );
                     order.setOrderId(rs.getInt("order_id"));
                     // User ID if needed in the future
+                    orders.add(order);
+                }
+            }
+        }
+        return orders;
+    }
+
+    @Override
+    public List<FbOrder> findAllActiveOrdersWithDetails(Connection conn) throws SQLException {
+        List<FbOrder> orders = new ArrayList<>();
+        String sql = "SELECT o.*, u.full_name as user_name, c.name as computer_name " +
+                     "FROM fb_orders o " +
+                     "JOIN users u ON o.user_id = u.user_id " +
+                     "LEFT JOIN bookings b ON o.booking_id = b.booking_id " +
+                     "LEFT JOIN computers c ON b.computer_id = c.computer_id " +
+                     "WHERE o.status IN ('PENDING', 'PREPARING') " +
+                     "ORDER BY o.created_at ASC";
+        return executeActiveOrdersQuery(conn, sql, null);
+    }
+
+    @Override
+    public List<FbOrder> findActiveOrdersByUserIdWithDetails(Connection conn, int userId) throws SQLException {
+        String sql = "SELECT o.*, u.full_name as user_name, c.name as computer_name " +
+                     "FROM fb_orders o " +
+                     "JOIN users u ON o.user_id = u.user_id " +
+                     "LEFT JOIN bookings b ON o.booking_id = b.booking_id " +
+                     "LEFT JOIN computers c ON b.computer_id = c.computer_id " +
+                     "WHERE o.status IN ('PENDING', 'PREPARING') AND o.user_id = ? " +
+                     "ORDER BY o.created_at ASC";
+        return executeActiveOrdersQuery(conn, sql, userId);
+    }
+
+    private List<FbOrder> executeActiveOrdersQuery(Connection conn, String sql, Integer userId) throws SQLException {
+        List<FbOrder> orders = new ArrayList<>();
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            if (userId != null) {
+                stmt.setInt(1, userId);
+            }
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int bookingIdVal = rs.getInt("booking_id");
+                    Integer bId = rs.wasNull() ? null : bookingIdVal;
+                    FbOrder order = new FbOrder(
+                        rs.getInt("user_id"),
+                        bId,
+                        rs.getString("status"),
+                        rs.getBigDecimal("total_amount")
+                    );
+                    order.setOrderId(rs.getInt("order_id"));
+                    order.setUserName(rs.getString("user_name"));
+                    String compName = rs.getString("computer_name");
+                    order.setComputerName(compName != null ? compName : "Không có");
                     orders.add(order);
                 }
             }

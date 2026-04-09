@@ -28,7 +28,7 @@ public class BookingService {
         return instance;
     }
 
-    public void bookComputer(int userId, Booking booking) throws BusinessException {
+    public int bookComputer(int userId, Booking booking) throws BusinessException {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
@@ -49,7 +49,7 @@ public class BookingService {
             userDAO.deductBalance(conn, userId, totalCost);
 
             booking.setUserId(userId);
-            bookingDAO.createBooking(conn, booking);
+            int newBookingId = bookingDAO.createBooking(conn, booking);
             
             // Note: Since computer is booked now, should we change computer status to IN_USE?
             com.cyber.dao.IComputerDAO computerDAO = com.cyber.dao.impl.ComputerDAOImpl.getInstance();
@@ -60,6 +60,7 @@ public class BookingService {
             }
             
             conn.commit();
+            return newBookingId;
         } catch (SQLException e) {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException rollbackEx) {}
@@ -82,6 +83,14 @@ public class BookingService {
                     conn.close();
                 } catch (SQLException closeEx) {}
             }
+        }
+    }
+
+    public List<Booking> getActiveBookingsByUserId(int userId) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return bookingDAO.findActiveBookingsByUserId(conn, userId);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách đặt máy: " + e.getMessage());
         }
     }
 }

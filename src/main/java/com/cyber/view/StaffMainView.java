@@ -75,17 +75,17 @@ public class StaffMainView {
                 return;
             }
 
-            System.out.printf("%-10s | %-10s | %-12s | %-15s | %-15s\n", "Order ID", "User ID", "Booking ID", "Tổng Tiền", "Trạng thái");
-            System.out.println("----------------------------------------------------------------------");
+            System.out.printf("%-10s | %-20s | %-15s | %-15s | %-15s\n", "Order ID", "Tên Khách Hàng", "Tên Máy", "Tổng Tiền", "Trạng thái");
+            System.out.println("-------------------------------------------------------------------------------------");
             for (FbOrder order : pendingOrders) {
-                System.out.printf("%-10d | %-10d | %-12s | %-15s | %-15s\n",
+                System.out.printf("%-10d | %-20s | %-15s | %-15s | %-15s\n",
                         order.getOrderId(),
-                        order.getUserId(),
-                        order.getBookingId() != null ? order.getBookingId().toString() : "N/A",
+                        order.getUserName() != null ? truncate(order.getUserName(), 20) : "N/A",
+                        order.getComputerName() != null ? truncate(order.getComputerName(), 15) : "Không có",
                         FormatUtils.formatVND(order.getTotalAmount()),
                         order.getStatus());
             }
-            System.out.println("----------------------------------------------------------------------");
+            System.out.println("-------------------------------------------------------------------------------------");
             System.out.println("Nhập Order ID để cập nhật trạng thái (HOẶC nhập 0 để Quay Lại):");
             int orderId = InputUtils.inputInt("Order ID: ", 0, Integer.MAX_VALUE);
             if (orderId == 0) return;
@@ -106,5 +106,10 @@ public class StaffMainView {
             fbOrderService.updateOrderStatus(orderId, newStatus);
             PrintUtils.printSuccess("Đã cập nhật Order #" + orderId + " sang trạng thái: " + newStatus);
         }
+    }
+
+    private String truncate(String s, int maxLen) {
+        if (s == null) return "";
+        return s.length() <= maxLen ? s : s.substring(0, maxLen - 3) + "...";
     }
 }

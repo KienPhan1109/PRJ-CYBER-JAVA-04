@@ -62,12 +62,4 @@ public class FormatUtils {
         }
     }
 
-    public static String formatServiceItemStatus(com.cyber.model.enums.ServiceItemStatus status) {
-        if (status == null) return "N/A";
-        switch (status) {
-            case ACTIVE: return "\033[32m[ĐANG BÁN]\033[0m";
-            case OUT_OF_STOCK: return "\033[31m[HẾT HÀNG]\033[0m";
-            default: return status.name();
-        }
-    }
 }

@@ -10,6 +10,9 @@ public class Booking {
     private Timestamp endTime;
     private String status;
     private BigDecimal totalFee;
+    
+    // Additional field for display
+    private String computerName;
 
     public Booking(int bookingId, int userId, int computerId, Timestamp startTime, Timestamp endTime, String status, BigDecimal totalFee) {
         this.bookingId = bookingId;
@@ -75,5 +78,13 @@ public class Booking {
 
     public void setTotalFee(BigDecimal totalFee) {
         this.totalFee = totalFee;
+    }
+
+    public String getComputerName() {
+        return computerName;
+    }
+
+    public void setComputerName(String computerName) {
+        this.computerName = computerName;
     }
 }

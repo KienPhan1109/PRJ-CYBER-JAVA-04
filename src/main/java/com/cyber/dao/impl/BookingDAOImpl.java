@@ -56,4 +56,33 @@ public class BookingDAOImpl implements IBookingDAO {
             }
         }
     }
+
+    @Override
+    public java.util.List<Booking> findActiveBookingsByUserId(Connection conn, int userId) throws SQLException {
+        java.util.List<Booking> list = new java.util.ArrayList<>();
+        String sql = "SELECT b.*, c.name as computer_name " +
+                     "FROM bookings b " +
+                     "JOIN computers c ON b.computer_id = c.computer_id " +
+                     "WHERE b.user_id = ? AND b.status IN ('PENDING', 'IN_PROGRESS', 'ACTIVE') " +
+                     "ORDER BY b.start_time DESC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Booking b = new Booking(
+                        rs.getInt("booking_id"),
+                        rs.getInt("user_id"),
+                        rs.getInt("computer_id"),
+                        rs.getTimestamp("start_time"),
+                        rs.getTimestamp("end_time"),
+                        rs.getString("status"),
+                        rs.getBigDecimal("total_fee")
+                    );
+                    b.setComputerName(rs.getString("computer_name"));
+                    list.add(b);
+                }
+            }
+        }
+        return list;
+    }
 }
