@@ -13,6 +13,8 @@ import com.cyber.domain.fb.discount.PercentageDiscountStrategy;
 import com.cyber.exception.BusinessException;
 import com.cyber.model.*;
 import com.cyber.model.enums.ComputerZone;
+import com.cyber.model.enums.FBStatus;
+import com.cyber.model.enums.FbTemperature;
 import com.cyber.service.BookingService;
 import com.cyber.service.ComputerService;
 import com.cyber.service.FbMenuService;
@@ -286,9 +288,9 @@ public class CustomerMainView {
         System.out.println("\n  >> Tuỳ chỉnh món: " + item.getName() + " (Giá gốc: " + FormatUtils.formatVND(item.getBasePrice()) + ")");
 
         // Chọn Size nếu là đồ uống
-        if ("COLD".equalsIgnoreCase(item.getTemperatureLevel())
-                || "HOT".equalsIgnoreCase(item.getTemperatureLevel())
-                || "ICED".equalsIgnoreCase(item.getTemperatureLevel())) {
+        if (item.getTemperatureLevel() == FbTemperature.COLD
+                || item.getTemperatureLevel() == FbTemperature.HOT
+                || item.getTemperatureLevel() == FbTemperature.ICED) {
             System.out.println("  Chọn size: 1=M (giữ nguyên)  2=L (+10.000đ)  3=S (giữ nguyên)");
             int sizeChoice = InputUtils.inputInt("  Chọn size (1-3): ", 1, 3);
             SizeDecorator.SizeType sizeType = sizeChoice == 2
@@ -357,16 +359,21 @@ public class CustomerMainView {
         System.out.println("\n" + "=".repeat(100));
         System.out.println("  MENU F&B");
         System.out.println("=".repeat(100));
-        System.out.printf("%-5s | %-10s | %-28s | %-12s | %-6s | %-8s | %-15s%n",
+        System.out.printf("%-5s | %-10s | %-28s | %-12s | %-8s | %-6s | %-15s%n",
                 "ID", "Danh mục", "Tên món", "Giá gốc", "Tồn kho", "T.gian", "Tags");
         System.out.println("-".repeat(100));
         for (FbMenuItem m : menuItems) {
-            System.out.printf("%-5d | %-10s | %-28s | %-12s | %-6d | %-6d' | %-15s%n",
+            String stockStr = m.getStockQuantity() > 0 ? String.valueOf(m.getStockQuantity()) : "[HẾT HÀNG]";
+            String nameCol = m.getStatus() == FBStatus.OUT_OF_STOCK 
+                             ? PrintUtils.colorText(m.getName(), "YELLOW") 
+                             : m.getName();
+
+            System.out.printf("%-5d | %-10s | %-28s | %-12s | %-8s | %-6d' | %-15s%n",
                     m.getMenuItemId(),
                     m.getCategoryName() != null ? m.getCategoryName() : "-",
-                    m.getName(),
+                    nameCol,
                     FormatUtils.formatVND(m.getBasePrice()),
-                    m.getStockQuantity(),
+                    stockStr,
                     m.getPrepTimeInMinutes(),
                     m.getItemTags() != null ? m.getItemTags() : "-");
         }

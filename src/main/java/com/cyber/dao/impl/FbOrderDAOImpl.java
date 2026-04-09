@@ -2,6 +2,7 @@ package com.cyber.dao.impl;
 
 import com.cyber.dao.IFbOrderDAO;
 import com.cyber.model.FbOrder;
+import com.cyber.model.enums.FbOrderStatus;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -39,23 +40,26 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
     }
 
     @Override
-    public List<FbOrder> findAllOrdersByStatus(Connection conn, String status) throws SQLException {
+    public List<FbOrder> findAllOrdersByStatus(Connection conn, FbOrderStatus status) throws SQLException {
         List<FbOrder> orders = new ArrayList<>();
         String sql = "SELECT * FROM fb_orders WHERE status = ? ORDER BY created_at ASC";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, status);
+            stmt.setString(1, status.name());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     int bookingIdVal = rs.getInt("booking_id");
                     Integer bId = rs.wasNull() ? null : bookingIdVal;
+                    
+                    String statusStr = rs.getString("status");
+                    FbOrderStatus s = FbOrderStatus.valueOf(statusStr.toUpperCase());
+                    
                     FbOrder order = new FbOrder(
                         rs.getInt("user_id"),
                         bId,
-                        rs.getString("status"),
+                        s,
                         rs.getBigDecimal("total_amount")
                     );
                     order.setOrderId(rs.getInt("order_id"));
-                    // User ID if needed in the future
                     orders.add(order);
                 }
             }
@@ -98,10 +102,14 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
                 while (rs.next()) {
                     int bookingIdVal = rs.getInt("booking_id");
                     Integer bId = rs.wasNull() ? null : bookingIdVal;
+                    
+                    String statusStr = rs.getString("status");
+                    FbOrderStatus s = FbOrderStatus.valueOf(statusStr.toUpperCase());
+
                     FbOrder order = new FbOrder(
                         rs.getInt("user_id"),
                         bId,
-                        rs.getString("status"),
+                        s,
                         rs.getBigDecimal("total_amount")
                     );
                     order.setOrderId(rs.getInt("order_id"));
@@ -116,10 +124,10 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
     }
 
     @Override
-    public void updateOrderStatus(Connection conn, int orderId, String newStatus) throws SQLException {
+    public void updateOrderStatus(Connection conn, int orderId, FbOrderStatus newStatus) throws SQLException {
         String sql = "UPDATE fb_orders SET status = ? WHERE order_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, newStatus);
+            stmt.setString(1, newStatus.name());
             stmt.setInt(2, orderId);
             stmt.executeUpdate();
         }

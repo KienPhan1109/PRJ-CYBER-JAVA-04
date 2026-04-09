@@ -12,6 +12,7 @@ import com.cyber.dao.impl.FbOrderDetailDAOImpl;
 import com.cyber.exception.BusinessException;
 import com.cyber.model.FbOrder;
 import com.cyber.model.User;
+import com.cyber.model.enums.FbOrderStatus;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -69,7 +70,7 @@ public class FbOrderService {
         }
     }
 
-    public void updateOrderStatus(int orderId, String newStatus) throws BusinessException {
+    public void updateOrderStatus(int orderId, FbOrderStatus newStatus) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             orderDAO.updateOrderStatus(conn, orderId, newStatus);
         } catch (SQLException e) {
@@ -127,7 +128,7 @@ public class FbOrderService {
             userDAO.deductBalance(conn, userId, totalAmount);
 
             // 4. Tạo fb_order header
-            FbOrder newOrder = new FbOrder(userId, bookingId, "PENDING", totalAmount);
+            FbOrder newOrder = new FbOrder(userId, bookingId, FbOrderStatus.PENDING, totalAmount);
             int newOrderId = orderDAO.createOrder(conn, newOrder);
 
             // 5. Lưu từng cart item + trừ stock

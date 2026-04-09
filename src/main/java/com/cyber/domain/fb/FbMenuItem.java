@@ -1,5 +1,6 @@
 package com.cyber.domain.fb;
-
+import com.cyber.model.enums.FBStatus;
+import com.cyber.model.enums.FbTemperature;
 import java.math.BigDecimal;
 
 /**
@@ -18,8 +19,8 @@ public class FbMenuItem {
     private int    prepTimeInMinutes;   // Thời gian chuẩn bị (phút)
     private String itemTags;            // "Spicy,Vegan,BestSeller"
     private String availability;        // "ALL" hoặc "06:00-22:00"
-    private String temperatureLevel;    // HOT / COLD / ICED / NONE
-    private String status;              // ACTIVE / OUT_OF_STOCK / HIDDEN
+    private FbTemperature temperatureLevel;    // HOT / COLD / ICED / NONE
+    private FBStatus status;              // ACTIVE / OUT_OF_STOCK / HIDDEN
 
     public FbMenuItem() {}
 
@@ -27,7 +28,7 @@ public class FbMenuItem {
                       String description, BigDecimal basePrice,
                       int stockQuantity, int prepTimeInMinutes,
                       String itemTags, String availability,
-                      String temperatureLevel, String status) {
+                      FbTemperature temperatureLevel, FBStatus status) {
         this.menuItemId       = menuItemId;
         this.categoryId       = categoryId;
         this.name             = name;
@@ -74,9 +75,9 @@ public class FbMenuItem {
     public String getAvailability() { return availability; }
     public void setAvailability(String availability) { this.availability = availability; }
 
-    public String getTemperatureLevel() { return temperatureLevel; }
-    public void setTemperatureLevel(String temperatureLevel) { this.temperatureLevel = temperatureLevel; }
+    public FbTemperature getTemperatureLevel() { return temperatureLevel; }
+    public void setTemperatureLevel(FbTemperature temperatureLevel) { this.temperatureLevel = temperatureLevel; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public FBStatus getStatus() { return status; }
+    public void setStatus(FBStatus status) { this.status = status; }
 }

@@ -3,6 +3,7 @@ package com.cyber.view;
 import com.cyber.exception.BusinessException;
 import com.cyber.model.FbOrder;
 import com.cyber.model.User;
+import com.cyber.model.enums.FbOrderStatus;
 import com.cyber.service.FbOrderService;
 import com.cyber.service.UserService;
 import com.cyber.util.FormatUtils;
@@ -78,12 +79,21 @@ public class StaffMainView {
             System.out.printf("%-10s | %-20s | %-15s | %-15s | %-15s\n", "Order ID", "Tên Khách Hàng", "Tên Máy", "Tổng Tiền", "Trạng thái");
             System.out.println("-------------------------------------------------------------------------------------");
             for (FbOrder order : pendingOrders) {
-                System.out.printf("%-10d | %-20s | %-15s | %-15s | %-15s\n",
+                String stStr = order.getStatus() != null ? order.getStatus().name() : "N/A";
+                String coloredSt = switch (stStr) {
+                    case "PENDING"   -> PrintUtils.colorText(stStr, "YELLOW");
+                    case "PREPARING" -> PrintUtils.colorText(stStr, "CYAN");
+                    case "DELIVERED" -> PrintUtils.colorText(stStr, "GREEN");
+                    case "CANCELLED" -> PrintUtils.colorText(stStr, "RED");
+                    default -> stStr;
+                };
+
+                System.out.printf("%-10d | %-20s | %-15s | %-15s | %-24s\n",
                         order.getOrderId(),
                         order.getUserName() != null ? truncate(order.getUserName(), 20) : "N/A",
                         order.getComputerName() != null ? truncate(order.getComputerName(), 15) : "Không có",
                         FormatUtils.formatVND(order.getTotalAmount()),
-                        order.getStatus());
+                        coloredSt);
             }
             System.out.println("-------------------------------------------------------------------------------------");
             System.out.println("Nhập Order ID để cập nhật trạng thái (HOẶC nhập 0 để Quay Lại):");
@@ -102,7 +112,9 @@ public class StaffMainView {
             System.out.println("3. Hủy bỏ (CANCELLED)");
             int action = InputUtils.inputInt("Chọn thao tác (1-3): ", 1, 3);
             
-            String newStatus = action == 1 ? "PREPARING" : (action == 2 ? "DELIVERED" : "CANCELLED");
+            FbOrderStatus newStatus = action == 1 ? FbOrderStatus.PREPARING 
+                                    : (action == 2 ? FbOrderStatus.DELIVERED : FbOrderStatus.CANCELLED);
+                                    
             fbOrderService.updateOrderStatus(orderId, newStatus);
             PrintUtils.printSuccess("Đã cập nhật Order #" + orderId + " sang trạng thái: " + newStatus);
         }

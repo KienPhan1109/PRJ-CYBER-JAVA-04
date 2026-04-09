@@ -11,7 +11,6 @@ import com.cyber.util.InputUtils;
  * Presentation layer responsible for handling the Authentication console UI.
  */
 public class AuthView {
-    
     private final AuthService authService;
     private User currentUser;
 
@@ -36,15 +35,12 @@ public class AuthView {
             int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-2): ", 0, 2);
             
             switch (choice) {
-                case 1:
-                    handleLogin();
-                    break;
-                case 2:
-                    handleRegister();
-                    break;
-                case 0:
+                case 1 -> handleLogin();
+                case 2 -> handleRegister();
+                case 0 -> {
                     System.out.println("Cảm ơn bạn đã sử dụng hệ thống. Hẹn gặp lại!");
                     System.exit(0);
+                }
             }
         }
     }
@@ -54,8 +50,8 @@ public class AuthView {
      * Contains built-in try-catch logic allowing continuous retry on failure.
      */
     private void handleLogin() {
-        System.out.println("\n--- ĐĂNG NHẬP ---");
         while (true) {
+            System.out.println("\n--- ĐĂNG NHẬP HỆ THỐNG CYBER GAMING & F&B ---");
             String username = InputUtils.inputString("Tài khoản: ");
             String password = InputUtils.inputPassword("Mật khẩu: ");
             
@@ -70,13 +66,11 @@ public class AuthView {
                 String role = currentUser.getRole() != null ? currentUser.getRole().getRoleName().toUpperCase() : "CUSTOMER";
                 String name = currentUser.getFullName() != null ? currentUser.getFullName() : username;
 
-                if ("ADMIN".equals(role)) {
-                    System.out.println("Xin chào Admin " + name + ", đang chuyển vào màn hình Quản trị...");
-                } else if ("STAFF".equals(role)) {
-                    System.out.println("Xin chào Nhân viên " + name + ", đang chuyển vào màn hình Thu ngân/Phục vụ...");
-                } else {
-                    System.out.println("Xin chào " + name + ", chúc bạn trải nghiệm dịch vụ vui vẻ!");
-                }
+                if ("ADMIN".equals(role)) System.out.println("Xin chào Admin " + name + ", đang chuyển vào màn hình Quản trị...");
+
+                else if ("STAFF".equals(role)) System.out.println("Xin chào Nhân viên " + name + ", đang chuyển vào màn hình Thu ngân/Phục vụ...");
+
+                else System.out.println("Xin chào " + name + ", chúc bạn trải nghiệm dịch vụ vui vẻ!");
                 
                 break; // Break loop, return control back to Main or displayAuthMenu (which collapses since currentUser != null)
                 
@@ -92,7 +86,7 @@ public class AuthView {
      * Sub-routine handling the logic for new user registration.
      */
     private void handleRegister() {
-        System.out.println("\n--- ĐĂNG KÝ TÀI KHOẢN ---");
+        System.out.println("\n--- ĐĂNG KÝ TÀI KHOẢN HỆ THỐNG CYBER GAMING & F&B ---");
         while (true) {
             User newUser = new User();
             String rawPassword = newUser.inputRegisterData();

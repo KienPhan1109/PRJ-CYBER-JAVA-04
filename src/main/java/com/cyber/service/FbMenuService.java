@@ -45,13 +45,24 @@ public class FbMenuService {
     // -------------------------------------------------------
 
     /**
-     * Lấy toàn bộ menu đang ACTIVE.
+     * Lấy toàn bộ menu đang ACTIVE hoặc OUT_OF_STOCK (cho User).
      */
     public List<FbMenuItem> getAllActiveMenuItems() throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             return menuItemDAO.findAllActive(conn);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách menu: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Lấy toàn bộ menu bao gồm cả HIDDEN (cho Admin).
+     */
+    public List<FbMenuItem> getAllMenuItemsForAdmin() throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return menuItemDAO.findAll(conn);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách menu toàn bộ: " + e.getMessage());
         }
     }
 

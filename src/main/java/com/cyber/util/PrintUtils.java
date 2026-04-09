@@ -6,6 +6,23 @@ public class PrintUtils {
     private static final String ANSI_RED = "\033[31m";
     private static final String ANSI_GREEN = "\033[32m";
     private static final String ANSI_YELLOW = "\033[33m";
+    private static final String ANSI_BLUE = "\033[34m";
+    private static final String ANSI_PURPLE = "\033[35m";
+    private static final String ANSI_CYAN = "\033[36m";
+    private static final String ANSI_WHITE = "\033[37m";
+
+    public static String colorText(String text, String color) {
+        String code = switch (color.toUpperCase()) {
+            case "RED" -> ANSI_RED;
+            case "GREEN" -> ANSI_GREEN;
+            case "YELLOW" -> ANSI_YELLOW;
+            case "BLUE" -> ANSI_BLUE;
+            case "PURPLE" -> ANSI_PURPLE;
+            case "CYAN" -> ANSI_CYAN;
+            default -> ANSI_RESET;
+        };
+        return code + text + ANSI_RESET;
+    }
 
     /**
      * In ra thông báo thành công với màu Xanh Lá

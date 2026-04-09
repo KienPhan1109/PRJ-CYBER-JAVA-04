@@ -1,5 +1,9 @@
 package com.cyber.util;
 
+import com.cyber.model.enums.ComputerStatus;
+import com.cyber.model.enums.FBStatus;
+import com.cyber.model.enums.FbTemperature;
+
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -9,7 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 public class FormatUtils {
-    private static final Locale VN_LOCALE = new Locale("vi", "VN");
+    private static final Locale VN_LOCALE = Locale.of("vi", "VN");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
@@ -52,14 +56,31 @@ public class FormatUtils {
         return String.format("%s-%03d", prefix, id);
     }
 
-    public static String formatComputerStatus(com.cyber.model.enums.ComputerStatus status) {
+    public static String formatComputerStatus(ComputerStatus status) {
         if (status == null) return "N/A";
-        switch (status) {
-            case AVAILABLE: return "\033[32m[SẴN SÀNG]\033[0m";
-            case IN_USE: return "\033[31m[ĐANG SỬ DỤNG]\033[0m";
-            case MAINTENANCE: return "\033[33m[BẢO TRÌ]\033[0m";
-            default: return status.name();
-        }
+        return switch (status) {
+            case AVAILABLE -> "\033[32m[SẴN SÀNG]" + ColorConst.RESET;
+            case IN_USE -> "\033[31m[ĐANG SỬ DỤNG]" + ColorConst.RESET;
+            case MAINTENANCE -> "\033[33m[BẢO TRÌ]" + ColorConst.RESET;
+        };
     }
 
+    public static String formatFbTemperature(FbTemperature temperature) {
+        if (temperature == null) return "N/A";
+        return switch (temperature) {
+            case HOT ->  ColorConst.RED + "HOT" + ColorConst.RESET;
+            case COLD -> ColorConst.BLUE + "COLD" + ColorConst.RESET;
+            case ICED -> ColorConst.CYAN + "ICED" + ColorConst.RESET;
+            case NONE -> ColorConst.WHITE + "NONE" + ColorConst.RESET;
+        };
+    }
+
+    public static String formatFbStatus(FBStatus status) {
+        if (status == null) return "N/A";
+        return switch (status) {
+            case ACTIVE ->  ColorConst.GREEN + "ACTIVE" + ColorConst.RESET;
+            case OUT_OF_STOCK -> ColorConst.YELLOW + "OUT_OF_STOCK" + ColorConst.RESET;
+            case HIDDEN -> ColorConst.RED + "HIDDEN" + ColorConst.RESET;
+        };
+    }
 }

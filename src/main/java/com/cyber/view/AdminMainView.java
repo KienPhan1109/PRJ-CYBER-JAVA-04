@@ -25,7 +25,7 @@ public class AdminMainView {
             System.out.println("        Xin chào: " + adminUser.getFullName());
             System.out.println("==========================================");
             System.out.println("1. Quản lý Máy trạm");
-            System.out.println("2. Quản lý Menu F&B (Nâng cao)");
+            System.out.println("2. Quản lý Menu F&B");
             System.out.println("3. Quản lý hệ thống Người dùng");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
@@ -33,12 +33,13 @@ public class AdminMainView {
             int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-3): ", 0, 3);
 
             switch (choice) {
-                case 1: computerView.displayMenu(); break;
-                case 2: fbMenuView.displayMenu();   break;
-                case 3: userView.displayMenu();     break;
-                case 0:
+                case 1 -> computerView.displayMenu();
+                case 2 -> fbMenuView.displayMenu();
+                case 3 -> userView.displayMenu();
+                case 0 -> {
                     PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Admin...");
                     return;
+                }
             }
         }
     }

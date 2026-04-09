@@ -1,18 +1,19 @@
 package com.cyber.model;
+import com.cyber.model.enums.FbOrderStatus;
 import java.math.BigDecimal;
 
 public class FbOrder {
     private int orderId;
     private int userId;
     private Integer bookingId;
-    private String status;
+    private FbOrderStatus status;
     private BigDecimal totalAmount;
     
     // Additional fields for display
     private String userName;
     private String computerName;
 
-    public FbOrder(int userId, Integer bookingId, String status, BigDecimal totalAmount) {
+    public FbOrder(int userId, Integer bookingId, FbOrderStatus status, BigDecimal totalAmount) {
         this.userId = userId;
         this.bookingId = bookingId;
         this.status = status;
@@ -43,11 +44,11 @@ public class FbOrder {
         this.bookingId = bookingId;
     }
 
-    public String getStatus() {
+    public FbOrderStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(FbOrderStatus status) {
         this.status = status;
     }
 

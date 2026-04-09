@@ -11,7 +11,6 @@ import com.cyber.util.InputUtils;
 import java.util.List;
 
 public class ComputerManagementView {
-
     private final ComputerService computerService;
 
     public ComputerManagementView() {
@@ -20,30 +19,26 @@ public class ComputerManagementView {
 
     public void displayMenu() {
         while (true) {
-            System.out.println("\n--- QUẢN LÝ MÁY TRẠM ---");
+            System.out.println("\n====================================");
+            System.out.println("          QUẢN LÝ MÁY TRẠM          ");
+            System.out.println("====================================");
             System.out.println("1. Xem danh sách máy");
             System.out.println("2. Thêm máy trạm mới");
             System.out.println("3. Sửa thông tin máy");
             System.out.println("4. Xoá máy trạm");
             System.out.println("0. Quay lại");
+            System.out.println("====================================");
 
             int choice = InputUtils.inputInt("Chọn chức năng (0-4): ", 0, 4);
 
             switch (choice) {
-                case 1:
-                    displayList();
-                    break;
-                case 2:
-                    handleAdd();
-                    break;
-                case 3:
-                    handleEdit();
-                    break;
-                case 4:
-                    handleDelete();
-                    break;
-                case 0:
+                case 1 -> displayList();
+                case 2 -> handleAdd();
+                case 3 -> handleEdit();
+                case 4 -> handleDelete();
+                case 0 -> {
                     return;
+                }
             }
         }
     }
@@ -51,15 +46,17 @@ public class ComputerManagementView {
     private void displayList() {
         try {
             List<Computer> computers = computerService.getAllComputers();
-            System.out.println("\n==========================================================================================================");
-            System.out.printf("%-10s | %-15s | %-15s | %-30s | %-12s | %-15s%n", "ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá/Giờ");
-            System.out.println("----------------------------------------------------------------------------------------------------------");
+            System.out.println("\n========================================================================================================================================");
+            System.out.println("                                                     DANH SÁCH MÁY TOÀN HỆ THỐNG                                                        ");
+            System.out.println("========================================================================================================================================");
+            System.out.printf("%-7s | %-15s | %-15s | %-50s | %-18s | %-15s\n", "ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá / Giờ");
+            System.out.println("----------------------------------------------------------------------------------------------------------------------------------------");
             
             if (computers.isEmpty()) {
                 System.out.println("Chưa có dữ liệu máy trạm trong hệ thống.");
             } else {
                 for (Computer c : computers) {
-                    System.out.printf("%-10s | %-15s | %-15s | %-30s | %-12s | %-15s%n",
+                    System.out.printf("%-7s | %-15s | %-15s | %-50s | %-27s | %-15s\n",
                             FormatUtils.formatId("C", c.getComputerId()),
                             c.getName(),
                             c.getZone() != null ? c.getZone().name() : "N/A",
@@ -68,7 +65,7 @@ public class ComputerManagementView {
                             FormatUtils.formatVND(c.getPricePerHour()));
                 }
             }
-            System.out.println("==========================================================================================================");
+            System.out.println("========================================================================================================================================");
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }

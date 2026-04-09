@@ -13,9 +13,14 @@ import java.util.List;
 public interface IFbMenuItemDAO {
 
     /**
-     * Lấy tất cả món đang ACTIVE (kèm categoryName bằng JOIN).
+     * Lấy tất cả món đang ACTIVE hoặc OUT_OF_STOCK (kèm categoryName bằng JOIN).
      */
     List<FbMenuItem> findAllActive(Connection conn) throws SQLException;
+
+    /**
+     * Lấy tất cả món (bao gồm cả HIDDEN).
+     */
+    List<FbMenuItem> findAll(Connection conn) throws SQLException;
 
     /**
      * Tìm món theo ID (bất kể status).

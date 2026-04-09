@@ -2,6 +2,8 @@ package com.cyber.view;
 
 import com.cyber.domain.fb.FbMenuItem;
 import com.cyber.exception.BusinessException;
+import com.cyber.model.enums.FBStatus;
+import com.cyber.model.enums.FbTemperature;
 import com.cyber.service.FbMenuService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
@@ -26,22 +28,26 @@ public class FbMenuManagementView {
 
     public void displayMenu() {
         while (true) {
-            System.out.println("\n--- QUẢN LÝ MENU F&B NÂNG CAO ---");
+            System.out.println("\n==================================");
+            System.out.println("         QUẢN LÝ MENU F&B         ");
+            System.out.println("==================================");
             System.out.println("1. Xem danh sách Menu");
             System.out.println("2. Thêm món mới vào Menu");
             System.out.println("3. Sửa thông tin món");
-            System.out.println("4. Ẩn/Xoá mềm món");
+            System.out.println("4. Xoá món");
             System.out.println("5. Quản lý Topping");
             System.out.println("0. Quay lại");
 
             int choice = InputUtils.inputInt("Chọn chức năng (0-5): ", 0, 5);
             switch (choice) {
-                case 1: displayMenuList();  break;
-                case 2: handleAddItem();    break;
-                case 3: handleEditItem();   break;
-                case 4: handleDeleteItem(); break;
-                case 5: manageToppings();   break;
-                case 0: return;
+                case 1 -> displayMenuList();
+                case 2 -> handleAddItem();
+                case 3 -> handleEditItem();
+                case 4 -> handleDeleteItem();
+                case 5 -> manageToppings();
+                case 0 -> {
+                    return;
+                }
             }
         }
     }
@@ -51,28 +57,31 @@ public class FbMenuManagementView {
     // -------------------------------------------------------
     private void displayMenuList() {
         try {
-            List<FbMenuItem> items = menuService.getAllActiveMenuItems();
-            System.out.println("\n" + "=".repeat(130));
-            System.out.printf("%-5s | %-10s | %-25s | %-12s | %-7s | %-6s | %-20s | %-8s | %-6s%n",
-                    "ID", "Danh mục", "Tên món", "Giá gốc", "Tồn kho", "T.gian", "Tags", "Nhiệt độ", "Giờ phục vụ");
-            System.out.println("-".repeat(130));
+            List<FbMenuItem> items = menuService.getAllMenuItemsForAdmin();
+            System.out.println("\n====================================================================================================================================================");
+            System.out.println("                                                              DANH SÁCH MÓN TOÀN HỆ THỐNG                                                             ");
+            System.out.println("====================================================================================================================================================");
+            System.out.printf("%-6s | %-10s | %-25s | %-12s | %-8s | %-6s | %-20s | %-10s | %-11s | %-24s\n",
+                    "ID", "Danh mục", "Tên món", "Giá gốc", "Tồn kho", "T.gian", "Tags", "Nhiệt độ", "Giờ phục vụ", "Trạng thái");
+            System.out.println("----------------------------------------------------------------------------------------------------------------------------------------------------");
             if (items.isEmpty()) {
                 System.out.println("  Chưa có món nào trong menu.");
             } else {
                 for (FbMenuItem item : items) {
-                    System.out.printf("%-5d | %-10s | %-25s | %-12s | %-7d | %-6d | %-20s | %-8s | %-6s%n",
-                            item.getMenuItemId(),
-                            item.getCategoryName() != null ? item.getCategoryName() : "-",
+                    System.out.printf("%-6s | %-10s | %-25s | %-12s | %-8d | %-6d | %-20s | %-19s | %-11s | %-24s\n",
+                            FormatUtils.formatId("IT", item.getMenuItemId()),
+                            item.getCategoryName() != null ? item.getCategoryName() : "N/A",
                             item.getName(),
                             FormatUtils.formatVND(item.getBasePrice()),
                             item.getStockQuantity(),
                             item.getPrepTimeInMinutes(),
-                            item.getItemTags() != null ? item.getItemTags() : "-",
-                            item.getTemperatureLevel() != null ? item.getTemperatureLevel() : "-",
-                            item.getAvailability() != null ? item.getAvailability() : "ALL");
+                            item.getItemTags() != null ? item.getItemTags() : "N/A",
+                            FormatUtils.formatFbTemperature(item.getTemperatureLevel()),
+                            item.getAvailability() != null ? item.getAvailability() : "ALL",
+                            FormatUtils.formatFbStatus(item.getStatus()));
                 }
             }
-            System.out.println("=".repeat(130));
+            System.out.println("====================================================================================================================================================");
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }
@@ -83,24 +92,27 @@ public class FbMenuManagementView {
     // -------------------------------------------------------
     private void handleAddItem() {
         System.out.println("\n--- THÊM MÓN MỚI VÀO MENU ---");
-        System.out.println("Danh mục: 1=FOOD  2=DRINK  3=SNACK");
-
-        int catChoice = InputUtils.inputInt("Chọn danh mục (1-3): ", 1, 3);
-        // Seed data: FOOD=1, DRINK=2, SNACK=3
-        int categoryId = catChoice;
+        System.out.println("Chọn danh mục:");
+        System.out.println("1. FOOD | 2. DRINK | 3.SNACK");
+        int categoryId = InputUtils.inputInt("Lựa chọn (1-3): ", 1, 3);
 
         String name = InputUtils.inputString("Tên món: ");
         String desc = InputUtils.inputString("Mô tả: ");
         BigDecimal price = InputUtils.inputBigDecimal("Giá gốc (VND): ", BigDecimal.ZERO);
-        int stock = InputUtils.inputInt("Tồn kho ban đầu: ", 0, 99999);
+        int stock = InputUtils.inputInt("Tồn kho ban đầu: ", 1, 99999);
         int prepTime = InputUtils.inputInt("Thời gian chuẩn bị (phút): ", 0, 120);
         String tags = InputUtils.inputString("Tags (VD: Spicy,Vegan,BestSeller): ");
         String availability = InputUtils.inputString("Khung giờ phục vụ (ALL hoặc VD: 06:00-22:00): ");
 
-        System.out.println("Nhiệt độ: 1=HOT  2=COLD  3=ICED  4=NONE");
-        int tempChoice = InputUtils.inputInt("Chọn (1-4): ", 1, 4);
-        String[] tempValues = {"HOT", "COLD", "ICED", "NONE"};
-        String temperatureLevel = tempValues[tempChoice - 1];
+        System.out.println("Chọn nhiệt độ:");
+        System.out.println("1. HOT | 2. COLD | 3. ICED | 4. NONE");
+        int tempChoice = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
+        FbTemperature temperatureLevel = switch (tempChoice) {
+            case 1 -> FbTemperature.HOT;
+            case 2 -> FbTemperature.COLD;
+            case 3 -> FbTemperature.ICED;
+            default -> FbTemperature.NONE;
+        };
 
         FbMenuItem newItem = new FbMenuItem();
         newItem.setCategoryId(categoryId);
@@ -112,7 +124,7 @@ public class FbMenuManagementView {
         newItem.setItemTags(tags);
         newItem.setAvailability(availability);
         newItem.setTemperatureLevel(temperatureLevel);
-        newItem.setStatus(stock == 0 ? "OUT_OF_STOCK" : "ACTIVE");
+        newItem.setStatus(stock == 0 ? FBStatus.OUT_OF_STOCK : FBStatus.ACTIVE);
 
         try {
             int newId = menuService.createMenuItem(newItem);
@@ -155,7 +167,7 @@ public class FbMenuManagementView {
             existing.setPrepTimeInMinutes(prepTime);
             existing.setItemTags(tags);
             existing.setAvailability(avail);
-            existing.setStatus(stock == 0 ? "OUT_OF_STOCK" : "ACTIVE");
+            existing.setStatus(stock == 0 ? FBStatus.OUT_OF_STOCK : FBStatus.ACTIVE);
 
             menuService.updateMenuItem(existing);
             PrintUtils.printSuccess("Cập nhật món thành công!");

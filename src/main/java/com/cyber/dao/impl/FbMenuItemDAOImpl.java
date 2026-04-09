@@ -32,7 +32,13 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             "SELECT m.*, c.category_name " +
             "FROM fb_menu_items m " +
             "JOIN fb_categories c ON m.category_id = c.category_id " +
-            "WHERE m.status = 'ACTIVE' " +
+            "WHERE m.status IN ('ACTIVE', 'OUT_OF_STOCK') " +
+            "ORDER BY c.category_name, m.name";
+
+    private static final String SQL_FIND_ALL =
+            "SELECT m.*, c.category_name " +
+            "FROM fb_menu_items m " +
+            "JOIN fb_categories c ON m.category_id = c.category_id " +
             "ORDER BY c.category_name, m.name";
 
     private static final String SQL_FIND_BY_ID =
@@ -63,7 +69,9 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             "UPDATE fb_menu_items SET status='HIDDEN' WHERE menu_item_id=?";
 
     private static final String SQL_DEDUCT_STOCK =
-            "UPDATE fb_menu_items SET stock_quantity = stock_quantity - ? " +
+            "UPDATE fb_menu_items " +
+            "SET stock_quantity = stock_quantity - ?, " +
+            "    status = CASE WHEN stock_quantity - ? = 0 THEN 'OUT_OF_STOCK' ELSE status END " +
             "WHERE menu_item_id = ? AND stock_quantity >= ?";
 
     // -------------------------------------------------------
@@ -74,6 +82,18 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     public List<FbMenuItem> findAllActive(Connection conn) throws SQLException {
         List<FbMenuItem> result = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(SQL_FIND_ALL_ACTIVE);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                result.add(mapRow(rs));
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<FbMenuItem> findAll(Connection conn) throws SQLException {
+        List<FbMenuItem> result = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(SQL_FIND_ALL);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 result.add(mapRow(rs));
@@ -120,8 +140,8 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             ps.setInt   (6, item.getPrepTimeInMinutes());
             ps.setString(7, item.getItemTags());
             ps.setString(8, item.getAvailability());
-            ps.setString(9, item.getTemperatureLevel());
-            ps.setString(10, item.getStatus() != null ? item.getStatus() : "ACTIVE");
+            ps.setString(9, item.getTemperatureLevel() != null ? item.getTemperatureLevel().name() : null);
+            ps.setString(10, item.getStatus() != null ? item.getStatus().name() : "ACTIVE");
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) return keys.getInt(1);
@@ -141,8 +161,8 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             ps.setInt   (6, item.getPrepTimeInMinutes());
             ps.setString(7, item.getItemTags());
             ps.setString(8, item.getAvailability());
-            ps.setString(9, item.getTemperatureLevel());
-            ps.setString(10, item.getStatus());
+            ps.setString(9, item.getTemperatureLevel() != null ? item.getTemperatureLevel().name() : null);
+            ps.setString(10, item.getStatus() != null ? item.getStatus().name() : "ACTIVE");
             ps.setInt   (11, item.getMenuItemId());
             ps.executeUpdate();
         }
@@ -160,8 +180,9 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     public void deductStock(Connection conn, int menuItemId, int quantity) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(SQL_DEDUCT_STOCK)) {
             ps.setInt(1, quantity);
-            ps.setInt(2, menuItemId);
-            ps.setInt(3, quantity); // WHERE stock_quantity >= quantity
+            ps.setInt(2, quantity); // For CASE check
+            ps.setInt(3, menuItemId);
+            ps.setInt(4, quantity); // WHERE stock_quantity >= quantity
             int rows = ps.executeUpdate();
             if (rows == 0) {
                 throw new SQLException("Không đủ tồn kho cho menu_item_id=" + menuItemId
@@ -187,8 +208,24 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
         item.setPrepTimeInMinutes(rs.getInt  ("prep_time_minutes"));
         item.setItemTags        (rs.getString("item_tags"));
         item.setAvailability    (rs.getString("availability"));
-        item.setTemperatureLevel(rs.getString("temperature_level"));
-        item.setStatus          (rs.getString("status"));
+        
+        String tempStr = rs.getString("temperature_level");
+        if (tempStr != null && !tempStr.isEmpty()) {
+            try {
+                item.setTemperatureLevel(com.cyber.model.enums.FbTemperature.valueOf(tempStr.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Ignore or handle
+            }
+        }
+        
+        String statusStr = rs.getString("status");
+        if (statusStr != null && !statusStr.isEmpty()) {
+            try {
+                item.setStatus(com.cyber.model.enums.FBStatus.valueOf(statusStr.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                item.setStatus(com.cyber.model.enums.FBStatus.ACTIVE);
+            }
+        }
         return item;
     }
 }
