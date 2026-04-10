@@ -59,17 +59,19 @@ public class CustomerMainView {
             System.out.println("2. Đặt đồ ăn / Thức uống (F&B)");
             System.out.println("3. Xem lịch sử / trạng thái món đã đặt (F&B)");
             System.out.println("4. Tra cứu & Ngắt máy trạm (Session Status)");
+            System.out.println("5. Đặt máy trước (Cọc 1h)");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-4): ", 0, 4);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-5): ", 0, 5);
 
             try {
                 switch (choice) {
-                    case 1: bookComputerFlow(); break;
-                    case 2: orderFoodFlow();    break;
-                    case 3: viewCurrentStatus(); break;
+                    case 1: bookComputerFlow();     break;
+                    case 2: orderFoodFlow();        break;
+                    case 3: viewCurrentStatus();    break;
                     case 4: displayCurrentSession(); break;
+                    case 5: reserveComputerFlow();  break;
                     case 0:
                         PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Khách hàng...");
                         return;
@@ -265,6 +267,96 @@ public class CustomerMainView {
             PrintUtils.printWarning("Vui lòng chờ Nhân viên (Staff) phê duyệt. Máy sẽ được bật sau khi được duyệt.");
         } else {
             System.out.println("Đã hủy đặt máy.");
+        }
+    }
+
+    // -------------------------------------------------------
+    // Chế độ 2: Đặt máy trước (Reservation + Cọc 1h)
+    // -------------------------------------------------------
+
+    private void reserveComputerFlow() throws BusinessException {
+        System.out.println("\n--- ĐẶT MÁY TRƯỚC (CỌc 1 GIờ) ---");
+        System.out.println("Lưu ý: Bạn sẽ bị trừ tiền cọc bằng 1 giờ chơi ngay lập tức.");
+        System.out.println("Nếu quá 1 phút kể từ giờ đặt mà không mở máy, tiền cọc sẽ MẤT.\n");
+
+        // Nhập thời gian muốn đến (tương lai) trước khi kiểm tra máy trống
+        System.out.println("\nNhập thời gian bạn muốn đến (phải là tương lai):");
+        String dateTimeStr = InputUtils.inputString("Nhập thời gian (yyyy-MM-dd HH:mm): ");
+
+        java.sql.Timestamp startTime;
+        try {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm");
+            sdf.setLenient(false);
+            java.util.Date parsed = sdf.parse(dateTimeStr);
+            startTime = new java.sql.Timestamp(parsed.getTime());
+        } catch (java.text.ParseException e) {
+            PrintUtils.printError("Định dạng thời gian không hợp lệ. Hãy nhập theo mẫu yyyy-MM-dd HH:mm");
+            return;
+        }
+
+        if (startTime.getTime() <= System.currentTimeMillis()) {
+            PrintUtils.printError("Thời gian phải trong tương lai!");
+            return;
+        }
+
+        // Chọn khu vực
+        System.out.println("\nChọn khu vực:");
+        System.out.println("1. VIP | 2. STANDARD | 3. ESPORT | 4. STREAMING | 5. COUPLE | 6. BẤT KỲ");
+        int zoneChoice = InputUtils.inputInt("Chọn (1-6): ", 1, 6);
+
+        ComputerZone zone = null;
+        switch (zoneChoice) {
+            case 1: zone = ComputerZone.VIP;       break;
+            case 2: zone = ComputerZone.STANDARD;  break;
+            case 3: zone = ComputerZone.ESPORT;    break;
+            case 4: zone = ComputerZone.STREAMING; break;
+            case 5: zone = ComputerZone.COUPLE;    break;
+        }
+
+        // Tính thời gian kết thúc dự kiến = startTime + 1 giờ (3600000ms) để giữ chỗ
+        java.sql.Timestamp endTime = new java.sql.Timestamp(startTime.getTime() + 3600000L);
+
+        List<Computer> available = computerService.getAvailableComputersByZone(zone, startTime, endTime);
+        if (available.isEmpty()) {
+            PrintUtils.printWarning("Không có máy nào khả dụng trong khu vực này vào thời gian bạn chọn.");
+            return;
+        }
+
+        System.out.println("\nDanh sách máy trống lúc " + dateTimeStr + ":");
+        for (int i = 0; i < available.size(); i++) {
+            Computer c = available.get(i);
+            System.out.printf("%d. %s (%s) | %s/h%n",
+                    i + 1, c.getName(), c.getZone(), FormatUtils.formatVND(c.getPricePerHour()));
+        }
+        int pcIdx = InputUtils.inputInt("Chọn số thứ tự máy (1-" + available.size() + "): ", 1, available.size());
+        Computer targetComputer = available.get(pcIdx - 1);
+
+        // Hiển thị thông tin xác nhận
+        BigDecimal deposit = targetComputer.getPricePerHour();
+        System.out.println("\n--- XÁC NHẬN ĐẶT TRƯỚC ---");
+        System.out.printf("  Máy: %s (%s)%n", targetComputer.getName(), targetComputer.getZone());
+        System.out.printf("  Thời gian đến: %s%n", dateTimeStr);
+        System.out.printf("  Tiền cọc (1h): %s%n", FormatUtils.formatVND(deposit));
+        System.out.printf("  Số dư hiện tại: %s%n", FormatUtils.formatVND(customerUser.getBalance()));
+        PrintUtils.printWarning("Quá 1 phút kể từ giờ đặt, tiền cọc sẽ bị mất nếu không mở máy!");
+
+        String confirm = InputUtils.inputString("Xác nhận đặt trước? (Y/N): ");
+        if (confirm.equalsIgnoreCase("y")) {
+            int bookingId = bookingService.reserveComputer(
+                    customerUser.getUserId(), targetComputer.getComputerId(), startTime);
+
+            // Cập nhật lại balance trong UI
+            try {
+                User updated = com.cyber.service.UserService.getInstance().getUserById(customerUser.getUserId());
+                customerUser.setBalance(updated.getBalance());
+            } catch (BusinessException ignored) {}
+
+            PrintUtils.printSuccess("Đặt máy trước thành công! Booking #" + bookingId);
+            System.out.println("  Tiền cọc đã trừ: " + FormatUtils.formatVND(deposit));
+            System.out.println("  Số dư còn lại: " + FormatUtils.formatVND(customerUser.getBalance()));
+            PrintUtils.printWarning("Hãy đến quán đúng giờ và yêu cầu Staff mở máy để được hoàn cọc!");
+        } else {
+            System.out.println("Đã hủy.");
         }
     }
 

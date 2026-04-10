@@ -153,24 +153,29 @@ public class StaffMainView {
     private void manageBookingRequests() throws BusinessException {
         while (true) {
             java.util.List<Booking> pendingList = bookingService.getPendingBookings();
-            System.out.println("\n--- DANH SÁCH YÊU CẦU MỞ MÁY (PENDING) ---");
+            System.out.println("\n--- DANH SÁCH YÊU CẦU MỞ MÁY (PENDING / RESERVED) ---");
             if (pendingList.isEmpty()) {
                 System.out.println("Không có yêu cầu nào đang chờ duyệt.");
                 return;
             }
 
-            System.out.printf("%-10s | %-20s | %-15s | %-15s | %-20s%n",
-                    "Booking ID", "Tên Khách Hàng", "Tên Máy", "Đơn giá/h", "Thời gian gửi");
-            System.out.println("-".repeat(90));
+            System.out.printf("%-8s | %-10s | %-18s | %-12s | %-12s | %-12s | %-16s%n",
+                    "ID", "Trạng thái", "Tên Khách Hàng", "Tên Máy", "Đơn giá/h", "Tiền cọc", "Giờ đặt");
+            System.out.println("-".repeat(100));
             for (Booking b : pendingList) {
-                System.out.printf("%-10d | %-20s | %-15s | %-15s | %-20s%n",
+                String statusLabel = "RESERVED".equals(b.getStatus()) ? "ĐẶT TRƯỚC" : "MỞ MÁY";
+                String depositStr = "RESERVED".equals(b.getStatus()) && b.getTotalFee() != null
+                        ? FormatUtils.formatVND(b.getTotalFee()) : "---";
+                System.out.printf("%-8d | %-10s | %-18s | %-12s | %-12s | %-12s | %-16s%n",
                         b.getBookingId(),
-                        b.getUserName() != null ? truncate(b.getUserName(), 20) : "N/A",
-                        b.getComputerName() != null ? truncate(b.getComputerName(), 15) : "N/A",
+                        statusLabel,
+                        b.getUserName() != null ? truncate(b.getUserName(), 18) : "N/A",
+                        b.getComputerName() != null ? truncate(b.getComputerName(), 12) : "N/A",
                         b.getHourlyRateSnapshot() != null ? FormatUtils.formatVND(b.getHourlyRateSnapshot()) : "N/A",
-                        b.getStartTime() != null ? b.getStartTime().toString().substring(0, 19) : "N/A");
+                        depositStr,
+                        b.getStartTime() != null ? b.getStartTime().toString().substring(0, 16) : "N/A");
             }
-            System.out.println("-".repeat(90));
+            System.out.println("-".repeat(100));
 
             int bookingId = InputUtils.inputInt("Nhập Booking ID để xử lý (0 để Quay Lại): ", 0, Integer.MAX_VALUE);
             if (bookingId == 0) return;
@@ -182,17 +187,23 @@ public class StaffMainView {
                 continue;
             }
 
-            System.out.println("Xử lý yêu cầu Booking #" + bookingId + " — Khách: " + target.getUserName() + " — Máy: " + target.getComputerName());
-            System.out.println("1. Phê duyệt (Approve) — Bật máy cho khách");
-            System.out.println("2. Từ chối   (Reject)  — Hủy yêu cầu");
+            String typeLabel = "RESERVED".equals(target.getStatus()) ? " (ĐẶT TRƯỚC — có cọc)" : "";
+            System.out.println("Xử lý yêu cầu Booking #" + bookingId + typeLabel
+                    + " — Khách: " + target.getUserName() + " — Máy: " + target.getComputerName());
+            System.out.println("1. Phê duyệt (Approve) — Bật máy cho khách" 
+                    + ("RESERVED".equals(target.getStatus()) ? " + Hoàn cọc" : ""));
+            System.out.println("2. Từ chối   (Reject)  — Hủy yêu cầu"
+                    + ("RESERVED".equals(target.getStatus()) ? " + Hoàn cọc" : ""));
             int action = InputUtils.inputInt("Chọn thao tác (1-2): ", 1, 2);
 
             if (action == 1) {
                 bookingService.approveBooking(bookingId, staffUser);
-                PrintUtils.printSuccess("Đã PHÊ DUYỆT Booking #" + bookingId + ". Máy " + target.getComputerName() + " đã được bật cho khách.");
+                PrintUtils.printSuccess("Đã PHÊ DUYỆT Booking #" + bookingId + ". Máy " + target.getComputerName() + " đã được bật cho khách."
+                        + ("RESERVED".equals(target.getStatus()) ? " Tiền cọc đã hoàn lại." : ""));
             } else {
                 bookingService.rejectBooking(bookingId, staffUser);
-                PrintUtils.printWarning("Đã TỪ CHỐI Booking #" + bookingId + ". Yêu cầu đã bị hủy.");
+                PrintUtils.printWarning("Đã TỪ CHỐI Booking #" + bookingId + ". Yêu cầu đã bị hủy."
+                        + ("RESERVED".equals(target.getStatus()) ? " Tiền cọc đã hoàn lại." : ""));
             }
         }
     }

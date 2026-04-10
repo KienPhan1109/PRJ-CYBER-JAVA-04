@@ -13,4 +13,5 @@ public interface IBookingDAO {
     Booking findById(Connection conn, int bookingId) throws SQLException;
     void updateBooking(Connection conn, Booking booking) throws SQLException;
     java.util.List<Booking> findPendingBookings(Connection conn) throws SQLException;
+    java.util.List<Booking> findOverdueReservations(Connection conn, int overdueMinutes) throws SQLException;
 }

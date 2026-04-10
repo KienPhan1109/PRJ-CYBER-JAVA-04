@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import com.cyber.util.FormatUtils;
 
 public class BookingService {
 
@@ -236,9 +237,8 @@ public class BookingService {
 
     /**
      * Staff phê duyệt yêu cầu mở máy.
-     * 1. Chuyển booking sang ACTIVE, cập nhật start_time = NOW.
-     * 2. Chuyển computer sang IN_USE.
-     * 3. Ghi log hành động.
+     * - PENDING: Chuyển thẳng sang ACTIVE.
+     * - RESERVED: Hoàn tiền cọc rồi chuyển sang ACTIVE.
      */
     public void approveBooking(int bookingId, User staffActor) throws BusinessException {
         Connection conn = null;
@@ -248,11 +248,24 @@ public class BookingService {
 
             Booking booking = bookingDAO.findById(conn, bookingId);
             if (booking == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy yêu cầu đặt máy.");
-            if (!"PENDING".equals(booking.getStatus())) throw new BusinessException("INVALID_STATE", "Yêu cầu này không ở trạng thái chờ duyệt.");
 
-            // Cập nhật booking: ACTIVE, start_time = thời điểm duyệt
+            String oldStatus = booking.getStatus();
+            if (!"PENDING".equals(oldStatus) && !"RESERVED".equals(oldStatus)) {
+                throw new BusinessException("INVALID_STATE", "Yêu cầu này không ở trạng thái chờ duyệt.");
+            }
+
+            // Nếu là RESERVED → hoàn lại tiền cọc cho khách
+            if ("RESERVED".equals(oldStatus)) {
+                BigDecimal deposit = booking.getTotalFee(); // Tiền cọc đã lưu trong total_fee
+                if (deposit != null && deposit.compareTo(BigDecimal.ZERO) > 0) {
+                    userDAO.updateBalance(conn, booking.getUserId(), deposit); // Cộng lại
+                }
+            }
+
+            // Cập nhật booking: ACTIVE, start_time = thời điểm duyệt, reset total_fee
             booking.setStatus("ACTIVE");
             booking.setStartTime(new java.sql.Timestamp(System.currentTimeMillis()));
+            booking.setTotalFee(BigDecimal.ZERO); // Reset — heartbeat sẽ tính tiền từ đây
             bookingDAO.updateBooking(conn, booking);
 
             // Chuyển máy sang IN_USE
@@ -264,12 +277,16 @@ public class BookingService {
             }
 
             // Ghi log
-            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, staffActor,
-                    String.format("Phê duyệt mở máy: Booking #%d, Máy: %s, Khách: UserID=%d",
+            String logMsg = "RESERVED".equals(oldStatus)
+                    ? String.format("Phê duyệt mở máy (ĐẶT TRƯỚC — hoàn cọc %s): Booking #%d, Máy: %s, Khách: UserID=%d",
+                            FormatUtils.formatVND(booking.getTotalFee()), bookingId,
+                            comp != null ? comp.getName() : String.valueOf(booking.getComputerId()),
+                            booking.getUserId())
+                    : String.format("Phê duyệt mở máy: Booking #%d, Máy: %s, Khách: UserID=%d",
                             bookingId,
                             comp != null ? comp.getName() : String.valueOf(booking.getComputerId()),
-                            booking.getUserId()),
-                    bookingId);
+                            booking.getUserId());
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, staffActor, logMsg, bookingId);
 
             conn.commit();
         } catch (SQLException e) {
@@ -287,8 +304,8 @@ public class BookingService {
 
     /**
      * Staff từ chối yêu cầu mở máy.
-     * 1. Chuyển booking sang CANCELLED.
-     * 2. Ghi log hành động.
+     * - PENDING: Chỉ hủy (không có tiền cọc).
+     * - RESERVED: Hoàn tiền cọc rồi hủy.
      */
     public void rejectBooking(int bookingId, User staffActor) throws BusinessException {
         Connection conn = null;
@@ -298,16 +315,30 @@ public class BookingService {
 
             Booking booking = bookingDAO.findById(conn, bookingId);
             if (booking == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy yêu cầu đặt máy.");
-            if (!"PENDING".equals(booking.getStatus())) throw new BusinessException("INVALID_STATE", "Yêu cầu này không ở trạng thái chờ duyệt.");
+
+            String oldStatus = booking.getStatus();
+            if (!"PENDING".equals(oldStatus) && !"RESERVED".equals(oldStatus)) {
+                throw new BusinessException("INVALID_STATE", "Yêu cầu này không ở trạng thái chờ duyệt.");
+            }
+
+            // Nếu là RESERVED → hoàn lại tiền cọc cho khách
+            if ("RESERVED".equals(oldStatus)) {
+                BigDecimal deposit = booking.getTotalFee();
+                if (deposit != null && deposit.compareTo(BigDecimal.ZERO) > 0) {
+                    userDAO.updateBalance(conn, booking.getUserId(), deposit);
+                }
+            }
 
             booking.setStatus("CANCELLED");
             bookingDAO.updateBooking(conn, booking);
 
             // Ghi log
-            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, staffActor,
-                    String.format("Từ chối yêu cầu mở máy: Booking #%d, Máy ID=%d, Khách: UserID=%d",
-                            bookingId, booking.getComputerId(), booking.getUserId()),
-                    bookingId);
+            String logMsg = "RESERVED".equals(oldStatus)
+                    ? String.format("Từ chối yêu cầu đặt trước (hoàn cọc %s): Booking #%d, Máy ID=%d, Khách: UserID=%d",
+                            FormatUtils.formatVND(booking.getTotalFee()), bookingId, booking.getComputerId(), booking.getUserId())
+                    : String.format("Từ chối yêu cầu mở máy: Booking #%d, Máy ID=%d, Khách: UserID=%d",
+                            bookingId, booking.getComputerId(), booking.getUserId());
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, staffActor, logMsg, bookingId);
 
             conn.commit();
         } catch (SQLException e) {
@@ -320,6 +351,106 @@ public class BookingService {
             if (conn != null) {
                 try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
             }
+        }
+    }
+
+    // =========================================================
+    // CHẾ ĐỘ 2: ĐẶT MÁY TRƯỚC (RESERVATION + DEPOSIT)
+    // =========================================================
+
+    /**
+     * Khách đặt máy trước — trừ tiền cọc 1 giờ ngay lập tức.
+     * Tạo booking với status RESERVED.
+     */
+    public int reserveComputer(int userId, int computerId, java.sql.Timestamp startTime) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            User currentUser = userDAO.findById(conn, userId);
+            if (currentUser == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy tài khoản.");
+            if (currentUser.getStatus() == com.cyber.model.enums.UserStatus.LOCKED)
+                throw new BusinessException("LOCKED", "Tài khoản bị khóa.");
+
+            com.cyber.dao.IComputerDAO computerDAO = com.cyber.dao.impl.ComputerDAOImpl.getInstance();
+            Computer comp = computerDAO.findById(conn, computerId);
+            if (comp == null || comp.isDeleted())
+                throw new BusinessException("NOT_FOUND", "Máy trạm không tồn tại hoặc đã thanh lý.");
+
+            // Tính tiền cọc = 1 giờ chơi
+            BigDecimal deposit = comp.getPricePerHour();
+            if (currentUser.getBalance().compareTo(deposit) < 0) {
+                throw new BusinessException("ERR_INSUFFICIENT_BALANCE",
+                        String.format("Không đủ tiền cọc. Cần %s, hiện có %s.",
+                                FormatUtils.formatVND(deposit), FormatUtils.formatVND(currentUser.getBalance())));
+            }
+
+            // Trừ tiền cọc ngay
+            userDAO.deductBalance(conn, userId, deposit);
+
+            // Tạo booking RESERVED — total_fee lưu số tiền cọc
+            Booking booking = new Booking(0, userId, computerId,
+                    startTime, null, "RESERVED", deposit, comp.getPricePerHour());
+            int newBookingId = bookingDAO.createBooking(conn, booking);
+
+            // Ghi log
+            User systemActor = new User();
+            systemActor.setUserId(userId);
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, systemActor,
+                    String.format("Đặt trước máy %s lúc %s — Trừ cọc %s",
+                            comp.getName(), startTime.toString().substring(0, 16), FormatUtils.formatVND(deposit)),
+                    newBookingId);
+
+            conn.commit();
+            return newBookingId;
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw new BusinessException("DB_ERROR", "Lỗi CSDL khi đặt máy trước: " + e.getMessage());
+        } catch (BusinessException be) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw be;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+            }
+        }
+    }
+
+    /**
+     * Tự động hủy các reservation quá hạn (gọi bởi Heartbeat).
+     * Không hoàn tiền cọc — phạt khách không đến.
+     */
+    public void processOverdueReservations(int overdueMinutes) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            List<Booking> overdueList = bookingDAO.findOverdueReservations(conn, overdueMinutes);
+            for (Booking b : overdueList) {
+                conn.setAutoCommit(false);
+                try {
+                    b.setStatus("CANCELLED");
+                    bookingDAO.updateBooking(conn, b);
+
+                    User systemAdmin = new User();
+                    systemAdmin.setUserId(1);
+                    LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, systemAdmin,
+                            String.format("Thu cọc do quá hạn %d phút: Booking #%d, Máy: %s, Khách: %s, Cọc: %s",
+                                    overdueMinutes, b.getBookingId(),
+                                    b.getComputerName() != null ? b.getComputerName() : String.valueOf(b.getComputerId()),
+                                    b.getUserName() != null ? b.getUserName() : String.valueOf(b.getUserId()),
+                                    FormatUtils.formatVND(b.getTotalFee())),
+                            b.getBookingId());
+
+                    conn.commit();
+                    System.out.println("[Reservation] Hủy đặt trước quá hạn: Booking #" + b.getBookingId());
+                } catch (SQLException ex) {
+                    conn.rollback();
+                    System.err.println("[Reservation Error] " + ex.getMessage());
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[Reservation Error] DB Error: " + e.getMessage());
         }
     }
 }
