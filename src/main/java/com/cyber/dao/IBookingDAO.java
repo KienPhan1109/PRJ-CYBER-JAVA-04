@@ -12,4 +12,5 @@ public interface IBookingDAO {
     java.util.List<Booking> findAllActiveBookings(Connection conn) throws SQLException;
     Booking findById(Connection conn, int bookingId) throws SQLException;
     void updateBooking(Connection conn, Booking booking) throws SQLException;
+    java.util.List<Booking> findPendingBookings(Connection conn) throws SQLException;
 }

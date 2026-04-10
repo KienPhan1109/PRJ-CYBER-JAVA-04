@@ -28,6 +28,11 @@ public class BookingService {
         return instance;
     }
 
+    /**
+     * Gửi yêu cầu đặt máy — tạo booking với trạng thái PENDING.
+     * Tiền CHƯA bị trừ, máy CHƯA chuyển sang IN_USE.
+     * Staff phải gọi approveBooking() để kích hoạt phiên chơi.
+     */
     public int bookComputer(int userId, Booking booking) throws BusinessException {
         Connection conn = null;
         try {
@@ -38,34 +43,18 @@ public class BookingService {
             if (currentUser == null) throw new RuntimeException("ERR_USER_NOT_FOUND");
             if (currentUser.getStatus() == com.cyber.model.enums.UserStatus.LOCKED) throw new RuntimeException("ERR_USER_LOCKED");
 
-            if (!bookingDAO.isComputerAvailable(conn, booking.getComputerId(), booking.getStartTime(), booking.getEndTime())) {
-                throw new RuntimeException("Máy trạm này đã được đặt trong khoảng thời gian trên.");
-            }
-
-            BigDecimal totalCost = booking.getTotalFee() != null ? booking.getTotalFee() : BigDecimal.ZERO;
-            if (currentUser.getBalance().compareTo(totalCost) < 0) {
-                throw new BusinessException("ERR_INSUFFICIENT_BALANCE", "Bạn không đủ tiền để thuê máy. Vui lòng nạp thêm!");
-            }
-            userDAO.deductBalance(conn, userId, totalCost);
-
+            // Đặt trạng thái PENDING — chờ Staff phê duyệt
+            booking.setStatus("PENDING");
             booking.setUserId(userId);
             int newBookingId = bookingDAO.createBooking(conn, booking);
-            
-            // Note: Since computer is booked now, should we change computer status to IN_USE?
-            com.cyber.dao.IComputerDAO computerDAO = com.cyber.dao.impl.ComputerDAOImpl.getInstance();
-            Computer comp = computerDAO.findById(conn, booking.getComputerId());
-            if (comp != null) {
-                comp.setStatus(com.cyber.model.enums.ComputerStatus.IN_USE);
-                computerDAO.updateComputer(conn, comp);
-            }
-            
+
             conn.commit();
             return newBookingId;
         } catch (SQLException e) {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException rollbackEx) {}
             }
-            throw new BusinessException("DB_ERROR", "Lỗi CSDL khi đặt máy: " + e.getMessage());
+            throw new BusinessException("DB_ERROR", "Lỗi CSDL khi gửi yêu cầu đặt máy: " + e.getMessage());
         } catch (BusinessException be) {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException rollbackEx) {}
@@ -227,6 +216,110 @@ public class BookingService {
             }
         } catch (SQLException e) {
             System.err.println("[Heartbeat Error] DB Error: " + e.getMessage());
+        }
+    }
+
+    // =========================================================
+    // STAFF APPROVAL FLOW
+    // =========================================================
+
+    /**
+     * Lấy danh sách booking đang chờ Staff phê duyệt.
+     */
+    public List<Booking> getPendingBookings() throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return bookingDAO.findPendingBookings(conn);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách yêu cầu PENDING: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Staff phê duyệt yêu cầu mở máy.
+     * 1. Chuyển booking sang ACTIVE, cập nhật start_time = NOW.
+     * 2. Chuyển computer sang IN_USE.
+     * 3. Ghi log hành động.
+     */
+    public void approveBooking(int bookingId, User staffActor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            Booking booking = bookingDAO.findById(conn, bookingId);
+            if (booking == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy yêu cầu đặt máy.");
+            if (!"PENDING".equals(booking.getStatus())) throw new BusinessException("INVALID_STATE", "Yêu cầu này không ở trạng thái chờ duyệt.");
+
+            // Cập nhật booking: ACTIVE, start_time = thời điểm duyệt
+            booking.setStatus("ACTIVE");
+            booking.setStartTime(new java.sql.Timestamp(System.currentTimeMillis()));
+            bookingDAO.updateBooking(conn, booking);
+
+            // Chuyển máy sang IN_USE
+            com.cyber.dao.IComputerDAO computerDAO = com.cyber.dao.impl.ComputerDAOImpl.getInstance();
+            Computer comp = computerDAO.findById(conn, booking.getComputerId());
+            if (comp != null) {
+                comp.setStatus(com.cyber.model.enums.ComputerStatus.IN_USE);
+                computerDAO.updateComputer(conn, comp);
+            }
+
+            // Ghi log
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, staffActor,
+                    String.format("Phê duyệt mở máy: Booking #%d, Máy: %s, Khách: UserID=%d",
+                            bookingId,
+                            comp != null ? comp.getName() : String.valueOf(booking.getComputerId()),
+                            booking.getUserId()),
+                    bookingId);
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw new BusinessException("DB_ERROR", "Lỗi CSDL khi phê duyệt: " + e.getMessage());
+        } catch (BusinessException be) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw be;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+            }
+        }
+    }
+
+    /**
+     * Staff từ chối yêu cầu mở máy.
+     * 1. Chuyển booking sang CANCELLED.
+     * 2. Ghi log hành động.
+     */
+    public void rejectBooking(int bookingId, User staffActor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            Booking booking = bookingDAO.findById(conn, bookingId);
+            if (booking == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy yêu cầu đặt máy.");
+            if (!"PENDING".equals(booking.getStatus())) throw new BusinessException("INVALID_STATE", "Yêu cầu này không ở trạng thái chờ duyệt.");
+
+            booking.setStatus("CANCELLED");
+            bookingDAO.updateBooking(conn, booking);
+
+            // Ghi log
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, staffActor,
+                    String.format("Từ chối yêu cầu mở máy: Booking #%d, Máy ID=%d, Khách: UserID=%d",
+                            bookingId, booking.getComputerId(), booking.getUserId()),
+                    bookingId);
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw new BusinessException("DB_ERROR", "Lỗi CSDL khi từ chối: " + e.getMessage());
+        } catch (BusinessException be) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw be;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+            }
         }
     }
 }

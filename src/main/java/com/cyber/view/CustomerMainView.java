@@ -93,67 +93,92 @@ public class CustomerMainView {
                 // Nếu lỗi thì giữ balance cũ, không crash
             }
 
-            List<Booking> activeBookings = bookingService.getActiveBookingsByUserId(customerUser.getUserId());
-            if (activeBookings.isEmpty()) {
-                PrintUtils.printWarning("Bạn không có phiên chơi nào đang hoạt động.");
+            // === PHẦN 1: Hiển thị các yêu cầu đang chờ duyệt (PENDING) ===
+            List<Booking> allBookings = bookingService.getActiveBookingsByUserId(customerUser.getUserId());
+            // Lấy danh sách PENDING riêng qua service
+            List<Booking> pendingBookings = bookingService.getPendingBookings().stream()
+                    .filter(b -> b.getUserId() == customerUser.getUserId())
+                    .collect(java.util.stream.Collectors.toList());
+            
+            if (!pendingBookings.isEmpty()) {
+                System.out.println("\n--- YÊU CẦU ĐANG CHỜ STAFF DUYỆT ---");
+                for (Booking pending : pendingBookings) {
+                    PrintUtils.printTableSeparator(70);
+                    System.out.printf("| %-30s | %-33s |\n", "Booking ID", pending.getBookingId());
+                    System.out.printf("| %-30s | %-33s |\n", "Tên máy", pending.getComputerName() != null ? pending.getComputerName() : pending.getComputerId());
+                    System.out.printf("| %-30s | %-33s |\n", "Đơn giá/h", FormatUtils.formatVND(pending.getHourlyRateSnapshot()));
+                    System.out.printf("| %-30s | %-33s |\n", "Trạng thái", PrintUtils.colorText("PENDING - Chờ duyệt", "YELLOW"));
+                }
+                PrintUtils.printTableSeparator(70);
+            }
+
+            // === PHẦN 2: Hiển thị các phiên chơi ACTIVE ===
+            // allBookings chỉ chứa ACTIVE (đã fix query)
+            if (allBookings.isEmpty() && pendingBookings.isEmpty()) {
+                PrintUtils.printWarning("Bạn không có phiên chơi hoặc yêu cầu nào đang hoạt động.");
                 return;
             }
 
-            System.out.println("\n--- TRẠNG THÁI CÁC PHIÊN CHƠI HIỆN TẠI ---");
-            for (Booking active : activeBookings) {
-                BigDecimal hourly = active.getHourlyRateSnapshot();
-                if (hourly == null) hourly = BigDecimal.ZERO;
-                BigDecimal ratePerSecond = hourly.divide(new BigDecimal(3600), 4, java.math.RoundingMode.HALF_UP);
-                
-                long diffInMillis = System.currentTimeMillis() - active.getStartTime().getTime();
-                long secondsUsed = diffInMillis / 1000;
-                if (secondsUsed < 0) secondsUsed = 0;
-                
-                BigDecimal spent = ratePerSecond.multiply(new BigDecimal(secondsUsed)).setScale(2, java.math.RoundingMode.HALF_UP);
-                
-                // Thuật toán: Chia tổng số dư cho tổng số tiền / giây của TẤT CẢ các máy đang dùng
+            if (!allBookings.isEmpty()) {
+                System.out.println("\n--- TRẠNG THÁI CÁC PHIÊN CHƠI HIỆN TẠI ---");
+
+                // Tính tổng rate/giây của tất cả máy đang dùng (cho ước tính thời gian còn lại)
                 BigDecimal totalRatePerSecond = BigDecimal.ZERO;
-                for (Booking bg : activeBookings) {
+                for (Booking bg : allBookings) {
                     BigDecimal bgHourly = bg.getHourlyRateSnapshot();
                     if (bgHourly == null) bgHourly = BigDecimal.ZERO;
                     totalRatePerSecond = totalRatePerSecond.add(bgHourly.divide(new BigDecimal(3600), 4, java.math.RoundingMode.HALF_UP));
                 }
-                
+
+                // Thời gian còn lại = số dư hiện tại / tổng rate (balance đã được heartbeat trừ rồi)
                 long expectedRemainingSecs = 0;
                 if (totalRatePerSecond.compareTo(BigDecimal.ZERO) > 0) {
                     expectedRemainingSecs = customerUser.getBalance().divide(totalRatePerSecond, 0, java.math.RoundingMode.DOWN).longValue();
                 }
 
-                PrintUtils.printTableSeparator(70);
-                System.out.printf("| %-30s | %-33s |\n", "Tên máy", active.getComputerName() != null ? active.getComputerName() : active.getComputerId());
-                System.out.printf("| %-30s | %-33s |\n", "Thời gian bắt đầu", active.getStartTime().toString());
-                System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", secondsUsed + " giây (" + (secondsUsed/60) + " phút)");
-                System.out.printf("| %-30s | %-33s |\n", "Tiền giờ đã chi (ước tính)", FormatUtils.formatVND(spent));
-                System.out.printf("| %-30s | %-33s |\n", "Thời gian còn lại dự kiến", expectedRemainingSecs + " giây (" + (expectedRemainingSecs/60) + " phút)");
-            }
-            PrintUtils.printTableSeparator(70);
-            System.out.println("  Số dư khả dụng hiện tại: " + FormatUtils.formatVND(customerUser.getBalance()));
+                for (Booking active : allBookings) {
+                    long diffInMillis = System.currentTimeMillis() - active.getStartTime().getTime();
+                    long secondsUsed = diffInMillis / 1000;
+                    if (secondsUsed < 0) secondsUsed = 0;
 
-            System.out.println("\n-------------------------------------------");
-            System.out.println("Bạn có muốn ngắt (trả) máy trạm nào không?");
-            int checkoutId = InputUtils.inputInt("Nhập ID của máy (booking_id hoặc computer_id đều được, nhập 0 để bỏ qua): ", 0, Integer.MAX_VALUE);
-            
-            if (checkoutId != 0) {
-                Booking targetToCheckout = null;
-                for (Booking b : activeBookings) {
-                    if (b.getBookingId() == checkoutId || b.getComputerId() == checkoutId) {
-                        targetToCheckout = b;
-                        break;
-                    }
+                    long usedMinutes = secondsUsed / 60;
+                    long usedSecs = secondsUsed % 60;
+
+                    long remainMinutes = expectedRemainingSecs / 60;
+                    long remainSecs = expectedRemainingSecs % 60;
+
+                    PrintUtils.printTableSeparator(70);
+                    System.out.printf("| %-30s | %-33s |\n", "Tên máy", active.getComputerName() != null ? active.getComputerName() : active.getComputerId());
+                    System.out.printf("| %-30s | %-33s |\n", "Thời gian bắt đầu", active.getStartTime().toString());
+                    System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", usedMinutes + " phút " + usedSecs + " giây");
+                    System.out.printf("| %-30s | %-33s |\n", "Đơn giá/h", FormatUtils.formatVND(active.getHourlyRateSnapshot()));
+                    System.out.printf("| %-30s | %-33s |\n", "Thời gian còn lại dự kiến", remainMinutes + " phút " + remainSecs + " giây");
                 }
+                PrintUtils.printTableSeparator(70);
+                System.out.println("  Số dư khả dụng hiện tại: " + FormatUtils.formatVND(customerUser.getBalance()));
+                System.out.println("  (Số dư được cập nhật mỗi 10 giây bởi hệ thống)");
+
+                System.out.println("\n-------------------------------------------");
+                System.out.println("Bạn có muốn ngắt (trả) máy trạm nào không?");
+                int checkoutId = InputUtils.inputInt("Nhập ID của máy (booking_id hoặc computer_id đều được, nhập 0 để bỏ qua): ", 0, Integer.MAX_VALUE);
                 
-                if (targetToCheckout == null) {
-                    PrintUtils.printWarning("Không tìm thấy ID hợp lệ trong danh sách máy đang thuê.");
-                } else {
-                    String confirm = InputUtils.inputString("Xác nhận ngắt máy " + targetToCheckout.getComputerName() + "? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N");
-                    if (confirm.equalsIgnoreCase("y")) {
-                        bookingService.endSession(targetToCheckout.getBookingId());
-                        PrintUtils.printSuccess("Đã ngắt máy " + targetToCheckout.getComputerName() + " thành công!");
+                if (checkoutId != 0) {
+                    Booking targetToCheckout = null;
+                    for (Booking b : allBookings) {
+                        if (b.getBookingId() == checkoutId || b.getComputerId() == checkoutId) {
+                            targetToCheckout = b;
+                            break;
+                        }
+                    }
+                    
+                    if (targetToCheckout == null) {
+                        PrintUtils.printWarning("Không tìm thấy ID hợp lệ trong danh sách máy đang thuê.");
+                    } else {
+                        String confirm = InputUtils.inputString("Xác nhận ngắt máy " + targetToCheckout.getComputerName() + "? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N");
+                        if (confirm.equalsIgnoreCase("y")) {
+                            bookingService.endSession(targetToCheckout.getBookingId());
+                            PrintUtils.printSuccess("Đã ngắt máy " + targetToCheckout.getComputerName() + " thành công!");
+                        }
                     }
                 }
             }
@@ -176,7 +201,16 @@ public class CustomerMainView {
             return;
         }
         
-        System.out.println("Lưu ý: Tiền máy sẽ được hệ thống trừ dần tự động mỗi 10 giây.");
+        // Kiểm tra xem có yêu cầu PENDING chưa được duyệt không
+        List<Booking> pendingBookings = bookingService.getPendingBookings().stream()
+                .filter(b -> b.getUserId() == customerUser.getUserId())
+                .collect(java.util.stream.Collectors.toList());
+        if (!pendingBookings.isEmpty()) {
+            PrintUtils.printWarning("Bạn đã có yêu cầu mở máy đang chờ Staff duyệt. Vui lòng chờ hoặc liên hệ nhân viên!");
+            return;
+        }
+        
+        System.out.println("Lưu ý: Sau khi Staff duyệt, tiền máy sẽ được hệ thống trừ dần tự động mỗi 10 giây.");
 
         System.out.println("Chọn khu vực:");
         System.out.println("1. VIP | 2. STANDARD | 3. ESPORT | 4. STREAMING | 5. COUPLE | 6. BẤT KỲ");
@@ -222,13 +256,13 @@ public class CustomerMainView {
                 targetComputer.getName(), FormatUtils.formatVND(targetComputer.getPricePerHour()));
         System.out.println("  Số dư khả dụng: " + FormatUtils.formatVND(customerUser.getBalance()));
 
-        String confirm = InputUtils.inputString("Xác nhận Bật Máy? (Y/N): ");
+        String confirm = InputUtils.inputString("Xác nhận gửi yêu cầu mở máy? (Y/N): ");
         if (confirm.equalsIgnoreCase("y")) {
             Booking newBooking = new Booking(0, customerUser.getUserId(),
-                    targetComputer.getComputerId(), start, end, "ACTIVE", BigDecimal.ZERO, targetComputer.getPricePerHour());
+                    targetComputer.getComputerId(), start, end, "PENDING", BigDecimal.ZERO, targetComputer.getPricePerHour());
             this.currentBookingId = bookingService.bookComputer(customerUser.getUserId(), newBooking);
-            // set computer status to IN_USE happens inside service
-            PrintUtils.printSuccess("Đặt máy thành công! Bắt đầu sử dụng máy " + targetComputer.getName());
+            PrintUtils.printSuccess("Yêu cầu mở máy " + targetComputer.getName() + " đã được gửi!");
+            PrintUtils.printWarning("Vui lòng chờ Nhân viên (Staff) phê duyệt. Máy sẽ được bật sau khi được duyệt.");
         } else {
             System.out.println("Đã hủy đặt máy.");
         }

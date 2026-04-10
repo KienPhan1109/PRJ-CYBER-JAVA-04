@@ -69,7 +69,7 @@ public class BookingDAOImpl implements IBookingDAO {
         String sql = "SELECT b.*, c.name as computer_name " +
                      "FROM bookings b " +
                      "JOIN computers c ON b.computer_id = c.computer_id " +
-                     "WHERE b.user_id = ? AND b.status IN ('PENDING', 'IN_PROGRESS', 'ACTIVE') " +
+                     "WHERE b.user_id = ? AND b.status = 'ACTIVE' " +
                      "ORDER BY b.start_time DESC";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
@@ -157,5 +157,36 @@ public class BookingDAOImpl implements IBookingDAO {
             stmt.setInt(6, booking.getBookingId());
             stmt.executeUpdate();
         }
+    }
+
+    @Override
+    public java.util.List<Booking> findPendingBookings(Connection conn) throws SQLException {
+        java.util.List<Booking> list = new java.util.ArrayList<>();
+        String sql = "SELECT b.*, c.name as computer_name, u.full_name as user_name " +
+                     "FROM bookings b " +
+                     "JOIN computers c ON b.computer_id = c.computer_id " +
+                     "JOIN users u ON b.user_id = u.user_id " +
+                     "WHERE b.status = 'PENDING' " +
+                     "ORDER BY b.created_at ASC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Booking b = new Booking(
+                        rs.getInt("booking_id"),
+                        rs.getInt("user_id"),
+                        rs.getInt("computer_id"),
+                        rs.getTimestamp("start_time"),
+                        rs.getTimestamp("end_time"),
+                        rs.getString("status"),
+                        rs.getBigDecimal("total_fee"),
+                        rs.getBigDecimal("hourly_rate_snapshot")
+                    );
+                    b.setComputerName(rs.getString("computer_name"));
+                    b.setUserName(rs.getString("user_name"));
+                    list.add(b);
+                }
+            }
+        }
+        return list;
     }
 }
