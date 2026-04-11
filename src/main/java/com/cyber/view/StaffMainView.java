@@ -173,7 +173,7 @@ public class StaffMainView {
                         b.getComputerName() != null ? truncate(b.getComputerName(), 12) : "N/A",
                         b.getHourlyRateSnapshot() != null ? FormatUtils.formatVND(b.getHourlyRateSnapshot()) : "N/A",
                         depositStr,
-                        b.getStartTime() != null ? b.getStartTime().toString().substring(0, 16) : "N/A");
+                        FormatUtils.formatTimestamp(b.getStartTime()));
             }
             System.out.println("-".repeat(100));
 
@@ -248,7 +248,7 @@ public class StaffMainView {
                         log.getLogType().name(),
                         log.getActorId(),
                         truncate(log.getAction(), 60),
-                        log.getCreatedAt() != null ? log.getCreatedAt().toString().substring(0, 19) : "N/A");
+                        FormatUtils.formatTimestamp(log.getCreatedAt()));
             }
         }
         System.out.println("=".repeat(110));

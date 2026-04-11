@@ -84,6 +84,14 @@ public class BookingService {
         }
     }
 
+    public List<Booking> getBookingHistoryByUserId(int userId) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return bookingDAO.findAllBookingsByUserId(conn, userId);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách lịch sử đặt máy: " + e.getMessage());
+        }
+    }
+
     public int startSession(int userId, int computerId) throws BusinessException {
         Connection conn = null;
         try {
@@ -204,6 +212,7 @@ public class BookingService {
                         endSession(b.getBookingId());
                         User systemAdmin = new User();
                         systemAdmin.setUserId(1);
+                        systemAdmin.setUsername("SYSTEM_BACKGROUND");
                         com.cyber.service.LogService.getInstance().logStandalone(
                                 com.cyber.model.enums.LogType.COMPUTER, 
                                 systemAdmin, 
@@ -211,7 +220,28 @@ public class BookingService {
                                 b.getUserId()
                         );
                     } catch (BusinessException be) {
-                        System.err.println("[Heartbeat] Error ending session: " + be.getMessage());
+                        System.err.println("[Heartbeat] Error ending session (outOfMoney): " + be.getMessage());
+                    }
+                } else {
+                    // Check for Hard-Kick (upcoming reservations)
+                    try {
+                        Booking nextRes = bookingDAO.findNextReservation(conn, b.getComputerId());
+                        if (nextRes != null) {
+                            if (System.currentTimeMillis() >= nextRes.getStartTime().getTime()) {
+                                endSession(b.getBookingId());
+                                User systemAdmin = new User();
+                                systemAdmin.setUserId(1);
+                                com.cyber.service.LogService.getInstance().logStandalone(
+                                        com.cyber.model.enums.LogType.COMPUTER, 
+                                        systemAdmin, 
+                                        "Ngắt máy tự động để nhường máy cho lịch đặt trước #" + nextRes.getBookingId(),
+                                        b.getUserId()
+                                );
+                                System.out.println("[Hard-Kick] Đã ngắt phiên " + b.getBookingId() + " do có người đặt trước lúc " + nextRes.getStartTime());
+                            }
+                        }
+                    } catch (Exception ex) {
+                        System.err.println("[Heartbeat] Error processing hard-kick: " + ex.getMessage());
                     }
                 }
             }
@@ -256,6 +286,10 @@ public class BookingService {
 
             // Nếu là RESERVED → hoàn lại tiền cọc cho khách
             if ("RESERVED".equals(oldStatus)) {
+                if (System.currentTimeMillis() < booking.getStartTime().getTime()) {
+                    throw new BusinessException("INVALID_TIME", "Chưa đến giờ đặt trước. Vui lòng mở máy đúng theo lịch!");
+                }
+                
                 BigDecimal deposit = booking.getTotalFee(); // Tiền cọc đã lưu trong total_fee
                 if (deposit != null && deposit.compareTo(BigDecimal.ZERO) > 0) {
                     userDAO.updateBalance(conn, booking.getUserId(), deposit); // Cộng lại
@@ -432,6 +466,7 @@ public class BookingService {
 
                     User systemAdmin = new User();
                     systemAdmin.setUserId(1);
+                    systemAdmin.setUsername("SYSTEM_BACKGROUND");
                     LogService.getInstance().log(conn, com.cyber.model.enums.LogType.COMPUTER, systemAdmin,
                             String.format("Thu cọc do quá hạn %d phút: Booking #%d, Máy: %s, Khách: %s, Cọc: %s",
                                     overdueMinutes, b.getBookingId(),
@@ -451,6 +486,14 @@ public class BookingService {
             }
         } catch (SQLException e) {
             System.err.println("[Reservation Error] DB Error: " + e.getMessage());
+        }
+    }
+
+    public Booking getNextReservation(int computerId) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return bookingDAO.findNextReservation(conn, computerId);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi tìm lịch đặt tiếp theo: " + e.getMessage());
         }
     }
 }

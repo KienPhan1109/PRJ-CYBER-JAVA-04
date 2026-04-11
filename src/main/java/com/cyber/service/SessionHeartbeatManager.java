@@ -32,8 +32,8 @@ public class SessionHeartbeatManager {
                 // Quét và hủy các reservation quá hạn (1 phút để test nhanh)
                 BookingService.getInstance().processOverdueReservations(1);
             } catch (Exception e) {
-                // Log silently to not disrupt the console too much
-                System.err.println("[Heartbeat Error] Lỗi xử lý phiên chạy ngầm: " + e.getMessage());
+                // Log silently with timestamp to track intermittent DB issues
+                System.err.println("[" + new java.sql.Timestamp(System.currentTimeMillis()) + "] [Heartbeat Error] Lỗi xử lý phiên chạy ngầm: " + e.getMessage());
             }
         };
         // Schedule fixed rate

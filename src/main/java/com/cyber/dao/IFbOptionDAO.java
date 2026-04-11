@@ -56,4 +56,14 @@ public interface IFbOptionDAO {
      * Nếu stock về 0, tự động đổi status = OUT_OF_STOCK.
      */
     void deductToppingStock(Connection conn, int toppingId, int quantity) throws SQLException;
+    /**
+     * Tạo tùy chọn mới cho một MenuItem.
+     * @param optionType SIZE, WEIGHT, SUGAR_LEVEL, ICE_LEVEL, OTHER
+     */
+    void createOption(Connection conn, int menuItemId, String optionType, String optionLabel, BigDecimal extraPrice) throws SQLException;
+
+    /**
+     * Xóa một tùy chọn theo optionId.
+     */
+    void deleteOption(Connection conn, int optionId) throws SQLException;
 }

@@ -60,10 +60,11 @@ public class CustomerMainView {
             System.out.println("3. Xem lịch sử / trạng thái món đã đặt (F&B)");
             System.out.println("4. Tra cứu & Ngắt máy trạm (Session Status)");
             System.out.println("5. Đặt máy trước (Cọc 1h)");
+            System.out.println("6. Lịch sử đặt máy");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-5): ", 0, 5);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-6): ", 0, 6);
 
             try {
                 switch (choice) {
@@ -72,6 +73,7 @@ public class CustomerMainView {
                     case 3: viewCurrentStatus();    break;
                     case 4: displayCurrentSession(); break;
                     case 5: reserveComputerFlow();  break;
+                    case 6: viewBookingHistoryFlow(); break;
                     case 0:
                         PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Khách hàng...");
                         return;
@@ -143,18 +145,34 @@ public class CustomerMainView {
                     long secondsUsed = diffInMillis / 1000;
                     if (secondsUsed < 0) secondsUsed = 0;
 
-                    long usedMinutes = secondsUsed / 60;
-                    long usedSecs = secondsUsed % 60;
-
-                    long remainMinutes = expectedRemainingSecs / 60;
-                    long remainSecs = expectedRemainingSecs % 60;
+                    String usedTimeStr = FormatUtils.formatDuration(secondsUsed);
+                    String remainTimeStr = FormatUtils.formatDuration(expectedRemainingSecs);
+                    if (expectedRemainingSecs < 300) {
+                        remainTimeStr = "\033[31m" + remainTimeStr + " (SẮP HẾT GIỜ)\033[0m";
+                    }
 
                     PrintUtils.printTableSeparator(70);
                     System.out.printf("| %-30s | %-33s |\n", "Tên máy", active.getComputerName() != null ? active.getComputerName() : active.getComputerId());
-                    System.out.printf("| %-30s | %-33s |\n", "Thời gian bắt đầu", active.getStartTime().toString());
-                    System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", usedMinutes + " phút " + usedSecs + " giây");
+                    System.out.printf("| %-30s | %-33s |\n", "Thời gian bắt đầu", FormatUtils.formatTimestamp(active.getStartTime()));
+                    System.out.printf("| %-30s | %-33s |\n", "Thời gian đã sử dụng", usedTimeStr);
                     System.out.printf("| %-30s | %-33s |\n", "Đơn giá/h", FormatUtils.formatVND(active.getHourlyRateSnapshot()));
-                    System.out.printf("| %-30s | %-33s |\n", "Thời gian còn lại dự kiến", remainMinutes + " phút " + remainSecs + " giây");
+                    System.out.printf("| %-30s | %-42s |\n", "Thời gian còn lại dự kiến", remainTimeStr);
+
+                    // Always-on Transparency cho lịch RESERVED tiếp theo
+                    Booking nextRes = bookingService.getNextReservation(active.getComputerId());
+                    if (nextRes != null) {
+                        long diffToRes = nextRes.getStartTime().getTime() - System.currentTimeMillis();
+                        long minsToRes = diffToRes / 60000;
+                        if (minsToRes < 0) minsToRes = 0;
+                        
+                        PrintUtils.printTableSeparator(70);
+                        if (minsToRes > 5) {
+                            System.out.printf("| %-66s |\n", "⚠️ TIẾP THEO: Có người đặt lúc " + FormatUtils.formatTimestamp(nextRes.getStartTime()) + " (Khoảng " + minsToRes + " phút nữa)");
+                        } else {
+                            System.out.println("| \033[31m[!!!] CẢNH BÁO ĐỎ: Hệ thống sẽ NGẮT MÁY BẢN TRONG " + minsToRes + " PHÚT TỚI!\033[0m |");
+                            System.out.println("| \033[31m[!!!] Vui lòng lưu lại công việc của bạn ngay bây giờ.\033[0m               |");
+                        }
+                    }
                 }
                 PrintUtils.printTableSeparator(70);
                 System.out.println("  Số dư khả dụng hiện tại: " + FormatUtils.formatVND(customerUser.getBalance()));
@@ -252,6 +270,21 @@ public class CustomerMainView {
         Computer targetComputer = availableComputers.stream()
                 .filter(c -> c.getComputerId() == computerId).findFirst().orElse(null);
         if (targetComputer == null) { PrintUtils.printError("ID máy không hợp lệ."); return; }
+
+        // Cảnh báo minh bạch (Transparency): Kiểm tra máy có lịch đặt trước không
+        Booking nextRes = bookingService.getNextReservation(targetComputer.getComputerId());
+        if (nextRes != null) {
+            System.out.println();
+            PrintUtils.printWarning("=================================================");
+            PrintUtils.printWarning("⚠️ CHÚ Ý: MÁY ĐÃ CÓ NGƯỜI ĐẶT TRƯỚC VÀO LÚC " + FormatUtils.formatTimestamp(nextRes.getStartTime()));
+            PrintUtils.printWarning("Hệ thống sẽ TỰ ĐỘNG NGẮT MÁY của bạn đúng vào giờ đó.");
+            PrintUtils.printWarning("=================================================");
+            String ans = InputUtils.inputString("Bạn vẫn muốn ngồi máy này chứ? (Y/N): ");
+            if (!ans.equalsIgnoreCase("y")) {
+                System.out.println("Đã hủy đặt máy.");
+                return;
+            }
+        }
 
         System.out.println("\nĐẶT MÁY (PAY AS YOU GO):");
         System.out.printf("  Máy: %s | Đơn giá: %s/h%n",
@@ -358,6 +391,41 @@ public class CustomerMainView {
         } else {
             System.out.println("Đã hủy.");
         }
+    }
+
+    private void viewBookingHistoryFlow() throws BusinessException {
+        System.out.println("\n--- LỊCH SỬ ĐẶT MÁY ---");
+        List<Booking> list = bookingService.getBookingHistoryByUserId(customerUser.getUserId());
+        if (list.isEmpty()) {
+            System.out.println("Bạn chưa có lịch sử đặt máy nào.");
+            return;
+        }
+        
+        PrintUtils.printTableSeparator(115);
+        System.out.printf("| %-5s | %-12s | %-20s | %-20s | %-15s | %-15s | %-10s |\n",
+                "ID", "Máy", "Bắt đầu", "Kết thúc", "Tổng tiền", "Đơn giá/h", "Trạng thái");
+        PrintUtils.printTableSeparator(115);
+        
+        for (Booking b : list) {
+            String statusStr = b.getStatus();
+            switch (statusStr) {
+                case "ACTIVE": statusStr = "\033[32mACTIVE\033[0m"; break;
+                case "COMPLETED": statusStr = "\033[36mCOMPLETED\033[0m"; break;
+                case "CANCELLED": statusStr = "\033[31mCANCELLED\033[0m"; break;
+                case "RESERVED": statusStr = "\033[33mRESERVED\033[0m"; break;
+                case "PENDING": statusStr = "\033[35mPENDING\033[0m"; break;
+            }
+            
+            System.out.printf("| %-5d | %-12s | %-20s | %-20s | %-15s | %-15s | %-19s |\n",
+                    b.getBookingId(),
+                    b.getComputerName() != null ? b.getComputerName() : String.valueOf(b.getComputerId()),
+                    FormatUtils.formatTimestamp(b.getStartTime()),
+                    FormatUtils.formatTimestamp(b.getEndTime()),
+                    FormatUtils.formatVND(b.getTotalFee()),
+                    FormatUtils.formatVND(b.getHourlyRateSnapshot()),
+                    statusStr);
+        }
+        PrintUtils.printTableSeparator(115);
     }
 
     private void viewCurrentStatus() throws BusinessException {

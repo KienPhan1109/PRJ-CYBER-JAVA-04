@@ -314,6 +314,88 @@ public class FbMenuService {
     }
 
     // -------------------------------------------------------
+    // Quản lý Options (Size, Sugar, v.v.)
+    // -------------------------------------------------------
+
+    /**
+     * Thêm tùy chọn mới cho món (có ghi log).
+     */
+    public void addOptionToItem(int menuItemId, String optionType, String optionLabel, BigDecimal extraPrice, com.cyber.model.User actor) throws BusinessException {
+        if (optionType == null || optionType.isBlank()) {
+            throw new BusinessException("ERR_VALIDATION", "Loại tùy chọn không được để trống (SIZE, SUGAR_LEVEL, ICE_LEVEL, WEIGHT, OTHER).");
+        }
+        if (optionLabel == null || optionLabel.isBlank()) {
+            throw new BusinessException("ERR_VALIDATION", "Nhãn tùy chọn không được để trống (VD: Size L).");
+        }
+        if (extraPrice == null || extraPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("ERR_VALIDATION", "Phụ phí không được âm.");
+        }
+
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+            
+            FbMenuItem existing = menuItemDAO.findById(conn, menuItemId);
+            if (existing == null) {
+                throw new BusinessException("ERR_ITEM_NOT_FOUND", "Không tìm thấy món ăn với ID=" + menuItemId);
+            }
+
+            optionDAO.createOption(conn, menuItemId, optionType, optionLabel, extraPrice);
+            
+            String action = String.format("Thêm Option mới [%s - %s] (Phụ phí: %s) cho món: %s (ID=%d)", 
+                    optionType, optionLabel, com.cyber.util.FormatUtils.formatVND(extraPrice), existing.getName(), menuItemId);
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
+            
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw new BusinessException("DB_ERROR", "Lỗi thêm tùy chọn: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+            }
+        }
+    }
+
+    /**
+     * Xóa tùy chọn của món (có ghi log).
+     */
+    public void removeOptionFromItem(int menuItemId, int optionId, com.cyber.model.User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            List<Map<String, Object>> options = optionDAO.findOptionsByMenuItemId(conn, menuItemId);
+            Map<String, Object> optionToRemove = options.stream()
+                .filter(o -> (int)o.get("option_id") == optionId)
+                .findFirst().orElse(null);
+
+            if (optionToRemove == null) {
+                 throw new BusinessException("ERR_NOT_FOUND", "Không tìm thấy Option ID=" + optionId + " của món ăn này.");
+            }
+
+            optionDAO.deleteOption(conn, optionId);
+
+            FbMenuItem existing = menuItemDAO.findById(conn, menuItemId);
+            String action = String.format("Xóa Option [%s - %s] khỏi món: %s (ID=%d)", 
+                    optionToRemove.get("option_type"), optionToRemove.get("option_label"), 
+                    existing != null ? existing.getName() : "Unknown", menuItemId);
+            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            throw new BusinessException("DB_ERROR", "Lỗi xóa tùy chọn: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                 try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+            }
+        }
+    }
+
+    // -------------------------------------------------------
     // Private Validation
     // -------------------------------------------------------
 

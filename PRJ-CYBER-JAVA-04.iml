@@ -9,5 +9,7 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" exported="" name="mysql-connector-j-9.6.0" level="project" />
+    <orderEntry type="library" exported="" name="junit-jupiter-api-6.0.3" level="project" />
+    <orderEntry type="library" exported="" name="junit-platform-console-standalone-6.0.3" level="project" />
   </component>
 </module>

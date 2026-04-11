@@ -9,9 +9,11 @@ public interface IBookingDAO {
     boolean isComputerAvailable(Connection conn, int computerId, Timestamp start, Timestamp end) throws SQLException;
     boolean hasDependentBookings(Connection conn, int computerId) throws SQLException;
     java.util.List<Booking> findActiveBookingsByUserId(Connection conn, int userId) throws SQLException;
+    java.util.List<Booking> findAllBookingsByUserId(Connection conn, int userId) throws SQLException;
     java.util.List<Booking> findAllActiveBookings(Connection conn) throws SQLException;
     Booking findById(Connection conn, int bookingId) throws SQLException;
     void updateBooking(Connection conn, Booking booking) throws SQLException;
     java.util.List<Booking> findPendingBookings(Connection conn) throws SQLException;
     java.util.List<Booking> findOverdueReservations(Connection conn, int overdueMinutes) throws SQLException;
+    Booking findNextReservation(Connection conn, int computerId) throws SQLException;
 }

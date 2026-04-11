@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.sql.Timestamp;
 
 public class FormatUtils {
     private static final Locale VN_LOCALE = Locale.of("vi", "VN");
@@ -54,6 +55,24 @@ public class FormatUtils {
 
     public static String formatId(String prefix, int id) {
         return String.format("%s-%03d", prefix, id);
+    }
+    
+    public static String formatTimestamp(Timestamp timestamp) {
+        if (timestamp == null) return "N/A";
+        return timestamp.toLocalDateTime().format(DATETIME_FORMATTER);
+    }
+
+    public static String formatDuration(long totalSeconds) {
+        if (totalSeconds < 0) totalSeconds = 0;
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+        
+        if (hours > 0) {
+            return String.format("%d tiếng %02d phút %02d giây", hours, minutes, seconds);
+        } else {
+            return String.format("%d phút %02d giây", minutes, seconds);
+        }
     }
 
     public static String formatComputerStatus(ComputerStatus status) {

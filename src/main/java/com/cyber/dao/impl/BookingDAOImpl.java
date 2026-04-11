@@ -94,6 +94,36 @@ public class BookingDAOImpl implements IBookingDAO {
     }
 
     @Override
+    public java.util.List<Booking> findAllBookingsByUserId(Connection conn, int userId) throws SQLException {
+        java.util.List<Booking> list = new java.util.ArrayList<>();
+        String sql = "SELECT b.*, c.name as computer_name " +
+                     "FROM bookings b " +
+                     "JOIN computers c ON b.computer_id = c.computer_id " +
+                     "WHERE b.user_id = ? " +
+                     "ORDER BY b.created_at DESC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Booking b = new Booking(
+                        rs.getInt("booking_id"),
+                        rs.getInt("user_id"),
+                        rs.getInt("computer_id"),
+                        rs.getTimestamp("start_time"),
+                        rs.getTimestamp("end_time"),
+                        rs.getString("status"),
+                        rs.getBigDecimal("total_fee"),
+                        rs.getBigDecimal("hourly_rate_snapshot")
+                    );
+                    b.setComputerName(rs.getString("computer_name"));
+                    list.add(b);
+                }
+            }
+        }
+        return list;
+    }
+
+    @Override
     public java.util.List<Booking> findAllActiveBookings(Connection conn) throws SQLException {
         java.util.List<Booking> list = new java.util.ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name " +
@@ -220,5 +250,28 @@ public class BookingDAOImpl implements IBookingDAO {
             }
         }
         return list;
+    }
+
+    @Override
+    public Booking findNextReservation(Connection conn, int computerId) throws SQLException {
+        String sql = "SELECT * FROM bookings WHERE computer_id = ? AND status = 'RESERVED' ORDER BY start_time ASC LIMIT 1";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, computerId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return new Booking(
+                        rs.getInt("booking_id"),
+                        rs.getInt("user_id"),
+                        rs.getInt("computer_id"),
+                        rs.getTimestamp("start_time"),
+                        rs.getTimestamp("end_time"),
+                        rs.getString("status"),
+                        rs.getBigDecimal("total_fee"),
+                        rs.getBigDecimal("hourly_rate_snapshot")
+                    );
+                }
+            }
+        }
+        return null;
     }
 }

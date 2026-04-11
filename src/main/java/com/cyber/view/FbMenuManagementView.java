@@ -37,16 +37,18 @@ public class FbMenuManagementView {
             System.out.println("2. Thêm món mới vào Menu");
             System.out.println("3. Sửa thông tin món");
             System.out.println("4. Ẩn / Hiện món");
-            System.out.println("5. Quản lý Topping");
+            System.out.println("5. Quản lý Topping dùng chung");
+            System.out.println("6. Quản lý Tùy chọn của món (Size/Đường/Đá)");
             System.out.println("0. Quay lại");
 
-            int choice = InputUtils.inputInt("Chọn chức năng (0-5): ", 0, 5);
+            int choice = InputUtils.inputInt("Chọn chức năng (0-6): ", 0, 6);
             switch (choice) {
                 case 1 -> displayMenuList();
                 case 2 -> handleAddItem();
                 case 3 -> handleEditItem();
                 case 4 -> handleDeleteItem();
                 case 5 -> manageToppings();
+                case 6 -> manageItemOptions();
                 case 0 -> {
                     return;
                 }
@@ -332,11 +334,109 @@ public class FbMenuManagementView {
             try {
                 menuService.toggleToppingStatus(id, adminUser);
                 PrintUtils.printSuccess("Đã thay đổi trạng thái Topping ID=%d thành công.", id);
-            } catch (BusinessException e) {
+            } catch (
+                    BusinessException e) {
                 PrintUtils.printError(e.getMessage());
             }
         } else {
             System.out.println("Đã hủy thao tác.");
+        }
+    }
+
+    // -------------------------------------------------------
+    // 6. Quản lý Tùy chọn của Món (Item Options)
+    // -------------------------------------------------------
+    private void manageItemOptions() {
+        System.out.println("\n--- QUẢN LÝ TÙY CHỌN MÓN (SIZE, ĐƯỜNG, ĐÁ,...) ---");
+        int itemId = InputUtils.inputInt("Nhập ID của món cần quản lý (Menu Item ID): ", 1, Integer.MAX_VALUE);
+        
+        try {
+            FbMenuItem item = menuService.getMenuItemById(itemId);
+            System.out.println("=> Đang cấu hình Menu Item: " + item.getName());
+            
+            while (true) {
+                System.out.println("\n1. Xem danh sách Option hiện tại của: " + item.getName());
+                System.out.println("2. Thêm Option mới");
+                System.out.println("3. Xóa Option");
+                System.out.println("0. Quay lại mục trước");
+                
+                int optChoice = InputUtils.inputInt("Lựa chọn (0-3): ", 0, 3);
+                switch (optChoice) {
+                    case 1: displayItemOptions(itemId); break;
+                    case 2: handleAddItemOption(itemId); break;
+                    case 3: handleRemoveItemOption(itemId); break;
+                    case 0: return;
+                }
+            }
+        } catch (BusinessException e) {
+            PrintUtils.printError(e.getMessage());
+        }
+    }
+
+    private void displayItemOptions(int menuItemId) {
+        try {
+            List<Map<String, Object>> options = menuService.getOptionsByMenuItemId(menuItemId);
+            System.out.println("\n--- DANH SÁCH OPTION ---\n");
+            if (options.isEmpty()) {
+                System.out.println("Chưa có bất kỳ tùy chọn nào được cấu hình cho món này.");
+                return;
+            }
+            
+            System.out.printf("%-5s | %-15s | %-15s | %-15s%n", "ID", "Phân Loại", "Nhãn", "Phụ phí");
+            System.out.println("-".repeat(55));
+            for (Map<String, Object> opt : options) {
+                System.out.printf("%-5d | %-15s | %-15s | %-15s%n",
+                        opt.get("option_id"),
+                        opt.get("option_type"),
+                        opt.get("option_label"),
+                        FormatUtils.formatVND((BigDecimal) opt.get("extra_price")));
+            }
+        } catch (BusinessException e) {
+            PrintUtils.printError(e.getMessage());
+        }
+    }
+
+    private void handleAddItemOption(int menuItemId) {
+        System.out.println("\n-- THÊM TÙY CHỌN MỚI --");
+        System.out.println("Chọn phân loại Tùy chọn (Enum database mapping):");
+        System.out.println("1. SIZE");
+        System.out.println("2. SUGAR_LEVEL");
+        System.out.println("3. ICE_LEVEL");
+        System.out.println("4. WEIGHT");
+        System.out.println("5. Khác (OTHER)");
+        int typeChoice = InputUtils.inputInt("Chọn (1-5): ", 1, 5);
+        String optionType = switch (typeChoice) {
+            case 1 -> "SIZE";
+            case 2 -> "SUGAR_LEVEL";
+            case 3 -> "ICE_LEVEL";
+            case 4 -> "WEIGHT";
+            default -> "OTHER";
+        };
+        
+        String optionLabel = InputUtils.inputString("Nhãn hiển thị (VD: Size M, 50% Đường...): ");
+        BigDecimal extraPrice = InputUtils.inputBigDecimal("Phụ phí (VND, nhập 0 nếu miễn phí): ", BigDecimal.ZERO);
+        
+        try {
+            menuService.addOptionToItem(menuItemId, optionType, optionLabel, extraPrice, adminUser);
+            PrintUtils.printSuccess("Thêm tùy chọn thành công!");
+        } catch (BusinessException e) {
+            PrintUtils.printError(e.getMessage());
+        }
+    }
+
+    private void handleRemoveItemOption(int menuItemId) {
+        displayItemOptions(menuItemId);
+        int optId = InputUtils.inputInt("Nhập ID của Option cần xóa: ", 1, Integer.MAX_VALUE);
+        String confirm = InputUtils.inputString("Xác nhận xóa Option này rĩnh viễn? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
+        if (confirm.equalsIgnoreCase("y")) {
+            try {
+                menuService.removeOptionFromItem(menuItemId, optId, adminUser);
+                PrintUtils.printSuccess("Đã xóa tùy chọn ID=%d thành công.", optId);
+            } catch (BusinessException e) {
+                PrintUtils.printError(e.getMessage());
+            }
+        } else {
+            System.out.println("Hủy thao tác.");
         }
     }
 }

@@ -63,6 +63,12 @@ public class FbOptionDAOImpl implements IFbOptionDAO {
             "    status = CASE WHEN stock_quantity - ? = 0 THEN 'OUT_OF_STOCK' ELSE status END " +
             "WHERE topping_id = ? AND stock_quantity >= ?";
 
+    private static final String SQL_CREATE_OPTION =
+            "INSERT INTO fb_item_options (menu_item_id, option_type, option_label, extra_price) VALUES (?, ?, ?, ?)";
+
+    private static final String SQL_DELETE_OPTION =
+            "DELETE FROM fb_item_options WHERE option_id = ?";
+
     // -------------------------------------------------------
     // Implementations
     // -------------------------------------------------------
@@ -181,5 +187,24 @@ public class FbOptionDAOImpl implements IFbOptionDAO {
         map.put("stock_quantity", rs.getInt("stock_quantity"));
         map.put("status",        rs.getString("status"));
         return map;
+    }
+
+    @Override
+    public void createOption(Connection conn, int menuItemId, String optionType, String optionLabel, BigDecimal extraPrice) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(SQL_CREATE_OPTION)) {
+            ps.setInt(1, menuItemId);
+            ps.setString(2, optionType);
+            ps.setString(3, optionLabel);
+            ps.setBigDecimal(4, extraPrice);
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public void deleteOption(Connection conn, int optionId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(SQL_DELETE_OPTION)) {
+            ps.setInt(1, optionId);
+            ps.executeUpdate();
+        }
     }
 }
