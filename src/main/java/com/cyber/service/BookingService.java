@@ -41,8 +41,20 @@ public class BookingService {
             conn.setAutoCommit(false);
 
             User currentUser = userDAO.findById(conn, userId);
-            if (currentUser == null) throw new RuntimeException("ERR_USER_NOT_FOUND");
-            if (currentUser.getStatus() == com.cyber.model.enums.UserStatus.LOCKED) throw new RuntimeException("ERR_USER_LOCKED");
+            if (currentUser == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy người dùng.");
+            if (currentUser.getStatus() == com.cyber.model.enums.UserStatus.LOCKED) 
+                throw new BusinessException("LOCKED", "Tài khoản đang bị khóa.");
+
+            // Ràng buộc: Mỗi User chỉ được phép có tối đa 1 session (ACTIVE hoặc RESERVED)
+            List<Booking> activeList = bookingDAO.findActiveBookingsByUserId(conn, userId);
+            if (!activeList.isEmpty()) {
+                throw new BusinessException("ALREADY_ACTIVE", "Bạn đang có máy đang sử dụng. Vui lòng ngắt máy trước khi đặt máy mới.");
+            }
+            List<Booking> allList = bookingDAO.findAllBookingsByUserId(conn, userId);
+            boolean hasReserved = allList.stream().anyMatch(b -> "RESERVED".equals(b.getStatus()));
+            if (hasReserved) {
+                throw new BusinessException("ALREADY_RESERVED", "Bạn đã có lịch đặt máy trước. Mỗi tài khoản chỉ được có 1 phiên duy nhất.");
+            }
 
             // Đặt trạng thái PENDING — chờ Staff phê duyệt
             booking.setStatus("PENDING");
@@ -406,6 +418,17 @@ public class BookingService {
             if (currentUser == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy tài khoản.");
             if (currentUser.getStatus() == com.cyber.model.enums.UserStatus.LOCKED)
                 throw new BusinessException("LOCKED", "Tài khoản bị khóa.");
+
+            // Ràng buộc: Mỗi User chỉ được phép có tối đa 1 session (ACTIVE hoặc RESERVED)
+            List<Booking> activeList = bookingDAO.findActiveBookingsByUserId(conn, userId);
+            if (!activeList.isEmpty()) {
+                throw new BusinessException("ALREADY_ACTIVE", "Bạn đang có máy đang sử dụng. Không thể đặt thêm lịch mới.");
+            }
+            List<Booking> allList = bookingDAO.findAllBookingsByUserId(conn, userId);
+            boolean hasReserved = allList.stream().anyMatch(b -> "RESERVED".equals(b.getStatus()));
+            if (hasReserved) {
+                throw new BusinessException("ALREADY_RESERVED", "Bạn đã có lịch đặt máy trước rồi.");
+            }
 
             com.cyber.dao.IComputerDAO computerDAO = com.cyber.dao.impl.ComputerDAOImpl.getInstance();
             Computer comp = computerDAO.findById(conn, computerId);

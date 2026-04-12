@@ -191,6 +191,33 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
         }
     }
 
+    @Override
+    public void addStock(Connection conn, int menuItemId, int quantity) throws SQLException {
+        String sql = "UPDATE fb_menu_items SET stock_quantity = stock_quantity + ?, " +
+                     "status = CASE WHEN status = 'OUT_OF_STOCK' AND stock_quantity + ? > 0 THEN 'ACTIVE' ELSE status END " +
+                     "WHERE menu_item_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setInt(2, quantity);
+            ps.setInt(3, menuItemId);
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public FbMenuItem findByName(Connection conn, String name) throws SQLException {
+        String sql = "SELECT m.*, c.category_name FROM fb_menu_items m " +
+                     "JOIN fb_categories c ON m.category_id = c.category_id " +
+                     "WHERE m.name = ? AND m.is_deleted = 0";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapRow(rs);
+            }
+        }
+        return null;
+    }
+
     // -------------------------------------------------------
     // Private Helpers
     // -------------------------------------------------------

@@ -75,6 +75,12 @@ public class UserService {
                 throw new BusinessException("USER_NOT_FOUND",
                         "Không tìm thấy người dùng (ID=" + userId + ")");
             }
+
+            // Bảo vệ ADMIN: Không thể khóa tài khoản ADMIN
+            if (user.getRole() != null && user.getRole().getRoleId() == 1) {
+                throw new BusinessException("SECURITY_ERROR", "Không được phép thay đổi trạng thái của Quản trị viên (ADMIN).");
+            }
+
             userDAO.updateUserStatus(conn, userId, status);
 
             // Ghi log trong cùng transaction
@@ -109,6 +115,12 @@ public class UserService {
                 throw new BusinessException("USER_NOT_FOUND",
                         "Không tìm thấy người dùng (ID=" + userId + ")");
             }
+
+            // Chặn nạp tiền cho tài khoản bị khóa (LOCKED)
+            if (user.getStatus() == UserStatus.LOCKED) {
+                throw new BusinessException("ACCESS_DENIED", "Tài khoản đang bị khóa, không được phép nạp tiền.");
+            }
+
             userDAO.addBalance(conn, userId, amount);
 
             // Ghi log trong cùng transaction
@@ -135,6 +147,12 @@ public class UserService {
             if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("USER_NOT_FOUND", "Không tìm thấy người dùng");
             }
+
+            // Bảo vệ ADMIN: Không được sửa thông tin ADMIN từ trang quản lý chung
+            if (existing.getRole() != null && existing.getRole().getRoleId() == 1) {
+                throw new BusinessException("SECURITY_ERROR", "Không được phép chỉnh sửa thông tin của Quản trị viên (ADMIN).");
+            }
+
             userDAO.updateUser(conn, user);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi cập nhật User: " + e.getMessage());

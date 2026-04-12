@@ -10,6 +10,7 @@ import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 
 import java.util.List;
+import com.cyber.util.ColorConst;
 
 public class ComputerManagementView {
     private final ComputerService computerService;
@@ -49,26 +50,45 @@ public class ComputerManagementView {
     private void displayList() {
         try {
             List<Computer> computers = computerService.getAllComputers();
-            System.out.println("\n========================================================================================================================================");
-            System.out.println("                                                     DANH SÁCH MÁY TOÀN HỆ THỐNG                                                        ");
-            System.out.println("========================================================================================================================================");
-            System.out.printf("%-7s | %-15s | %-15s | %-50s | %-18s | %-15s\n", "ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá / Giờ");
-            System.out.println("----------------------------------------------------------------------------------------------------------------------------------------");
-            
             if (computers.isEmpty()) {
                 System.out.println("Chưa có dữ liệu máy trạm trong hệ thống.");
-            } else {
-                for (Computer c : computers) {
-                    System.out.printf("%-7s | %-15s | %-15s | %-50s | %-27s | %-15s\n",
+                return;
+            }
+            int pageSize = 10;
+            int totalPages = (int) Math.ceil((double) computers.size() / pageSize);
+            int currentPage = 1;
+
+            while (true) {
+                int start = (currentPage - 1) * pageSize;
+                int end = Math.min(start + pageSize, computers.size());
+
+                System.out.println("\n" + "=".repeat(130));
+                System.out.println("  DANH SÁCH MÁY TOÀN HỆ THỐNG (Trang " + currentPage + "/" + totalPages + ")");
+                System.out.println("=".repeat(130));
+                System.out.printf("%-7s | %-15s | %-12s | %-30s | %-18s | %-15s%n",
+                        "ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá / Giờ");
+                System.out.println("-".repeat(130));
+
+                for (int i = start; i < end; i++) {
+                    Computer c = computers.get(i);
+                    System.out.printf("%-7s | %-15s | %-12s | %-30s | %-27s | %-15s%n",
                             FormatUtils.formatId("C", c.getComputerId()),
-                            c.getName(),
-                            c.getZone() != null ? c.getZone().name() : "N/A",
-                            c.getHardwareConfig(),
+                            FormatUtils.truncate(c.getName(), 15),
+                            FormatUtils.formatValue(c.getZone()),
+                            FormatUtils.truncate(c.getHardwareConfig()),
                             FormatUtils.formatComputerStatus(c.getStatus()),
                             FormatUtils.formatVND(c.getPricePerHour()));
                 }
+                System.out.println("=".repeat(130));
+                System.out.println("Tổng: " + computers.size() + " máy | Trang " + currentPage + "/" + totalPages);
+
+                if (totalPages <= 1) break;
+                System.out.println("[N] Trang sau | [P] Trang trước | [Q] Thoát");
+                String nav = InputUtils.inputString("Lựa chọn: ").toUpperCase();
+                if (nav.equals("N") && currentPage < totalPages) currentPage++;
+                else if (nav.equals("P") && currentPage > 1) currentPage--;
+                else if (nav.equals("Q")) break;
             }
-            System.out.println("========================================================================================================================================");
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }
@@ -94,7 +114,7 @@ public class ComputerManagementView {
         
         try {
             computerService.addComputer(newComp, adminUser);
-            System.out.println("\033[32m[THÀNH CÔNG] Thêm máy trạm thành công!\033[0m");
+            PrintUtils.printSuccess("Thêm máy trạm thành công!");
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }
@@ -137,7 +157,7 @@ public class ComputerManagementView {
             existing.inputData(true, name);
             
             computerService.updateComputer(existing, adminUser);
-            System.out.println("\033[32m[THÀNH CÔNG] Cập nhật thông tin thành công!\033[0m");
+            PrintUtils.printSuccess("Cập nhật thông tin thành công!");
             
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
@@ -147,17 +167,25 @@ public class ComputerManagementView {
     private void handleToggleHideShow() {
         System.out.println("\n--- ẨN / HIỆN MÁY TRẠM ---");
         int id = InputUtils.inputInt("Nhập ID máy cần Ẩn/Hiện (số nguyên): ");
-        String confirm = InputUtils.inputString("Bạn có chắc chắn muốn thay đổi trạng thái máy không? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
-        
-        if (confirm.equalsIgnoreCase("Y")) {
-            try {
-                computerService.toggleComputerStatus(id, adminUser);
-                System.out.println("\033[32m[THÀNH CÔNG] Đã thay đổi trạng thái máy trạm!\033[0m");
-            } catch (BusinessException e) {
-                PrintUtils.printError(e.getMessage());
+        try {
+            Computer comp = computerService.getComputerById(id);
+            if (comp == null) {
+                PrintUtils.printWarning("Không tìm thấy máy với ID " + FormatUtils.formatId("C", id));
+                return;
             }
-        } else {
-            System.out.println("Đã hủy thao tác.");
+            boolean isHidden = comp.getStatus() == com.cyber.model.enums.ComputerStatus.HIDDEN;
+            String action = isHidden ? "HIỆN" : "ẨN";
+            String confirmMsg = String.format("Bạn có chắc chắn muốn %s máy [%s] không? (Y/N): ", action, comp.getName());
+            String confirm = InputUtils.inputString(confirmMsg, "^[YyNn]$", "Chỉ nhập Y hoặc N.");
+
+            if (confirm.equalsIgnoreCase("Y")) {
+                computerService.toggleComputerStatus(id, adminUser);
+                PrintUtils.printSuccess("Đã " + action + " máy trạm [" + comp.getName() + "] thành công!");
+            } else {
+                System.out.println("Đã hủy thao tác.");
+            }
+        } catch (BusinessException e) {
+            PrintUtils.printError(e.getMessage());
         }
     }
 }

@@ -98,13 +98,21 @@ public class FbOrderService {
 
             orderDAO.updateOrderStatus(conn, orderId, newStatus);
 
-            // Hoàn tiền nếu staff huỷ đơn
+            // Hoàn tiền + hoàn kho nếu staff huỷ đơn
             if (newStatus == FbOrderStatus.CANCELLED) {
                 com.cyber.dao.IUserDAO userDAO = com.cyber.dao.impl.UserDAOImpl.getInstance();
                 userDAO.addBalance(conn, order.getUserId(), order.getTotalAmount());
                 
-                String refundAction = String.format("Hoàn tiền đơn hàng huỷ: %s", 
-                    com.cyber.util.FormatUtils.formatVND(order.getTotalAmount()));
+                // Hoàn kho từng món trong đơn
+                List<java.util.Map<String, Object>> details = orderDetailDAO.findDetailsByOrderId(conn, orderId);
+                for (java.util.Map<String, Object> detail : details) {
+                    int menuItemId = (int) detail.get("menu_item_id");
+                    int quantity = (int) detail.get("quantity");
+                    menuItemDAO.addStock(conn, menuItemId, quantity);
+                }
+                
+                String refundAction = String.format("Hoàn tiền + hoàn kho đơn hàng huỷ #%d: %s", 
+                    orderId, com.cyber.util.FormatUtils.formatVND(order.getTotalAmount()));
                 logService.log(conn, LogType.USER, actor, refundAction, order.getUserId());
             }
 

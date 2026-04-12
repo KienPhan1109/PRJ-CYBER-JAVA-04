@@ -64,18 +64,47 @@ public class UserManagementView {
             PrintUtils.printWarning("Không có người dùng nào.");
             return;
         }
-        System.out.println("\n--- DANH SÁCH NGƯỜI DÙNG ---");
-        System.out.printf("%-5s | %-15s | %-20s | %-12s | %-15s | %-15s | %-10s\n", 
-            "ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái");
-        System.out.println("-----------------------------------------------------------------------------------------------------");
-        for (User u : users) {
-             String statusStr = u.getStatus() == UserStatus.ACTIVE ? "\033[32mACTIVE\033[0m" : "\033[31mLOCKED\033[0m";
-             System.out.printf("%-5d | %-15s | %-20s | %-12s | %-15s | %-15s | %-10s\n",
-                 u.getUserId(), u.getUsername(), u.getFullName(), u.getPhone() != null ? u.getPhone() : "N/A", 
-                 FormatUtils.formatVND(u.getBalance()), u.getRole() != null ? u.getRole().getRoleName() : "N/A",
-                 statusStr);
+        printUserTable(users, "DANH SÁCH NGƯỜI DÙNG");
+    }
+
+    /** In bảng User có phân trang (dùng chung) */
+    private void printUserTable(List<User> users, String title) {
+        int pageSize = 10;
+        int totalPages = (int) Math.ceil((double) users.size() / pageSize);
+        int currentPage = 1;
+
+        while (true) {
+            int start = (currentPage - 1) * pageSize;
+            int end = Math.min(start + pageSize, users.size());
+
+            System.out.println("\n" + "=".repeat(120));
+            System.out.println("  " + title + " (Trang " + currentPage + "/" + totalPages + ")");
+            System.out.println("=".repeat(120));
+            System.out.printf("%-5s | %-15s | %-20s | %-12s | %-15s | %-12s | %-15s%n",
+                    "ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái");
+            System.out.println("-".repeat(120));
+
+            for (int i = start; i < end; i++) {
+                User u = users.get(i);
+                System.out.printf("%-5d | %-15s | %-20s | %-12s | %-15s | %-12s | %-24s%n",
+                        u.getUserId(),
+                        FormatUtils.truncate(u.getUsername(), 15),
+                        FormatUtils.truncate(u.getFullName(), 20),
+                        FormatUtils.formatValue(u.getPhone()),
+                        FormatUtils.formatVND(u.getBalance()),
+                        u.getRole() != null ? u.getRole().getRoleName() : "---",
+                        FormatUtils.formatUserStatus(u.getStatus()));
+            }
+            System.out.println("=".repeat(120));
+            System.out.println("Tổng: " + users.size() + " người dùng | Trang " + currentPage + "/" + totalPages);
+
+            if (totalPages <= 1) break;
+            System.out.println("[N] Trang sau | [P] Trang trước | [Q] Thoát");
+            String nav = InputUtils.inputString("Lựa chọn: ").toUpperCase();
+            if (nav.equals("N") && currentPage < totalPages) currentPage++;
+            else if (nav.equals("P") && currentPage > 1) currentPage--;
+            else if (nav.equals("Q")) break;
         }
-        System.out.println("-----------------------------------------------------------------------------------------------------");
     }
 
     private void addUser() throws BusinessException {
@@ -83,13 +112,14 @@ public class UserManagementView {
         User user = new User();
         String pw = user.inputRegisterData();
         
-        System.out.println("Chọn Role (1. ADMIN | 2. STAFF | 3. CUSTOMER): ");
-        int roleChoice = InputUtils.inputInt("Nhập (1-3) [Mặc định 3]: ", 1, 3);
-        String roleName = roleChoice == 1 ? "ADMIN" : (roleChoice == 2 ? "STAFF" : "CUSTOMER");
-        user.setRole(new Role(roleChoice, roleName));
+        System.out.println("Chọn Role (1. STAFF | 2. CUSTOMER): ");
+        int roleChoice = InputUtils.inputInt("Nhập (1-2) [Mặc định 2]: ", 1, 2);
+        String roleName = roleChoice == 1 ? "STAFF" : "CUSTOMER";
+        int roleId = roleChoice == 1 ? 2 : 3;
+        user.setRole(new Role(roleId, roleName));
         
         authService.register(user, pw);
-        PrintUtils.printSuccess("Thêm người dùng thành công! ID = " + user.getUserId());
+        PrintUtils.printSuccess("Thêm người dùng thành công!");
     }
 
     private void editUser() throws BusinessException {
@@ -102,6 +132,7 @@ public class UserManagementView {
             throw new BusinessException("NOT_FOUND", "Không tìm thấy User với ID " + id);
         }
         
+        // Chặn sửa Admin
         if (existing.getRole() != null && existing.getRole().getRoleId() == 1) {
             PrintUtils.printWarning("Không được phép sửa thông tin của Quản trị viên (ADMIN).");
             return;
@@ -112,22 +143,26 @@ public class UserManagementView {
         }
 
         System.out.println("Sửa thông tin cho Username: " + existing.getUsername());
+
+        // Cho phép sửa tài khoản (Username)
+        String newUsername = InputUtils.inputStringUpdate(
+                "Tài khoản mới (Cũ: " + existing.getUsername() + ") [Enter để giữ nguyên]: ", existing.getUsername());
+        existing.setUsername(newUsername);
         
-        String newName = InputUtils.inputStringUpdate("Nhập họ tên mới (Cũ: " + existing.getFullName() + ") [Enter để giữ nguyên]: ", existing.getFullName());
+        String newName = InputUtils.inputStringUpdate(
+                "Nhập họ tên mới (Cũ: " + existing.getFullName() + ") [Enter để giữ nguyên]: ", existing.getFullName());
         existing.setFullName(newName);
         
-        String newPhone = InputUtils.inputStringUpdate("Nhập SDT mới (Cũ: " + existing.getPhone() + ") [Enter để giữ nguyên]: ", existing.getPhone());
+        String oldPhone = existing.getPhone() != null ? existing.getPhone() : "";
+        String newPhone = InputUtils.inputStringUpdate(
+                "Nhập SĐT mới (Cũ: " + (oldPhone.isEmpty() ? "---" : oldPhone) + ") [Enter để giữ nguyên]: ", oldPhone);
         existing.setPhone(newPhone);
         
+        // Chỉ cho phép chọn STAFF hoặc CUSTOMER
         int oldRoleId = existing.getRole() != null ? existing.getRole().getRoleId() : 3;
-        System.out.println("Chọn Role (1. ADMIN | 2. STAFF | 3. CUSTOMER - Cũ: " + oldRoleId + "): ");
-        String roleInput = InputUtils.inputStringUpdate("Nhập Role mới [Enter để giữ nguyên]: ", String.valueOf(oldRoleId)).trim();
-        if(!roleInput.isEmpty()) {
-            try {
-                int rId = Integer.parseInt(roleInput);
-                existing.setRole(new Role(rId, rId == 1 ? "ADMIN" : (rId == 2 ? "STAFF" : "CUSTOMER")));
-            } catch (Exception e) {}
-        }
+        System.out.println("Chọn Role (2. STAFF | 3. CUSTOMER - Cũ: " + oldRoleId + "): ");
+        int rId = InputUtils.inputIntUpdate("Nhập Role mới [Enter để giữ nguyên]: ", oldRoleId, 2, 3);
+        existing.setRole(new Role(rId, rId == 2 ? "STAFF" : "CUSTOMER"));
 
         userService.updateUser(existing);
         PrintUtils.printSuccess("Cập nhật thông tin thành công!");
@@ -162,17 +197,15 @@ public class UserManagementView {
 
     private void topUpBalance() throws BusinessException {
         System.out.println("\n[NẠP TIỀN CHO KHÁCH HÀNG]");
-        String keyword = InputUtils.inputStringOptional("Nhập từ khóa tên/username (Enter = hiện tất cả): ");
+        String keyword = InputUtils.inputStringOptional("Nhập từ khóa tên/username (Để trống = hiện tất cả): ");
         List<User> list = userService.searchUsersByName(keyword);
         if (list.isEmpty()) {
             PrintUtils.printWarning("Không tìm thấy khách hàng nào khớp với từ khóa.");
             return;
         }
-        System.out.println("Kết quả tìm kiếm:");
-        for (User u : list) {
-            System.out.printf(" - ID: %d | Username: %s | Tên: %s | SĐT: %s | Số dư: %s\n",
-                    u.getUserId(), u.getUsername(), u.getFullName(), u.getPhone() != null ? u.getPhone() : "N/A", FormatUtils.formatVND(u.getBalance()));
-        }
+
+        // Hiển thị bằng bảng phân trang
+        printUserTable(list, "KẾT QUẢ TÌM KIẾM");
 
         int id = InputUtils.inputInt("Nhập chính xác ID người dùng (0 để hủy): ", 0, Integer.MAX_VALUE);
         if (id == 0) return;
@@ -189,8 +222,7 @@ public class UserManagementView {
         
         BigDecimal amount = InputUtils.inputBigDecimal("Nhập số tiền muốn nạp (VND): ", BigDecimal.ONE);
         
-        // Truyền adminUser (actor) để ghi vào system_logs
         userService.topUpUser(id, amount, adminUser);
-        PrintUtils.printSuccess("Đã nạp " + FormatUtils.formatVND(amount) + " thành công cho User ID: " + id);
+        PrintUtils.printSuccess("Đã nạp " + FormatUtils.formatVND(amount) + " thành công cho User: " + targetUser.getUsername());
     }
 }

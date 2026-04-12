@@ -75,32 +75,101 @@ public class FormatUtils {
         }
     }
 
+    // =========================================================
+    // Tiện ích chuỗi
+    // =========================================================
+
+    /** Cắt chuỗi quá dài, mặc định 30 ký tự */
+    public static String truncate(String text) {
+        return truncate(text, 30);
+    }
+
+    public static String truncate(String text, int max) {
+        if (text == null) return "---";
+        if (text.length() <= max) return text;
+        return text.substring(0, max - 3) + "...";
+    }
+
+    /** Trả về "---" nếu dữ liệu trống/null */
+    public static String formatValue(Object value) {
+        if (value == null) return "---";
+        String str = value.toString().trim();
+        return str.isEmpty() ? "---" : str;
+    }
+
+    // =========================================================
+    // Trạng thái Máy trạm (Việt hóa + ColorConst)
+    // =========================================================
+
     public static String formatComputerStatus(ComputerStatus status) {
-        if (status == null) return "N/A";
+        if (status == null) return "---";
         return switch (status) {
-            case AVAILABLE -> "\033[32m[SẴN SÀNG]" + ColorConst.RESET;
-            case IN_USE -> "\033[31m[ĐANG SỬ DỤNG]" + ColorConst.RESET;
-            case MAINTENANCE -> "\033[33m[BẢO TRÌ]" + ColorConst.RESET;
-            case HIDDEN -> "\033[37m[ĐÃ ẨN]" + ColorConst.RESET;
+            case AVAILABLE   -> ColorConst.GREEN  + "Sẵn sàng"      + ColorConst.RESET;
+            case IN_USE      -> ColorConst.YELLOW + "Đang sử dụng"  + ColorConst.RESET;
+            case MAINTENANCE -> ColorConst.CYAN   + "Bảo trì"       + ColorConst.RESET;
+            case HIDDEN      -> ColorConst.RED    + "Đã ẩn"         + ColorConst.RESET;
         };
     }
 
+    // =========================================================
+    // Trạng thái F&B (Việt hóa + ColorConst)
+    // =========================================================
+
     public static String formatFbTemperature(FbTemperature temperature) {
-        if (temperature == null) return "N/A";
+        if (temperature == null) return "---";
         return switch (temperature) {
-            case HOT ->  ColorConst.RED + "HOT" + ColorConst.RESET;
-            case COLD -> ColorConst.BLUE + "COLD" + ColorConst.RESET;
-            case ICED -> ColorConst.CYAN + "ICED" + ColorConst.RESET;
-            case NONE -> ColorConst.WHITE + "NONE" + ColorConst.RESET;
+            case HOT  -> ColorConst.RED    + "Nóng"      + ColorConst.RESET;
+            case COLD -> ColorConst.BLUE   + "Lạnh"      + ColorConst.RESET;
+            case ICED -> ColorConst.CYAN   + "Đá"        + ColorConst.RESET;
+            case NONE -> ColorConst.WHITE  + "Không"     + ColorConst.RESET;
         };
     }
 
     public static String formatFbStatus(FBStatus status) {
-        if (status == null) return "N/A";
+        if (status == null) return "---";
         return switch (status) {
-            case ACTIVE ->  ColorConst.GREEN + "ACTIVE" + ColorConst.RESET;
-            case OUT_OF_STOCK -> ColorConst.YELLOW + "OUT_OF_STOCK" + ColorConst.RESET;
-            case HIDDEN -> ColorConst.RED + "HIDDEN" + ColorConst.RESET;
+            case ACTIVE       -> ColorConst.GREEN  + "Đang bán"  + ColorConst.RESET;
+            case OUT_OF_STOCK -> ColorConst.YELLOW + "Hết hàng"  + ColorConst.RESET;
+            case HIDDEN       -> ColorConst.RED    + "Đã ẩn"     + ColorConst.RESET;
+        };
+    }
+
+    public static String formatFbAvailability(String availability) {
+        if (availability == null || availability.isBlank()) return "---";
+        return switch (availability.toUpperCase()) {
+            case "ALL"       -> "Cả ngày";
+            case "MORNING"   -> "Buổi sáng";
+            case "AFTERNOON" -> "Buổi chiều";
+            case "EVENING"   -> "Buổi tối";
+            default          -> availability;
+        };
+    }
+
+    // =========================================================
+    // Trạng thái Booking (Việt hóa)
+    // =========================================================
+
+    public static String formatBookingStatus(String status) {
+        if (status == null) return "---";
+        return switch (status.toUpperCase()) {
+            case "PENDING"   -> ColorConst.YELLOW + "Chờ duyệt"    + ColorConst.RESET;
+            case "ACTIVE"    -> ColorConst.GREEN  + "Đang chơi"    + ColorConst.RESET;
+            case "COMPLETED" -> ColorConst.CYAN   + "Hoàn thành"   + ColorConst.RESET;
+            case "CANCELLED" -> ColorConst.RED    + "Đã hủy"       + ColorConst.RESET;
+            case "RESERVED"  -> ColorConst.PURPLE + "Đã đặt trước" + ColorConst.RESET;
+            default          -> status;
+        };
+    }
+
+    // =========================================================
+    // Trạng thái User (Việt hóa)
+    // =========================================================
+
+    public static String formatUserStatus(com.cyber.model.enums.UserStatus status) {
+        if (status == null) return "---";
+        return switch (status) {
+            case ACTIVE -> ColorConst.GREEN + "Hoạt động" + ColorConst.RESET;
+            case LOCKED -> ColorConst.RED   + "Bị khóa"   + ColorConst.RESET;
         };
     }
 }

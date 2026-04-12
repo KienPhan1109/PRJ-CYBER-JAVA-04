@@ -11,6 +11,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import com.cyber.model.User;
+import com.cyber.model.enums.LogType;
 
 /**
  * Service Layer cho quản lý Menu F&B.
@@ -24,9 +26,11 @@ public class FbMenuService {
 
     private static FbMenuService instance;
     private final IFbMenuItemDAO menuItemDAO;
+    private final LogService logService;
 
     private FbMenuService() {
         this.menuItemDAO = FbMenuItemDAOImpl.getInstance();
+        this.logService = LogService.getInstance();
     }
 
     public static synchronized FbMenuService getInstance() {
@@ -91,13 +95,28 @@ public class FbMenuService {
      * @return ID của MenuItem vừa tạo
      * @throws BusinessException ERR_VALIDATION nếu dữ liệu không hợp lệ
      */
-    public int createMenuItem(FbMenuItem item) throws BusinessException {
+    public int createMenuItem(FbMenuItem item, User actor) throws BusinessException {
         validateMenuItem(item);
         try (Connection conn = DatabaseConnection.getConnection()) {
-            return menuItemDAO.create(conn, item);
-        } catch (SQLException e) {
+            // Kiểm tra trùng tên
+            com.cyber.domain.fb.FbMenuItem existing = menuItemDAO.findByName(conn, item.getName());
+            if (existing != null) {
+                throw new BusinessException("DUPLICATE_NAME", "Tên món '" + item.getName() + "' đã tồn tại trong hệ thống.");
+            }
+            int newId = menuItemDAO.create(conn, item);
+            if (actor != null) {
+                logService.logStandalone(LogType.FB, actor,
+                        "Thêm món mới: " + item.getName() + " (ID=" + newId + ")", newId);
+            }
+            return newId;
+        } catch (java.sql.SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi tạo món mới: " + e.getMessage());
         }
+    }
+
+    /** Backward compat - không có actor thì không log */
+    public int createMenuItem(FbMenuItem item) throws BusinessException {
+        return createMenuItem(item, null);
     }
 
     /**
@@ -105,7 +124,7 @@ public class FbMenuService {
      *
      * @throws BusinessException ERR_ITEM_NOT_FOUND | ERR_VALIDATION
      */
-    public void updateMenuItem(FbMenuItem item) throws BusinessException {
+    public void updateMenuItem(FbMenuItem item, User actor) throws BusinessException {
         validateMenuItem(item);
         try (Connection conn = DatabaseConnection.getConnection()) {
             FbMenuItem existing = menuItemDAO.findById(conn, item.getMenuItemId());
@@ -113,40 +132,57 @@ public class FbMenuService {
                 throw new BusinessException("ERR_ITEM_NOT_FOUND", "Không tìm thấy món cần sửa!");
             }
             if (existing.getStatus() == com.cyber.model.enums.FBStatus.HIDDEN) {
-                throw new BusinessException("ERR_ITEM_HIDDEN", "Món ăn đang bị ẩn, không thể sửa thông tin mòn ăn.");
+                throw new BusinessException("ERR_ITEM_HIDDEN", "Món ăn đang bị ẩn, không thể sửa thông tin món ăn.");
             }
             
-            // Auto OUT_OF_STOCK if stock == 0 and currently ACTIVE
             if (item.getStockQuantity() == 0 && item.getStatus() == com.cyber.model.enums.FBStatus.ACTIVE) {
                 item.setStatus(com.cyber.model.enums.FBStatus.OUT_OF_STOCK);
             }
             
             menuItemDAO.update(conn, item);
+            if (actor != null) {
+                logService.logStandalone(LogType.FB, actor,
+                        "Cập nhật món: " + item.getName() + " (ID=" + item.getMenuItemId() + ")", item.getMenuItemId());
+            }
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi cập nhật món: " + e.getMessage());
         }
+    }
+
+    public void updateMenuItem(FbMenuItem item) throws BusinessException {
+        updateMenuItem(item, null);
     }
 
     /**
      * Thay đổi trạng thái Món ăn (Toggle): Ẩn <-> Hiện.
      * @throws BusinessException ERR_ITEM_NOT_FOUND
      */
-    public void toggleMenuItemStatus(int menuItemId) throws BusinessException {
+    public void toggleMenuItemStatus(int menuItemId, User actor) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             FbMenuItem existing = menuItemDAO.findById(conn, menuItemId);
             if (existing == null) {
                 throw new BusinessException("ERR_ITEM_NOT_FOUND",
                         "Không tìm thấy món (ID=" + menuItemId + ")");
             }
+            String oldStatus = existing.getStatus().name();
             if (existing.getStatus() == com.cyber.model.enums.FBStatus.HIDDEN) {
                 existing.setStatus(existing.getStockQuantity() > 0 ? com.cyber.model.enums.FBStatus.ACTIVE : com.cyber.model.enums.FBStatus.OUT_OF_STOCK);
             } else {
                 existing.setStatus(com.cyber.model.enums.FBStatus.HIDDEN);
             }
             menuItemDAO.update(conn, existing);
+            if (actor != null) {
+                logService.logStandalone(LogType.FB, actor,
+                        "Toggle món [" + existing.getName() + "]: " + oldStatus + " -> " + existing.getStatus().name(),
+                        menuItemId);
+            }
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi thay đổi trạng thái món: " + e.getMessage());
         }
+    }
+
+    public void toggleMenuItemStatus(int menuItemId) throws BusinessException {
+        toggleMenuItemStatus(menuItemId, null);
     }
 
 

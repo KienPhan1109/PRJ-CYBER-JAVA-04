@@ -61,7 +61,8 @@ public class LogService {
     public void log(Connection conn, LogType logType, User actor,
                     String action, Integer targetId) throws BusinessException {
         try {
-            SystemLog log = new SystemLog(logType, actor.getUserId(), action, targetId);
+            int actorId = (actor != null) ? actor.getUserId() : 0;
+            SystemLog log = new SystemLog(logType, actorId, action, targetId);
             logDAO.insertLog(conn, log);
         } catch (SQLException e) {
             // Ném BusinessException để caller có thể rollback transaction
@@ -80,7 +81,8 @@ public class LogService {
         try {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
-            logDAO.insertLog(conn, new SystemLog(logType, actor.getUserId(), action, targetId));
+            int actorId = (actor != null) ? actor.getUserId() : 0;
+            logDAO.insertLog(conn, new SystemLog(logType, actorId, action, targetId));
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }

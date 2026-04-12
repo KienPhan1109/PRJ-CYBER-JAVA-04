@@ -12,8 +12,7 @@ import java.math.BigDecimal;
  *   IDiscountStrategy (interface)
  *   ├── NoDiscountStrategy            — Không giảm
  *   ├── PercentageDiscountStrategy    — Giảm theo %
- *   ├── FixedAmountDiscountStrategy   — Giảm số tiền cố định
- *   └── HappyHourDiscountStrategy     — Giảm nếu trong khung giờ Happy Hour
+ *   └── FixedAmountDiscountStrategy   — Giảm số tiền cố định
  * </pre>
  * </p>
  */

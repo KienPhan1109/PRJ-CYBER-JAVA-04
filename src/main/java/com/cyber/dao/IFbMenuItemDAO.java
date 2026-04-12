@@ -55,4 +55,14 @@ public interface IFbMenuItemDAO {
      * @param quantity Số lượng cần trừ
      */
     void deductStock(Connection conn, int menuItemId, int quantity) throws SQLException;
+
+    /**
+     * Cộng lại tồn kho (hoàn kho khi hủy đơn).
+     */
+    void addStock(Connection conn, int menuItemId, int quantity) throws SQLException;
+
+    /**
+     * Tìm món theo tên (kiểm tra trùng lặp).
+     */
+    FbMenuItem findByName(Connection conn, String name) throws SQLException;
 }
