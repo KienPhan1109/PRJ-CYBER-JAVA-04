@@ -32,7 +32,7 @@ public class UserManagementView {
 
     public void displayMenu() {
         while (true) {
-            System.out.println("--- QUẢN LÝ NGƯỜI DÙNG ---");
+            System.out.println("\n--- QUẢN LÝ NGƯỜI DÙNG ---");
             System.out.println("1. Danh sách người dùng");
             System.out.println("2. Thêm người dùng mới");
             System.out.println("3. Sửa thông tin người dùng");

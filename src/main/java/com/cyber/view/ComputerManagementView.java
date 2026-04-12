@@ -33,7 +33,7 @@ public class ComputerManagementView {
             System.out.println("0. Quay lại");
             System.out.println("====================================");
 
-            int choice = InputUtils.inputInt("Chọn chức năng (0-4): ", 0, 4);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-4): ", 0, 4);
 
             switch (choice) {
                 case 1 -> displayList();
@@ -62,16 +62,16 @@ public class ComputerManagementView {
                 int start = (currentPage - 1) * pageSize;
                 int end = Math.min(start + pageSize, computers.size());
 
-                System.out.println("\n" + "=".repeat(130));
-                System.out.println("  DANH SÁCH MÁY TOÀN HỆ THỐNG (Trang " + currentPage + "/" + totalPages + ")");
-                System.out.println("=".repeat(130));
-                System.out.printf("%-7s | %-15s | %-12s | %-30s | %-18s | %-15s%n",
+                System.out.println("\n" + "=".repeat(110));
+                System.out.println("DANH SÁCH MÁY TOÀN HỆ THỐNG");
+                System.out.println("=".repeat(110));
+                System.out.printf("%-7s | %-15s | %-12s | %-30s | %-12s | %-15s%n",
                         "ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá / Giờ");
-                System.out.println("-".repeat(130));
+                System.out.println("-".repeat(110));
 
                 for (int i = start; i < end; i++) {
                     Computer c = computers.get(i);
-                    System.out.printf("%-7s | %-15s | %-12s | %-30s | %-27s | %-15s%n",
+                    System.out.printf("%-7s | %-15s | %-12s | %-30s | %-21s | %-15s%n",
                             FormatUtils.formatId("C", c.getComputerId()),
                             FormatUtils.truncate(c.getName(), 15),
                             FormatUtils.formatValue(c.getZone()),
@@ -79,7 +79,7 @@ public class ComputerManagementView {
                             FormatUtils.formatComputerStatus(c.getStatus()),
                             FormatUtils.formatVND(c.getPricePerHour()));
                 }
-                System.out.println("=".repeat(130));
+                System.out.println("=".repeat(110));
                 System.out.println("Tổng: " + computers.size() + " máy | Trang " + currentPage + "/" + totalPages);
 
                 if (totalPages <= 1) break;

@@ -4,12 +4,11 @@ import com.cyber.model.Role;
 import com.cyber.model.User;
 import java.math.BigDecimal;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserDAOImpl implements IUserDAO {
-
-    // 1. Dùng quy chuẩn Singleton instance
     private static UserDAOImpl instance;
-
     private UserDAOImpl() {}
 
     public static synchronized UserDAOImpl getInstance() {
@@ -103,8 +102,8 @@ public class UserDAOImpl implements IUserDAO {
     }
 
     @Override
-    public java.util.List<User> getAllUsers(Connection conn) throws SQLException {
-        java.util.List<User> users = new java.util.ArrayList<>();
+    public List<User> getAllUsers(Connection conn) throws SQLException {
+        List<User> users = new ArrayList<>();
         String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.is_deleted = 0";
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
@@ -116,8 +115,8 @@ public class UserDAOImpl implements IUserDAO {
     }
 
     @Override
-    public java.util.List<User> searchUsersByName(Connection conn, String name) throws SQLException {
-        java.util.List<User> users = new java.util.ArrayList<>();
+    public List<User> searchUsersByName(Connection conn, String name) throws SQLException {
+        List<User> users = new ArrayList<>();
         String sql = "SELECT u.*, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.is_deleted = 0 AND (u.full_name LIKE ? OR u.username LIKE ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, "%" + name + "%");

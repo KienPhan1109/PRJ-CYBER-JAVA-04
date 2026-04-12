@@ -2,12 +2,13 @@ package com.cyber.dao.impl;
 import com.cyber.dao.IBookingDAO;
 import com.cyber.model.Booking;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BookingDAOImpl implements IBookingDAO {
-
-    // Singleton Pattern
     private static BookingDAOImpl instance;
     private BookingDAOImpl() {}
+
     public static synchronized BookingDAOImpl getInstance() {
         if (instance == null) {
             instance = new BookingDAOImpl();
@@ -64,8 +65,8 @@ public class BookingDAOImpl implements IBookingDAO {
     }
 
     @Override
-    public java.util.List<Booking> findActiveBookingsByUserId(Connection conn, int userId) throws SQLException {
-        java.util.List<Booking> list = new java.util.ArrayList<>();
+    public List<Booking> findActiveBookingsByUserId(Connection conn, int userId) throws SQLException {
+        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name " +
                      "FROM bookings b " +
                      "JOIN computers c ON b.computer_id = c.computer_id " +
@@ -94,8 +95,8 @@ public class BookingDAOImpl implements IBookingDAO {
     }
 
     @Override
-    public java.util.List<Booking> findAllBookingsByUserId(Connection conn, int userId) throws SQLException {
-        java.util.List<Booking> list = new java.util.ArrayList<>();
+    public List<Booking> findAllBookingsByUserId(Connection conn, int userId) throws SQLException {
+        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name " +
                      "FROM bookings b " +
                      "JOIN computers c ON b.computer_id = c.computer_id " +
@@ -124,8 +125,8 @@ public class BookingDAOImpl implements IBookingDAO {
     }
 
     @Override
-    public java.util.List<Booking> findAllActiveBookings(Connection conn) throws SQLException {
-        java.util.List<Booking> list = new java.util.ArrayList<>();
+    public List<Booking> findAllActiveBookings(Connection conn) throws SQLException {
+        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name " +
                      "FROM bookings b " +
                      "JOIN computers c ON b.computer_id = c.computer_id " +
@@ -190,8 +191,8 @@ public class BookingDAOImpl implements IBookingDAO {
     }
 
     @Override
-    public java.util.List<Booking> findPendingBookings(Connection conn) throws SQLException {
-        java.util.List<Booking> list = new java.util.ArrayList<>();
+    public List<Booking> findPendingBookings(Connection conn) throws SQLException {
+        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name, u.full_name as user_name " +
                      "FROM bookings b " +
                      "JOIN computers c ON b.computer_id = c.computer_id " +
@@ -221,8 +222,8 @@ public class BookingDAOImpl implements IBookingDAO {
     }
 
     @Override
-    public java.util.List<Booking> findOverdueReservations(Connection conn, int overdueMinutes) throws SQLException {
-        java.util.List<Booking> list = new java.util.ArrayList<>();
+    public List<Booking> findOverdueReservations(Connection conn, int overdueMinutes) throws SQLException {
+        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name, u.full_name as user_name " +
                      "FROM bookings b " +
                      "JOIN computers c ON b.computer_id = c.computer_id " +

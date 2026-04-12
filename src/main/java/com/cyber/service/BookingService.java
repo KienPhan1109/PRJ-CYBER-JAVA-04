@@ -11,8 +11,6 @@ import java.util.List;
 import com.cyber.util.FormatUtils;
 
 public class BookingService {
-
-    // Singleton Pattern
     private static BookingService instance;
     private IBookingDAO bookingDAO;
     private IUserDAO userDAO;
@@ -29,11 +27,6 @@ public class BookingService {
         return instance;
     }
 
-    /**
-     * Gửi yêu cầu đặt máy — tạo booking với trạng thái PENDING.
-     * Tiền CHƯA bị trừ, máy CHƯA chuyển sang IN_USE.
-     * Staff phải gọi approveBooking() để kích hoạt phiên chơi.
-     */
     public int bookComputer(int userId, Booking booking) throws BusinessException {
         Connection conn = null;
         try {

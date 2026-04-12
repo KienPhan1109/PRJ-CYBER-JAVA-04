@@ -8,8 +8,6 @@ public class FbOrder {
     private Integer bookingId;
     private FbOrderStatus status;
     private BigDecimal totalAmount;
-    
-    // Additional fields for display
     private String userName;
     private String computerName;
 
@@ -40,10 +38,6 @@ public class FbOrder {
         return bookingId;
     }
 
-    public void setBookingId(Integer bookingId) {
-        this.bookingId = bookingId;
-    }
-
     public FbOrderStatus getStatus() {
         return status;
     }
@@ -54,10 +48,6 @@ public class FbOrder {
 
     public BigDecimal getTotalAmount() {
         return totalAmount;
-    }
-
-    public void setTotalAmount(BigDecimal totalAmount) {
-        this.totalAmount = totalAmount;
     }
 
     public String getUserName() {

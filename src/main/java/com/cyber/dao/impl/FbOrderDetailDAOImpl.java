@@ -9,14 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Cài đặt DAO cho bảng fb_order_details (Phase 2).
- * Lưu toàn bộ thông tin cấu hình Decorator (dạng JSON) để có thể load lại sau.
- */
 public class FbOrderDetailDAOImpl implements IFbOrderDetailDAO {
-
     private static FbOrderDetailDAOImpl instance;
-
     private FbOrderDetailDAOImpl() {}
 
     public static synchronized FbOrderDetailDAOImpl getInstance() {

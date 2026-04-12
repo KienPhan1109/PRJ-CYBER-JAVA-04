@@ -39,7 +39,7 @@ public class FbMenuManagementView {
             System.out.println("4. Ẩn / Hiện món");
             System.out.println("0. Quay lại");
 
-            int choice = InputUtils.inputInt("Chọn chức năng (0-4): ", 0, 4);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-4): ", 0, 4);
             switch (choice) {
                 case 1 -> displayMenuList();
                 case 2 -> handleAddItem();
@@ -71,7 +71,7 @@ public class FbMenuManagementView {
                 int end = Math.min(start + pageSize, items.size());
 
                 System.out.println("\n" + "=".repeat(150));
-                System.out.println("  DANH SÁCH MÓN TOÀN HỆ THỐNG - ADMIN (Trang " + currentPage + "/" + totalPages + ")");
+                System.out.println("DANH SÁCH MÓN TOÀN HỆ THỐNG");
                 System.out.println("=".repeat(150));
                 System.out.printf("%-6s | %-10s | %-20s | %-30s | %-12s | %-6s | %-5s | %-10s | %-10s | %-12s%n",
                         "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái");

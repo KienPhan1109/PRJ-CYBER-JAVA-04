@@ -10,9 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ComputerDAOImpl implements IComputerDAO {
-
     private static ComputerDAOImpl instance;
-
     private ComputerDAOImpl() {}
 
     public static synchronized ComputerDAOImpl getInstance() {
@@ -74,7 +72,7 @@ public class ComputerDAOImpl implements IComputerDAO {
     }
 
     @Override
-    public int addComputer(Connection conn, Computer computer) throws SQLException {
+    public void addComputer(Connection conn, Computer computer) throws SQLException {
         String sql = "INSERT INTO computers (name, zone, hardware_config, status, price_per_hour) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, computer.getName());
@@ -85,10 +83,11 @@ public class ComputerDAOImpl implements IComputerDAO {
             stmt.executeUpdate();
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) return rs.getInt(1);
+                if (rs.next()) {
+                    rs.getInt(1);
+                }
             }
         }
-        return -1;
     }
 
     @Override

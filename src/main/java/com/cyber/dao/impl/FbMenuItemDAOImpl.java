@@ -7,15 +7,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Cài đặt DAO cho bảng fb_menu_items.
- * Singleton Pattern, dùng PreparedStatement chống SQL Injection.
- * Mọi Connection đều được truyền từ Service (quản lý transaction tại Service layer).
- */
 public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
-
     private static FbMenuItemDAOImpl instance;
-
     private FbMenuItemDAOImpl() {}
 
     public static synchronized FbMenuItemDAOImpl getInstance() {
@@ -132,12 +125,12 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     @Override
     public int create(Connection conn, FbMenuItem item) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(SQL_CREATE, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt   (1, item.getCategoryId());
+            ps.setInt(1, item.getCategoryId());
             ps.setString(2, item.getName());
             ps.setString(3, item.getDescription());
             ps.setBigDecimal(4, item.getBasePrice());
-            ps.setInt   (5, item.getStockQuantity());
-            ps.setInt   (6, item.getPrepTimeInMinutes());
+            ps.setInt(5, item.getStockQuantity());
+            ps.setInt(6, item.getPrepTimeInMinutes());
             ps.setString(7, item.getItemTags());
             ps.setString(8, item.getAvailability());
             ps.setString(9, item.getTemperatureLevel() != null ? item.getTemperatureLevel().name() : null);
@@ -153,17 +146,17 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     @Override
     public void update(Connection conn, FbMenuItem item) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(SQL_UPDATE)) {
-            ps.setInt   (1, item.getCategoryId());
+            ps.setInt(1, item.getCategoryId());
             ps.setString(2, item.getName());
             ps.setString(3, item.getDescription());
             ps.setBigDecimal(4, item.getBasePrice());
-            ps.setInt   (5, item.getStockQuantity());
-            ps.setInt   (6, item.getPrepTimeInMinutes());
+            ps.setInt(5, item.getStockQuantity());
+            ps.setInt(6, item.getPrepTimeInMinutes());
             ps.setString(7, item.getItemTags());
             ps.setString(8, item.getAvailability());
             ps.setString(9, item.getTemperatureLevel() != null ? item.getTemperatureLevel().name() : null);
             ps.setString(10, item.getStatus() != null ? item.getStatus().name() : "ACTIVE");
-            ps.setInt   (11, item.getMenuItemId());
+            ps.setInt(11, item.getMenuItemId());
             ps.executeUpdate();
         }
     }
@@ -180,13 +173,12 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     public void deductStock(Connection conn, int menuItemId, int quantity) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(SQL_DEDUCT_STOCK)) {
             ps.setInt(1, quantity);
-            ps.setInt(2, quantity); // For CASE check
+            ps.setInt(2, quantity);
             ps.setInt(3, menuItemId);
-            ps.setInt(4, quantity); // WHERE stock_quantity >= quantity
+            ps.setInt(4, quantity);
             int rows = ps.executeUpdate();
             if (rows == 0) {
-                throw new SQLException("Không đủ tồn kho cho menu_item_id=" + menuItemId
-                        + " (yêu cầu: " + quantity + ")");
+                throw new SQLException("Không đủ tồn kho cho menu_item_id=" + menuItemId + " (yêu cầu: " + quantity + ")");
             }
         }
     }

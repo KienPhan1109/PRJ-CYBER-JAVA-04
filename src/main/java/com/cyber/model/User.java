@@ -3,6 +3,8 @@ package com.cyber.model;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import com.cyber.model.enums.UserStatus;
+import com.cyber.util.InputUtils;
+import com.cyber.util.PrintUtils;
 
 public class User {
     private int userId;
@@ -19,19 +21,19 @@ public class User {
     public User() {}
 
     public String inputRegisterData() {
-        this.username = com.cyber.util.InputUtils.inputString("Tên đăng nhập: ");
+        this.username = InputUtils.inputString("Tên đăng nhập: ");
         String password;
         while (true) {
-            password = com.cyber.util.InputUtils.inputRegisterPassword("Mật khẩu (>= 8 ký tự, 1 Hoa, 1 thường, 1 số, 1 ký tự đặc biệt): ");
-            String confirmPassword = com.cyber.util.InputUtils.inputPassword("Xác nhận mật khẩu: ");
+            password = InputUtils.inputRegisterPassword("Mật khẩu (>= 8 ký tự, 1 Hoa, 1 thường, 1 số, 1 ký tự đặc biệt): ");
+            String confirmPassword = InputUtils.inputPassword("Xác nhận mật khẩu: ");
             if (!password.equals(confirmPassword)) {
-                com.cyber.util.PrintUtils.printError("Mật khẩu xác nhận không khớp. Vui lòng nhập lại!");
+                PrintUtils.printError("Mật khẩu xác nhận không khớp. Vui lòng nhập lại!");
             } else {
                 break;
             }
         }
-        this.fullName = com.cyber.util.InputUtils.inputString("Họ và tên: ");
-        this.phone = com.cyber.util.InputUtils.inputString("Số điện thoại: ", "^(0|\\+84)[3|5|7|8|9][0-9]{8}$", "Số điện thoại không đúng định dạng VN (VD: 09xxxxxxxx hoặc +849xxxxxxxx).");
+        this.fullName = InputUtils.inputString("Họ và tên: ");
+        this.phone = InputUtils.inputString("Số điện thoại: ", "^(0|\\+84)[3|5|7|8|9][0-9]{8}$", "Số điện thoại không đúng định dạng VN (VD: 09xxxxxxxx hoặc +849xxxxxxxx).");
         return password;
     }
 
@@ -89,10 +91,6 @@ public class User {
 
     public void setPhone(String phone) {
         this.phone = phone;
-    }
-
-    public Timestamp getCreatedAt() {
-        return createdAt;
     }
 
     public void setCreatedAt(Timestamp createdAt) {

@@ -14,7 +14,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class AuthService {
-    // Singleton Pattern
     private static AuthService instance;
     private final IUserDAO userDAO;
 
@@ -30,18 +29,14 @@ public class AuthService {
     }
 
     public User login(String username, String password) throws BusinessException {
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getConnection()) {
             String hashedPwd = hashPassword(password);
-            
+
             User user = userDAO.findByUsernameAndPassword(conn, username, hashedPwd);
-            
+
             if (user == null) {
-                // Kiểm tra tương thích ngược: Tìm xem DB có lưu mật khẩu dạng plaintext cũ không
                 User oldUser = userDAO.findByUsernameAndPassword(conn, username, password);
                 if (oldUser != null) {
-                    // Cập nhật lại mật khẩu sang SHA-256 trong CSDL
                     userDAO.updatePassword(conn, oldUser.getUserId(), hashedPwd);
                     user = oldUser;
                     user.setPasswordHash(hashedPwd);
@@ -49,18 +44,15 @@ public class AuthService {
                     throw new BusinessException("AUTH_FAILED", "Tài khoản hoặc mật khẩu không chính xác.");
                 }
             }
-            
+
             if (user.getStatus() == com.cyber.model.enums.UserStatus.LOCKED) {
                 throw new BusinessException("ACCOUNT_LOCKED", "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
             }
-            
+
             return user;
-        } catch (SQLException e) {
+        } catch (
+                SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi truy vấn cơ sở dữ liệu: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                try { conn.close(); } catch (SQLException ex) {}
-            }
         }
     }
 
@@ -92,7 +84,7 @@ public class AuthService {
                 try {
                     conn.setAutoCommit(true);
                     conn.close();
-                } catch (SQLException ex) {}
+                } catch (SQLException _) {}
             }
         }
     }

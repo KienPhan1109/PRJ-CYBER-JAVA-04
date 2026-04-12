@@ -13,23 +13,23 @@ public class AdminMainView {
 
     private final User adminUser;
     private final ComputerManagementView  computerView;
-    private final FbMenuManagementView    fbMenuView;       // Quản lý Menu F&B nâng cao Phase 2
+    private final FbMenuManagementView    fbMenuView;
     private final UserManagementView      userView;
     private final LogService              logService;
 
     public AdminMainView(User adminUser) {
-        this.adminUser    = adminUser;
-        this.computerView = new ComputerManagementView(adminUser); // truyền actor cho log
-        this.fbMenuView   = new FbMenuManagementView(adminUser);
-        this.userView     = new UserManagementView(adminUser);
-        this.logService   = LogService.getInstance();
+        this.adminUser = adminUser;
+        this.computerView = new ComputerManagementView(adminUser);
+        this.fbMenuView = new FbMenuManagementView(adminUser);
+        this.userView = new UserManagementView(adminUser);
+        this.logService = LogService.getInstance();
     }
 
     public void displayMenu() {
         while (true) {
             System.out.println("\n==========================================");
-            System.out.println("        QUẢN TRỊ VIÊN (ADMIN) PANEL       ");
-            System.out.println("        Xin chào: " + adminUser.getFullName());
+            System.out.println("      QUẢN TRỊ VIÊN (ADMIN) PANEL       ");
+            System.out.println("      Xin chào: " + adminUser.getFullName());
             System.out.println("==========================================");
             System.out.println("1. Quản lý Máy trạm");
             System.out.println("2. Quản lý Menu F&B");

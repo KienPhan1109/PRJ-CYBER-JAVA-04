@@ -9,18 +9,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Cài đặt ILogDAO cho bảng system_logs.
- * Singleton Pattern, dùng PreparedStatement chống SQL Injection.
- * <p>
- * insertLog() nhận Connection từ ngoài (chạy chung transaction).
- * Các method read() tự mở Connection riêng (read-only).
- */
 public class LogDAOImpl implements ILogDAO {
-
-    // -------------------------------------------------------
-    // Singleton
-    // -------------------------------------------------------
     private static LogDAOImpl instance;
 
     private LogDAOImpl() {}

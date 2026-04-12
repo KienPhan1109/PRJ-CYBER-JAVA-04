@@ -9,10 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FbOrderDAOImpl implements IFbOrderDAO {
-
-    // Singleton Pattern
     private static FbOrderDAOImpl instance;
     private FbOrderDAOImpl() {}
+
     public static synchronized FbOrderDAOImpl getInstance() {
         if (instance == null) {
             instance = new FbOrderDAOImpl();
@@ -69,7 +68,6 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
 
     @Override
     public List<FbOrder> findAllActiveOrdersWithDetails(Connection conn) throws SQLException {
-        List<FbOrder> orders = new ArrayList<>();
         String sql = "SELECT o.*, u.full_name as user_name, c.name as computer_name " +
                      "FROM fb_orders o " +
                      "JOIN users u ON o.user_id = u.user_id " +
