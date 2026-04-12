@@ -2,9 +2,7 @@ package com.cyber.service;
 
 import com.cyber.connection.DatabaseConnection;
 import com.cyber.dao.IFbMenuItemDAO;
-import com.cyber.dao.IFbOptionDAO;
 import com.cyber.dao.impl.FbMenuItemDAOImpl;
-import com.cyber.dao.impl.FbOptionDAOImpl;
 import com.cyber.domain.fb.FbMenuItem;
 import com.cyber.exception.BusinessException;
 
@@ -26,11 +24,9 @@ public class FbMenuService {
 
     private static FbMenuService instance;
     private final IFbMenuItemDAO menuItemDAO;
-    private final IFbOptionDAO   optionDAO;
 
     private FbMenuService() {
         this.menuItemDAO = FbMenuItemDAOImpl.getInstance();
-        this.optionDAO   = FbOptionDAOImpl.getInstance();
     }
 
     public static synchronized FbMenuService getInstance() {
@@ -83,38 +79,7 @@ public class FbMenuService {
         }
     }
 
-    /**
-     * Lấy danh sách Topping đang ACTIVE (cho Customer).
-     */
-    public List<Map<String, Object>> getAllToppings() throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            return optionDAO.findAllToppings(conn);
-        } catch (SQLException e) {
-            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách topping: " + e.getMessage());
-        }
-    }
 
-    /**
-     * Lấy toàn bộ Topping kể cả HIDDEN/OUT_OF_STOCK (cho Admin).
-     */
-    public List<Map<String, Object>> getAllToppingsForAdmin() throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            return optionDAO.findAllToppingsForAdmin(conn);
-        } catch (SQLException e) {
-            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách topping (admin): " + e.getMessage());
-        }
-    }
-
-    /**
-     * Lấy các option (Size, Sugar, Ice) của một MenuItem.
-     */
-    public List<Map<String, Object>> getOptionsByMenuItemId(int menuItemId) throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            return optionDAO.findOptionsByMenuItemId(conn, menuItemId);
-        } catch (SQLException e) {
-            throw new BusinessException("DB_ERROR", "Lỗi lấy options của món: " + e.getMessage());
-        }
-    }
 
     // -------------------------------------------------------
     // WRITE Operations (cần transaction khi multi-step)
@@ -184,216 +149,7 @@ public class FbMenuService {
         }
     }
 
-    /**
-     * Tạo topping mới (có ghi log).
-     */
-    public int createTopping(String name, BigDecimal extraPrice, int stockQuantity, com.cyber.model.User actor) throws BusinessException {
-        if (name == null || name.isBlank()) {
-            throw new BusinessException("ERR_VALIDATION", "Tên topping không được để trống.");
-        }
-        if (extraPrice == null || extraPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("ERR_VALIDATION", "Giá topping không được âm.");
-        }
-        if (stockQuantity < 0) {
-            throw new BusinessException("ERR_VALIDATION", "Tồn kho topping không được âm.");
-        }
-        
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false);
-            
-            int newId = optionDAO.createTopping(conn, name.trim(), extraPrice, stockQuantity);
-            
-            // Ghi log
-            String action = String.format("Thêm Topping mới: %s (Giá: %s, Tồn kho: %d)", name, com.cyber.util.FormatUtils.formatVND(extraPrice), stockQuantity);
-            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
-            
-            conn.commit();
-            return newId;
-        } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw new BusinessException("DB_ERROR", "Lỗi tạo topping: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
-            }
-        }
-    }
 
-    /**
-     * Cập nhật thông tin Topping (có ghi log).
-     */
-    public void updateTopping(int toppingId, String name, BigDecimal extraPrice, int stockQuantity, com.cyber.model.User actor) throws BusinessException {
-        if (name == null || name.isBlank()) {
-            throw new BusinessException("ERR_VALIDATION", "Tên topping không được để trống.");
-        }
-        if (extraPrice == null || extraPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("ERR_VALIDATION", "Giá topping không được âm.");
-        }
-        if (stockQuantity < 0) {
-            throw new BusinessException("ERR_VALIDATION", "Tồn kho topping không được âm.");
-        }
-
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false);
-            
-            Map<String, Object> existing = optionDAO.findToppingById(conn, toppingId);
-            if (existing == null) {
-                throw new BusinessException("ERR_NOT_FOUND", "Không tìm thấy Topping ID=" + toppingId);
-            }
-
-            // Auto set status = OUT_OF_STOCK when stock == 0
-            if (stockQuantity == 0 && "ACTIVE".equals(existing.get("status"))) {
-                optionDAO.updateToppingStatus(conn, toppingId, "OUT_OF_STOCK");
-            }
-            optionDAO.updateTopping(conn, toppingId, name.trim(), extraPrice, stockQuantity);
-            
-            // Ghi log
-            String action = String.format("Cập nhật Topping ID %d: %s -> %s (Giá: %s -> %s, Tồn kho: %d)", 
-                    toppingId, existing.get("name"), name, 
-                    com.cyber.util.FormatUtils.formatVND((BigDecimal)existing.get("extra_price")),
-                    com.cyber.util.FormatUtils.formatVND(extraPrice),
-                    stockQuantity);
-            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
-            
-            conn.commit();
-        } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw new BusinessException("DB_ERROR", "Lỗi cập nhật topping: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
-            }
-        }
-    }
-
-    /**
-     * Thay đổi trạng thái Topping (Toggle): Ẩn <-> Hiện (có ghi log).
-     */
-    public void toggleToppingStatus(int toppingId, com.cyber.model.User actor) throws BusinessException {
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false);
-            
-            Map<String, Object> existing = optionDAO.findToppingById(conn, toppingId);
-            if (existing == null) {
-                throw new BusinessException("ERR_NOT_FOUND", "Không tìm thấy Topping ID=" + toppingId);
-            }
-
-            String currentStatus = (String) existing.get("status");
-            String newStatus;
-            String actionVerb;
-            if ("HIDDEN".equals(currentStatus)) {
-                int stock = (int) existing.get("stock_quantity");
-                newStatus = stock > 0 ? "ACTIVE" : "OUT_OF_STOCK";
-                actionVerb = "Hiện";
-            } else {
-                newStatus = "HIDDEN";
-                actionVerb = "Ẩn";
-            }
-
-            optionDAO.updateToppingStatus(conn, toppingId, newStatus);
-            
-            // Ghi log
-            String action = String.format("%s Topping: %s (ID: %d)", actionVerb, existing.get("name"), toppingId);
-            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
-            
-            conn.commit();
-        } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw new BusinessException("DB_ERROR", "Lỗi thay đổi trạng thái topping: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
-            }
-        }
-    }
-
-    // -------------------------------------------------------
-    // Quản lý Options (Size, Sugar, v.v.)
-    // -------------------------------------------------------
-
-    /**
-     * Thêm tùy chọn mới cho món (có ghi log).
-     */
-    public void addOptionToItem(int menuItemId, String optionType, String optionLabel, BigDecimal extraPrice, com.cyber.model.User actor) throws BusinessException {
-        if (optionType == null || optionType.isBlank()) {
-            throw new BusinessException("ERR_VALIDATION", "Loại tùy chọn không được để trống (SIZE, SUGAR_LEVEL, ICE_LEVEL, WEIGHT, OTHER).");
-        }
-        if (optionLabel == null || optionLabel.isBlank()) {
-            throw new BusinessException("ERR_VALIDATION", "Nhãn tùy chọn không được để trống (VD: Size L).");
-        }
-        if (extraPrice == null || extraPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("ERR_VALIDATION", "Phụ phí không được âm.");
-        }
-
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false);
-            
-            FbMenuItem existing = menuItemDAO.findById(conn, menuItemId);
-            if (existing == null) {
-                throw new BusinessException("ERR_ITEM_NOT_FOUND", "Không tìm thấy món ăn với ID=" + menuItemId);
-            }
-
-            optionDAO.createOption(conn, menuItemId, optionType, optionLabel, extraPrice);
-            
-            String action = String.format("Thêm Option mới [%s - %s] (Phụ phí: %s) cho món: %s (ID=%d)", 
-                    optionType, optionLabel, com.cyber.util.FormatUtils.formatVND(extraPrice), existing.getName(), menuItemId);
-            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
-            
-            conn.commit();
-        } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw new BusinessException("DB_ERROR", "Lỗi thêm tùy chọn: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
-            }
-        }
-    }
-
-    /**
-     * Xóa tùy chọn của món (có ghi log).
-     */
-    public void removeOptionFromItem(int menuItemId, int optionId, com.cyber.model.User actor) throws BusinessException {
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false);
-
-            List<Map<String, Object>> options = optionDAO.findOptionsByMenuItemId(conn, menuItemId);
-            Map<String, Object> optionToRemove = options.stream()
-                .filter(o -> (int)o.get("option_id") == optionId)
-                .findFirst().orElse(null);
-
-            if (optionToRemove == null) {
-                 throw new BusinessException("ERR_NOT_FOUND", "Không tìm thấy Option ID=" + optionId + " của món ăn này.");
-            }
-
-            optionDAO.deleteOption(conn, optionId);
-
-            FbMenuItem existing = menuItemDAO.findById(conn, menuItemId);
-            String action = String.format("Xóa Option [%s - %s] khỏi món: %s (ID=%d)", 
-                    optionToRemove.get("option_type"), optionToRemove.get("option_label"), 
-                    existing != null ? existing.getName() : "Unknown", menuItemId);
-            LogService.getInstance().log(conn, com.cyber.model.enums.LogType.FB, actor, action, null);
-
-            conn.commit();
-        } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw new BusinessException("DB_ERROR", "Lỗi xóa tùy chọn: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                 try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
-            }
-        }
-    }
 
     // -------------------------------------------------------
     // Private Validation

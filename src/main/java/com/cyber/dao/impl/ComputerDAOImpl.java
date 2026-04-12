@@ -25,6 +25,19 @@ public class ComputerDAOImpl implements IComputerDAO {
     @Override
     public List<Computer> getAllActiveComputers(Connection conn) throws SQLException {
         List<Computer> computers = new ArrayList<>();
+        String sql = "SELECT * FROM computers WHERE is_deleted = 0 AND status != 'HIDDEN' ORDER BY computer_id ASC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                computers.add(mapRowToComputer(rs));
+            }
+        }
+        return computers;
+    }
+
+    @Override
+    public List<Computer> getAllComputersForAdmin(Connection conn) throws SQLException {
+        List<Computer> computers = new ArrayList<>();
         String sql = "SELECT * FROM computers WHERE is_deleted = 0 ORDER BY computer_id ASC";
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
@@ -94,7 +107,7 @@ public class ComputerDAOImpl implements IComputerDAO {
 
     @Override
     public void deleteComputer(Connection conn, int computerId) throws SQLException {
-        String sql = "UPDATE computers SET is_deleted = 1 WHERE computer_id = ?";
+        String sql = "UPDATE computers SET status = 'HIDDEN' WHERE computer_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, computerId);
             stmt.executeUpdate();

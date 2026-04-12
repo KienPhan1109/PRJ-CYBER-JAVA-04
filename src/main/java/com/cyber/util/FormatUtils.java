@@ -81,6 +81,7 @@ public class FormatUtils {
             case AVAILABLE -> "\033[32m[SẴN SÀNG]" + ColorConst.RESET;
             case IN_USE -> "\033[31m[ĐANG SỬ DỤNG]" + ColorConst.RESET;
             case MAINTENANCE -> "\033[33m[BẢO TRÌ]" + ColorConst.RESET;
+            case HIDDEN -> "\033[37m[ĐÃ ẨN]" + ColorConst.RESET;
         };
     }
 

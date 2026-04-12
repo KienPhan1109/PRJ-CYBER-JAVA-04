@@ -36,7 +36,7 @@ public class ComputerService {
 
     public List<Computer> getAllComputers() throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            return computerDAO.getAllActiveComputers(conn);
+            return computerDAO.getAllComputersForAdmin(conn);
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách máy: " + e.getMessage());
         }
@@ -150,7 +150,7 @@ public class ComputerService {
         }
     }
 
-    public void deleteComputer(int id, User actor) throws BusinessException {
+    public void toggleComputerStatus(int id, User actor) throws BusinessException {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
@@ -161,17 +161,29 @@ public class ComputerService {
                 throw new BusinessException("NOT_FOUND", "Không tìm thấy máy có ID = " + id);
             }
 
-            // Quy tắc vàng (Hard Validation): Không cho xóa nếu đang IN_USE
+            // Quy tắc vàng (Hard Validation): Không cho sửa nếu đang IN_USE
             if (existing.getStatus() == com.cyber.model.enums.ComputerStatus.IN_USE) {
                 throw new BusinessException("IN_USE", "Lỗi: Máy đang có khách sử dụng. Khách phải đăng xuất thì Admin mới được phép Sửa/Xóa/Bảo trì máy này!");
             }
 
-            // Soft delete
-            computerDAO.deleteComputer(conn, id);
+            // Toggle Soft delete / Hidden status
+            String actionVerb;
+            if (existing.getStatus() == com.cyber.model.enums.ComputerStatus.HIDDEN) {
+                existing.setStatus(com.cyber.model.enums.ComputerStatus.AVAILABLE);
+                actionVerb = "Hiện";
+            } else {
+                existing.setStatus(com.cyber.model.enums.ComputerStatus.HIDDEN);
+                actionVerb = "Ẩn";
+            }
+            
+            // Re-use update method instead of delete query, or keep delete query if we modified it?
+            // Wait, we modified deleteComputer in DAO to just set status = 'HIDDEN'.
+            // It's better to just call updateComputer in DAO since we changed the whole object's status.
+            computerDAO.updateComputer(conn, existing);
 
             // Ghi log COMPUTER
-            String action = String.format("Xóa (thanh lý) máy trạm: %s (ID: %d)",
-                    existing.getName(), id);
+            String action = String.format("%s máy trạm: %s (ID: %d)",
+                    actionVerb, existing.getName(), id);
             logService.log(conn, LogType.COMPUTER, actor, action, id);
 
             conn.commit();

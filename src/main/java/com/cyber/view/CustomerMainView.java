@@ -2,10 +2,7 @@ package com.cyber.view;
 
 
 import com.cyber.domain.fb.FbMenuItem;
-import com.cyber.domain.fb.IBillable;
-import com.cyber.domain.fb.SingleItem;
-import com.cyber.domain.fb.SizeDecorator;
-import com.cyber.domain.fb.ToppingDecorator;
+
 import com.cyber.domain.fb.discount.FixedAmountDiscountStrategy;
 import com.cyber.domain.fb.discount.IDiscountStrategy;
 import com.cyber.domain.fb.discount.NoDiscountStrategy;
@@ -19,7 +16,7 @@ import com.cyber.service.BookingService;
 import com.cyber.service.ComputerService;
 import com.cyber.service.FbMenuService;
 import com.cyber.service.FbOrderService;
-import com.cyber.service.FbOrderService.FbAdvancedCartItem;
+import com.cyber.service.FbOrderService.FbCartItem;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
@@ -468,6 +465,14 @@ public class CustomerMainView {
     // =========================================================
 
     private void orderFoodFlow() throws BusinessException {
+        // --- Kiểm tra xem khách có đang ngồi máy (phiên ACTIVE) không ---
+        List<Booking> activeBookings = bookingService.getActiveBookingsByUserId(customerUser.getUserId());
+        if (activeBookings.isEmpty()) {
+            PrintUtils.printWarning("Bạn cần phải mở máy (có phiên chơi ACTIVE) thì mới có thể gọi dịch vụ F&B.");
+            return;
+        }
+        this.currentBookingId = activeBookings.get(0).getBookingId();
+
         // ---- Chọn Strategy giảm giá ----
         IDiscountStrategy strategy = selectDiscountStrategy();
 
@@ -478,14 +483,11 @@ public class CustomerMainView {
             return;
         }
 
-        // ---- Tải danh sách Topping ----
-        List<Map<String, Object>> allToppings = menuService.getAllToppings();
-
         // ---- Hiển thị menu ----
         printMenuTable(menuItems);
 
         // ---- Giỏ hàng ----
-        List<FbAdvancedCartItem> cart = new ArrayList<>();
+        List<FbCartItem> cart = new ArrayList<>();
         BigDecimal cartTotal = BigDecimal.ZERO;
 
         while (true) {
@@ -506,13 +508,23 @@ public class CustomerMainView {
             }
 
             int qty = InputUtils.inputInt("Số lượng: ", 1, selectedItem.getStockQuantity());
+            
+            BigDecimal finalPrice = selectedItem.getBasePrice().multiply(BigDecimal.valueOf(qty));
 
-            // Món lẻ flow (KHÔNG áp dụng strategy lúc này)
-            FbAdvancedCartItem singleCartItem = buildSingleItem(selectedItem, allToppings, com.cyber.domain.fb.discount.NoDiscountStrategy.getInstance(), qty);
+            FbCartItem singleCartItem = new FbCartItem(
+                    selectedItem.getMenuItemId(),
+                    qty,
+                    finalPrice,
+                    selectedItem.getName(),
+                    "{}",
+                    BigDecimal.ZERO,
+                    ""
+            );
+            
             cart.add(singleCartItem);
-            cartTotal = cartTotal.add(singleCartItem.getFinalPrice());
-            PrintUtils.printSuccess("Đã thêm [%s] vào giỏ. Đơn giá: %s",
-                    singleCartItem.getItemDescription(),
+            cartTotal = cartTotal.add(finalPrice);
+            PrintUtils.printSuccess("Đã thêm [%s] phân bổ x%d vào giỏ. Đơn giá: %s",
+                    singleCartItem.getItemDescription(), qty,
                     FormatUtils.formatVND(singleCartItem.getFinalPrice()));
         }
 
@@ -527,7 +539,7 @@ public class CustomerMainView {
         String payConfirm = InputUtils.inputString("Xác nhận thanh toán? (Y/N): ");
         if (payConfirm.equalsIgnoreCase("y")) {
             BigDecimal finalPay = strategy.applyDiscount(cartTotal);
-            orderService.orderFoodAdvanced(customerUser.getUserId(), currentBookingId, cart);
+            orderService.orderFood(customerUser.getUserId(), currentBookingId, cart);
             customerUser.setBalance(customerUser.getBalance().subtract(finalPay));
             PrintUtils.printSuccess("Đặt đồ ăn thành công! Đơn hàng đang chờ xử lý.");
         } else {
@@ -536,7 +548,7 @@ public class CustomerMainView {
     }
 
     // =========================================================
-    // Helpers — Build IBillable và FbAdvancedCartItem
+    // Helpers
     // =========================================================
 
     /**
@@ -554,81 +566,6 @@ public class CustomerMainView {
             case 3: return new FixedAmountDiscountStrategy(new BigDecimal("20000"), "VOUCHER_20K");
             default: return NoDiscountStrategy.getInstance();
         }
-    }
-
-    /**
-     * Build một món lẻ (SingleItem) với Decorator (Size + Topping) và Strategy.
-     */
-    private FbAdvancedCartItem buildSingleItem(FbMenuItem item,
-                                               List<Map<String, Object>> allToppings,
-                                               IDiscountStrategy strategy,
-                                               int quantity) throws BusinessException {
-        IBillable billable = new SingleItem(item);
-        System.out.println("\n  >> Tuỳ chỉnh món: " + item.getName() + " (Giá gốc: " + FormatUtils.formatVND(item.getBasePrice()) + ")");
-
-        // Chọn Size nếu là đồ uống
-        if (item.getTemperatureLevel() == FbTemperature.COLD
-                || item.getTemperatureLevel() == FbTemperature.HOT
-                || item.getTemperatureLevel() == FbTemperature.ICED) {
-            System.out.println("  Chọn size: 1=M (giữ nguyên)  2=L (+10.000đ)  3=S (giữ nguyên)");
-            int sizeChoice = InputUtils.inputInt("  Chọn size (1-3): ", 1, 3);
-            SizeDecorator.SizeType sizeType = sizeChoice == 2
-                    ? SizeDecorator.SizeType.L
-                    : (sizeChoice == 3 ? SizeDecorator.SizeType.S : SizeDecorator.SizeType.M);
-            billable = new SizeDecorator(billable, sizeType);
-        }
-
-        // Thêm Topping
-        billable = applyToppings(billable, allToppings);
-
-        // Áp dụng Strategy
-        BigDecimal priceBeforeDiscount = billable.calculatePrice();
-        BigDecimal finalPrice = strategy.applyDiscount(priceBeforeDiscount);
-        BigDecimal discountAmt = strategy.calculateDiscountAmount(priceBeforeDiscount);
-
-        String configJson = buildConfigJson(item.getMenuItemId(), billable.getDescription(), strategy.getStrategyName());
-
-        return new FbAdvancedCartItem(
-                item.getMenuItemId(), quantity, finalPrice,
-                billable.getDescription(), configJson,
-                discountAmt, strategy.getStrategyName()
-        );
-    }
-
-
-
-    /**
-     * Hỏi khách có muốn thêm Topping không. Có thể thêm nhiều tầng.
-     */
-    private IBillable applyToppings(IBillable billable, List<Map<String, Object>> allToppings) {
-        if (allToppings.isEmpty()) return billable;
-
-        System.out.println("\n  Danh sách Topping:");
-        for (Map<String, Object> t : allToppings) {
-            System.out.printf("    ID=%-3d | %-20s (+%s)%n",
-                    t.get("topping_id"), t.get("name"),
-                    FormatUtils.formatVND((BigDecimal) t.get("extra_price")));
-        }
-
-        while (true) {
-            System.out.println("  Nhập Topping ID để thêm (0 = không thêm / kết thúc):");
-            int tId = InputUtils.inputInt("  Topping ID: ", 0, Integer.MAX_VALUE);
-            if (tId == 0) break;
-
-            Map<String, Object> topping = allToppings.stream()
-                    .filter(t -> ((Number) t.get("topping_id")).intValue() == tId)
-                    .findFirst().orElse(null);
-            if (topping == null) {
-                PrintUtils.printError("  Không tìm thấy Topping ID=%d.", tId);
-                continue;
-            }
-            billable = new ToppingDecorator(billable,
-                    ((Number) topping.get("topping_id")).intValue(),
-                    (String) topping.get("name"),
-                    (BigDecimal) topping.get("extra_price"));
-            System.out.println("  Đã thêm Topping: " + topping.get("name"));
-        }
-        return billable;
     }
 
     /**
@@ -662,13 +599,13 @@ public class CustomerMainView {
         System.out.println("=".repeat(130));
     }
 
-    private void printCartSummary(List<FbAdvancedCartItem> cart, BigDecimal preDiscountTotal,
+    private void printCartSummary(List<FbCartItem> cart, BigDecimal preDiscountTotal,
                                   IDiscountStrategy strategy) {
         System.out.println("\n" + "=".repeat(80));
         System.out.println("  HOÁ ĐƠN DỰ KIẾN");
         System.out.println("=".repeat(80));
         
-        for (FbAdvancedCartItem item : cart) {
+        for (FbCartItem item : cart) {
             System.out.printf("  %-45s x%-3d = %s%n",
                     truncate(item.getItemDescription(), 45),
                     item.getQuantity(),
@@ -690,23 +627,13 @@ public class CustomerMainView {
         // Cập nhật lại list cart với chiết khấu để lưu DB khớp doanh thu.
         // Gán TOÀN BỘ giảm giá vào item đầu tiên (để chênh lệch về 0)
         if (!cart.isEmpty() && totalDiscountAmt.compareTo(BigDecimal.ZERO) > 0) {
-            FbAdvancedCartItem first = cart.get(0);
+            FbCartItem first = cart.get(0);
             first.setDiscountApplied(totalDiscountAmt);
             first.setDiscountStrategyName(strategy.getStrategyName());
         }
     }
 
-    /**
-     * Build chuỗi JSON đơn giản để lưu config Decorator vào DB.
-     */
-    private String buildConfigJson(int menuItemId, String description, String strategyName) {
-        return String.format(
-                "{\"menuItemId\":%d,\"description\":\"%s\",\"strategy\":\"%s\"}",
-                menuItemId,
-                description.replace("\"", "'"),
-                strategyName
-        );
-    }
+
 
     private String truncate(String s, int maxLen) {
         if (s == null) return "";

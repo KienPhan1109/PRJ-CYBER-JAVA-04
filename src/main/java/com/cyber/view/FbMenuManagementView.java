@@ -37,18 +37,14 @@ public class FbMenuManagementView {
             System.out.println("2. Thêm món mới vào Menu");
             System.out.println("3. Sửa thông tin món");
             System.out.println("4. Ẩn / Hiện món");
-            System.out.println("5. Quản lý Topping dùng chung");
-            System.out.println("6. Quản lý Tùy chọn của món (Size/Đường/Đá)");
             System.out.println("0. Quay lại");
 
-            int choice = InputUtils.inputInt("Chọn chức năng (0-6): ", 0, 6);
+            int choice = InputUtils.inputInt("Chọn chức năng (0-4): ", 0, 4);
             switch (choice) {
                 case 1 -> displayMenuList();
                 case 2 -> handleAddItem();
                 case 3 -> handleEditItem();
                 case 4 -> handleDeleteItem();
-                case 5 -> manageToppings();
-                case 6 -> manageItemOptions();
                 case 0 -> {
                     return;
                 }
@@ -103,8 +99,8 @@ public class FbMenuManagementView {
     private void handleAddItem() {
         System.out.println("\n--- THÊM MÓN MỚI VÀO MENU ---");
         System.out.println("Chọn danh mục:");
-        System.out.println("1. FOOD | 2. DRINK | 3.SNACK");
-        int categoryId = InputUtils.inputInt("Lựa chọn (1-3): ", 1, 3);
+        System.out.println("1. FOOD | 2. DRINK | 3. SNACK | 4. TOPPING");
+        int categoryId = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
 
         String name = InputUtils.inputString("Tên món: ");
 
@@ -161,7 +157,14 @@ public class FbMenuManagementView {
 
         try {
             FbMenuItem existing = menuService.getMenuItemById(id);
-            System.out.println("Đang sửa: " + existing.getName());
+            if (existing.getStatus() == FBStatus.HIDDEN) {
+                PrintUtils.printError("Món này đang bị ẨN. Vui lòng HIỆN món ăn trước khi sửa đổi.");
+                return;
+            }
+
+            System.out.println("Danh mục: 1. FOOD | 2. DRINK | 3. SNACK | 4. TOPPING");
+            int catId = InputUtils.inputIntUpdate(
+                    "Danh mục mới (Cũ: " + existing.getCategoryId() + ") [Enter giữ nguyên]: ", existing.getCategoryId(), 1, 4);
 
             String name = InputUtils.inputStringUpdate(
                     "Tên mới (Cũ: " + existing.getName() + ") [Enter giữ nguyên]: ", existing.getName());
@@ -188,6 +191,7 @@ public class FbMenuManagementView {
             String avail = InputUtils.inputStringUpdate(
                     "Khung giờ [Enter giữ nguyên]: ", existing.getAvailability() != null ? existing.getAvailability() : "ALL");
 
+            existing.setCategoryId(catId);
             existing.setName(name);
             existing.setDescription(desc);
             existing.setBasePrice(price);
@@ -224,219 +228,5 @@ public class FbMenuManagementView {
         }
     }
 
-    // -------------------------------------------------------
-    // 5. Quản lý Topping (có stock_quantity + status)
-    // -------------------------------------------------------
-    private void manageToppings() {
-        while (true) {
-            System.out.println("\n--- QUẢN LÝ TOPPING ---");
-            System.out.println("1. Xem danh sách Topping");
-            System.out.println("2. Thêm Topping mới");
-            System.out.println("3. Sửa Topping");
-            System.out.println("4. Ẩn / Hiện Topping (Toggle)");
-            System.out.println("0. Quay lại");
 
-            int choice = InputUtils.inputInt("Chọn (0-4): ", 0, 4);
-            switch (choice) {
-                case 1: displayToppingList(); break;
-                case 2: handleAddTopping();   break;
-                case 3: handleEditTopping();  break;
-                case 4: handleDeleteTopping(); break;
-                case 0: return;
-            }
-        }
-    }
-
-    private void displayToppingList() {
-        try {
-            // Admin xem toàn bộ kể cả HIDDEN/OUT_OF_STOCK
-            List<Map<String, Object>> toppings = menuService.getAllToppingsForAdmin();
-            System.out.println("\n" + "=".repeat(80));
-            System.out.println("                          DANH SÁCH TOPPING (ADMIN)");
-            System.out.println("=".repeat(80));
-            System.out.printf("%-5s | %-25s | %-12s | %-10s | %-15s%n",
-                    "ID", "Tên Topping", "Phụ phí", "Tồn kho", "Trạng thái");
-            System.out.println("-".repeat(80));
-            if (toppings.isEmpty()) {
-                System.out.println("  Chưa có topping nào.");
-            } else {
-                for (Map<String, Object> t : toppings) {
-                    String status = (String) t.get("status");
-                    String statusDisplay = switch (status) {
-                        case "ACTIVE"       -> "\033[32mACTIVE\033[0m";
-                        case "OUT_OF_STOCK" -> "\033[33mHẾT HÀNG\033[0m";
-                        case "HIDDEN"       -> "\033[31mĐÃ KHOÁ\033[0m";
-                        default             -> status;
-                    };
-                    System.out.printf("%-5d | %-25s | %-12s | %-10d | %-15s%n",
-                            t.get("topping_id"),
-                            t.get("name"),
-                            FormatUtils.formatVND((BigDecimal) t.get("extra_price")),
-                            (int) t.get("stock_quantity"),
-                            statusDisplay);
-                }
-            }
-            System.out.println("=".repeat(80));
-        } catch (BusinessException e) {
-            PrintUtils.printError(e.getMessage());
-        }
-    }
-
-    private void handleAddTopping() {
-        System.out.println("\n--- THÊM TOPPING MỚI ---");
-        String name = InputUtils.inputString("Tên topping: ");
-        BigDecimal price = InputUtils.inputBigDecimal("Phụ phí (VND, nhập 0 nếu miễn phí): ", BigDecimal.ZERO);
-        int stockQty = InputUtils.inputInt("Tồn kho ban đầu: ", 0, 99999);
-
-        try {
-            int newId = menuService.createTopping(name, price, stockQty, adminUser);
-            PrintUtils.printSuccess("Đã thêm topping '%s' (ID=%d) với phụ phí %s, tồn kho: %d.",
-                    name, newId, FormatUtils.formatVND(price), stockQty);
-        } catch (BusinessException e) {
-            PrintUtils.printError(e.getMessage());
-        }
-    }
-
-    private void handleEditTopping() {
-        System.out.println("\n--- SỬA TOPPING ---");
-        int id = InputUtils.inputInt("Nhập Topping ID cần sửa: ");
-        try {
-            List<Map<String, Object>> list = menuService.getAllToppingsForAdmin();
-            Map<String, Object> existing = list.stream()
-                    .filter(t -> (int)t.get("topping_id") == id)
-                    .findFirst().orElse(null);
-            
-            if (existing == null) {
-                PrintUtils.printWarning("Không tìm thấy Topping ID=" + id);
-                return;
-            }
-
-            String currentName = (String) existing.get("name");
-            BigDecimal currentPrice = (BigDecimal) existing.get("extra_price");
-            int currentStock = (int) existing.get("stock_quantity");
-
-            String name = InputUtils.inputStringUpdate("Tên mới (Cũ: " + currentName + ") [Enter giữ nguyên]: ", currentName);
-            BigDecimal price = InputUtils.inputBigDecimalUpdate("Phụ phí mới [Enter giữ nguyên]: ", currentPrice, BigDecimal.ZERO);
-            int stockQty = InputUtils.inputIntUpdate("Tồn kho mới (Cũ: " + currentStock + ") [Enter giữ nguyên]: ", currentStock, 0, 99999);
-
-            menuService.updateTopping(id, name, price, stockQty, adminUser);
-            PrintUtils.printSuccess("Cập nhật Topping thành công!");
-        } catch (BusinessException e) {
-            PrintUtils.printError(e.getMessage());
-        }
-    }
-
-    private void handleDeleteTopping() {
-        System.out.println("\n--- ẨN / HIỆN TOPPING (TOGGLE) ---");
-        int id = InputUtils.inputInt("Nhập Topping ID cần thay đổi trạng thái: ");
-        String confirm = InputUtils.inputString("Xác nhận thay đổi trạng thái topping này? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
-        if (confirm.equalsIgnoreCase("y")) {
-            try {
-                menuService.toggleToppingStatus(id, adminUser);
-                PrintUtils.printSuccess("Đã thay đổi trạng thái Topping ID=%d thành công.", id);
-            } catch (
-                    BusinessException e) {
-                PrintUtils.printError(e.getMessage());
-            }
-        } else {
-            System.out.println("Đã hủy thao tác.");
-        }
-    }
-
-    // -------------------------------------------------------
-    // 6. Quản lý Tùy chọn của Món (Item Options)
-    // -------------------------------------------------------
-    private void manageItemOptions() {
-        System.out.println("\n--- QUẢN LÝ TÙY CHỌN MÓN (SIZE, ĐƯỜNG, ĐÁ,...) ---");
-        int itemId = InputUtils.inputInt("Nhập ID của món cần quản lý (Menu Item ID): ", 1, Integer.MAX_VALUE);
-        
-        try {
-            FbMenuItem item = menuService.getMenuItemById(itemId);
-            System.out.println("=> Đang cấu hình Menu Item: " + item.getName());
-            
-            while (true) {
-                System.out.println("\n1. Xem danh sách Option hiện tại của: " + item.getName());
-                System.out.println("2. Thêm Option mới");
-                System.out.println("3. Xóa Option");
-                System.out.println("0. Quay lại mục trước");
-                
-                int optChoice = InputUtils.inputInt("Lựa chọn (0-3): ", 0, 3);
-                switch (optChoice) {
-                    case 1: displayItemOptions(itemId); break;
-                    case 2: handleAddItemOption(itemId); break;
-                    case 3: handleRemoveItemOption(itemId); break;
-                    case 0: return;
-                }
-            }
-        } catch (BusinessException e) {
-            PrintUtils.printError(e.getMessage());
-        }
-    }
-
-    private void displayItemOptions(int menuItemId) {
-        try {
-            List<Map<String, Object>> options = menuService.getOptionsByMenuItemId(menuItemId);
-            System.out.println("\n--- DANH SÁCH OPTION ---\n");
-            if (options.isEmpty()) {
-                System.out.println("Chưa có bất kỳ tùy chọn nào được cấu hình cho món này.");
-                return;
-            }
-            
-            System.out.printf("%-5s | %-15s | %-15s | %-15s%n", "ID", "Phân Loại", "Nhãn", "Phụ phí");
-            System.out.println("-".repeat(55));
-            for (Map<String, Object> opt : options) {
-                System.out.printf("%-5d | %-15s | %-15s | %-15s%n",
-                        opt.get("option_id"),
-                        opt.get("option_type"),
-                        opt.get("option_label"),
-                        FormatUtils.formatVND((BigDecimal) opt.get("extra_price")));
-            }
-        } catch (BusinessException e) {
-            PrintUtils.printError(e.getMessage());
-        }
-    }
-
-    private void handleAddItemOption(int menuItemId) {
-        System.out.println("\n-- THÊM TÙY CHỌN MỚI --");
-        System.out.println("Chọn phân loại Tùy chọn (Enum database mapping):");
-        System.out.println("1. SIZE");
-        System.out.println("2. SUGAR_LEVEL");
-        System.out.println("3. ICE_LEVEL");
-        System.out.println("4. WEIGHT");
-        System.out.println("5. Khác (OTHER)");
-        int typeChoice = InputUtils.inputInt("Chọn (1-5): ", 1, 5);
-        String optionType = switch (typeChoice) {
-            case 1 -> "SIZE";
-            case 2 -> "SUGAR_LEVEL";
-            case 3 -> "ICE_LEVEL";
-            case 4 -> "WEIGHT";
-            default -> "OTHER";
-        };
-        
-        String optionLabel = InputUtils.inputString("Nhãn hiển thị (VD: Size M, 50% Đường...): ");
-        BigDecimal extraPrice = InputUtils.inputBigDecimal("Phụ phí (VND, nhập 0 nếu miễn phí): ", BigDecimal.ZERO);
-        
-        try {
-            menuService.addOptionToItem(menuItemId, optionType, optionLabel, extraPrice, adminUser);
-            PrintUtils.printSuccess("Thêm tùy chọn thành công!");
-        } catch (BusinessException e) {
-            PrintUtils.printError(e.getMessage());
-        }
-    }
-
-    private void handleRemoveItemOption(int menuItemId) {
-        displayItemOptions(menuItemId);
-        int optId = InputUtils.inputInt("Nhập ID của Option cần xóa: ", 1, Integer.MAX_VALUE);
-        String confirm = InputUtils.inputString("Xác nhận xóa Option này rĩnh viễn? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
-        if (confirm.equalsIgnoreCase("y")) {
-            try {
-                menuService.removeOptionFromItem(menuItemId, optId, adminUser);
-                PrintUtils.printSuccess("Đã xóa tùy chọn ID=%d thành công.", optId);
-            } catch (BusinessException e) {
-                PrintUtils.printError(e.getMessage());
-            }
-        } else {
-            System.out.println("Hủy thao tác.");
-        }
-    }
 }

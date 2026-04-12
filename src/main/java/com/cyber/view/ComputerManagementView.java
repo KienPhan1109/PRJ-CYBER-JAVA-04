@@ -28,7 +28,7 @@ public class ComputerManagementView {
             System.out.println("1. Xem danh sách máy");
             System.out.println("2. Thêm máy trạm mới");
             System.out.println("3. Sửa thông tin máy");
-            System.out.println("4. Xoá máy trạm");
+            System.out.println("4. Ẩn/Hiện máy trạm");
             System.out.println("0. Quay lại");
             System.out.println("====================================");
 
@@ -38,7 +38,7 @@ public class ComputerManagementView {
                 case 1 -> displayList();
                 case 2 -> handleAdd();
                 case 3 -> handleEdit();
-                case 4 -> handleDelete();
+                case 4 -> handleToggleHideShow();
                 case 0 -> {
                     return;
                 }
@@ -112,6 +112,9 @@ public class ComputerManagementView {
             if (existing.getStatus() == com.cyber.model.enums.ComputerStatus.IN_USE) {
                 throw new BusinessException("IN_USE", "Máy đang có khách sử dụng (IN_USE), không thể chỉnh sửa lúc này.");
             }
+            if (existing.getStatus() == com.cyber.model.enums.ComputerStatus.HIDDEN) {
+                throw new BusinessException("HIDDEN", "Máy đang bị ẩn (HIDDEN), vui lòng Hiện máy trước khi chỉnh sửa.");
+            }
             System.out.println("Đang chỉnh sửa cho: " + existing.getName());
             
             String name;
@@ -141,20 +144,20 @@ public class ComputerManagementView {
         }
     }
 
-    private void handleDelete() {
-        System.out.println("\n--- XÓA MÁY TRẠM ---");
-        int id = InputUtils.inputInt("Nhập ID máy cần xóa (số nguyên): ");
-        String confirm = InputUtils.inputString("Bạn có chắc chắn muốn xóa không? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
+    private void handleToggleHideShow() {
+        System.out.println("\n--- ẨN / HIỆN MÁY TRẠM ---");
+        int id = InputUtils.inputInt("Nhập ID máy cần Ẩn/Hiện (số nguyên): ");
+        String confirm = InputUtils.inputString("Bạn có chắc chắn muốn thay đổi trạng thái máy không? (Y/N): ", "^[YyNn]$", "Chỉ nhập Y hoặc N.");
         
         if (confirm.equalsIgnoreCase("Y")) {
             try {
-                computerService.deleteComputer(id, adminUser);
-                System.out.println("\033[32m[THÀNH CÔNG] Xóa máy trạm thành công!\033[0m");
+                computerService.toggleComputerStatus(id, adminUser);
+                System.out.println("\033[32m[THÀNH CÔNG] Đã thay đổi trạng thái máy trạm!\033[0m");
             } catch (BusinessException e) {
                 PrintUtils.printError(e.getMessage());
             }
         } else {
-            System.out.println("Đã hủy thao tác xóa.");
+            System.out.println("Đã hủy thao tác.");
         }
     }
 }

@@ -33,7 +33,7 @@ CREATE TABLE computers (
     name VARCHAR(50) UNIQUE NOT NULL,
     zone VARCHAR(50) NOT NULL, -- VIP, STANDARD, ESPORT, STREAMING, COUPLE
     hardware_config TEXT,
-    status ENUM('AVAILABLE', 'IN_USE', 'MAINTENANCE') DEFAULT 'AVAILABLE',
+    status ENUM('AVAILABLE', 'IN_USE', 'MAINTENANCE', 'HIDDEN') DEFAULT 'AVAILABLE',
     price_per_hour DECIMAL(10, 2) NOT NULL,
     is_deleted TINYINT(1) DEFAULT 0
 );
@@ -84,24 +84,6 @@ CREATE TABLE fb_menu_items (
     FOREIGN KEY (category_id) REFERENCES fb_categories(category_id) ON DELETE RESTRICT
 );
 
--- 7. F&B Item Options
-CREATE TABLE fb_item_options (
-    option_id INT AUTO_INCREMENT PRIMARY KEY,
-    menu_item_id INT NOT NULL,
-    option_type ENUM('SIZE','WEIGHT','SUGAR_LEVEL','ICE_LEVEL','OTHER') NOT NULL,
-    option_label VARCHAR(50) NOT NULL,
-    extra_price DECIMAL(10, 2) DEFAULT 0.00,
-    FOREIGN KEY (menu_item_id) REFERENCES fb_menu_items(menu_item_id) ON DELETE CASCADE
-);
-
--- 8. F&B Toppings
-CREATE TABLE fb_toppings (
-    topping_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    extra_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-    stock_quantity INT DEFAULT 99,
-    status ENUM('ACTIVE','OUT_OF_STOCK','HIDDEN') DEFAULT 'ACTIVE'
-);
 
 -- 9. F&B Orders
 CREATE TABLE fb_orders (
@@ -178,7 +160,8 @@ INSERT INTO fb_categories (category_name, description) VALUES
 ('FOOD',  'Cơm, Mì, Bún thơm ngon'),
 ('DRINK', 'Trà sữa, Cafe, Nước ngọt mát lạnh'),
 ('SNACK', 'Đồ ăn vặt, hướng dương, khoai tây'),
-('COMBO', 'Các gói kết hợp tiết kiệm');
+('COMBO', 'Các gói kết hợp tiết kiệm'),
+('TOPPING', 'Các loại topping thêm');
 
 -- F&B Menu Items
 INSERT INTO fb_menu_items (category_id, name, description, base_price, stock_quantity, prep_time_minutes, item_tags, availability, temperature_level, status) VALUES
@@ -192,21 +175,10 @@ INSERT INTO fb_menu_items (category_id, name, description, base_price, stock_qua
 (2, 'Cafe Sữa Đá',           'Cafe Ranger Robusta, sữa đặc Ngôi sao', 22000.00, 60, 7, 'Morning', 'ALL', 'COLD', 'ACTIVE'),
 (4, 'Combo Cày Đêm',          '1 Mì xào bò + 1 Pepsi + 1 Khăn lạnh', 55000.00, 99, 10, 'Value', 'ALL', 'NONE', 'ACTIVE');
 
--- Toppings
-INSERT INTO fb_toppings (name, extra_price, stock_quantity, status) VALUES
-('Trân châu đen',   7000.00, 99, 'ACTIVE'),
-('Thạch nha đam',   6000.00, 99, 'ACTIVE'),
-('Kem cheese mặn',  10000.00, 50, 'ACTIVE'),
-('Trứng ốp la',     5000.00, 100, 'ACTIVE'),
-('Thêm bò',         15000.00, 30, 'ACTIVE');
-
--- Options (Size/Sugar)
-INSERT INTO fb_item_options (menu_item_id, option_type, option_label, extra_price) VALUES
-(5, 'SIZE', 'Size M', 0.00),
-(5, 'SIZE', 'Size L', 10000.00),
-(5, 'SUGAR_LEVEL', '100% Đường', 0.00),
-(5, 'SUGAR_LEVEL', '50% Đường', 0.00),
-(5, 'ICE_LEVEL', 'Đá bình thường', 0.00),
-(5, 'ICE_LEVEL', 'Không đá', 0.00),
-(6, 'SIZE', 'Ly thường', 0.00),
-(6, 'SIZE', 'Ly khổng lồ (+Top)', 15000.00);
+-- Toppings became normal items
+INSERT INTO fb_menu_items (category_id, name, description, base_price, stock_quantity, prep_time_minutes, item_tags, availability, temperature_level, status) VALUES
+(5, 'Trân châu đen',   'Topping trân châu', 7000.00, 99, 1, 'Topping', 'ALL', 'NONE', 'ACTIVE'),
+(5, 'Thạch nha đam',   'Topping thạch', 6000.00, 99, 1, 'Topping', 'ALL', 'NONE', 'ACTIVE'),
+(5, 'Kem cheese mặn',  'Topping kem', 10000.00, 50, 1, 'Topping', 'ALL', 'NONE', 'ACTIVE'),
+(5, 'Trứng ốp la',     'Topping trứng', 5000.00, 100, 1, 'Topping', 'ALL', 'NONE', 'ACTIVE'),
+(5, 'Thêm bò',         'Topping bò', 15000.00, 30, 2, 'Topping', 'ALL', 'NONE', 'ACTIVE');

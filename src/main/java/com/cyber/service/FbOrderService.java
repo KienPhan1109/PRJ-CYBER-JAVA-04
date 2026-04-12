@@ -2,12 +2,11 @@ package com.cyber.service;
 
 import com.cyber.connection.DatabaseConnection;
 import com.cyber.dao.IFbMenuItemDAO;
-import com.cyber.dao.IFbOptionDAO;
 import com.cyber.dao.IFbOrderDAO;
 import com.cyber.dao.IFbOrderDetailDAO;
 import com.cyber.dao.impl.FbMenuItemDAOImpl;
-import com.cyber.dao.impl.FbOptionDAOImpl;
 import com.cyber.dao.impl.FbOrderDAOImpl;
+import com.cyber.dao.impl.FbOrderDetailDAOImpl;
 import com.cyber.dao.impl.FbOrderDetailDAOImpl;
 import com.cyber.exception.BusinessException;
 import com.cyber.model.FbOrder;
@@ -26,14 +25,12 @@ public class FbOrderService {
     private static FbOrderService instance;
     private final IFbOrderDAO       orderDAO;
     private final IFbMenuItemDAO    menuItemDAO;
-    private final IFbOptionDAO      optionDAO;
     private final IFbOrderDetailDAO orderDetailDAO;
     private final LogService        logService;
 
     private FbOrderService() {
         this.orderDAO       = FbOrderDAOImpl.getInstance();
         this.menuItemDAO    = FbMenuItemDAOImpl.getInstance();
-        this.optionDAO      = FbOptionDAOImpl.getInstance();
         this.orderDetailDAO = FbOrderDetailDAOImpl.getInstance();
         this.logService     = LogService.getInstance();
     }
@@ -133,13 +130,10 @@ public class FbOrderService {
     // -------------------------------------------------------
 
     /**
-     * Đặt đơn hàng F&B nâng cao.
-     * View chịu trách nhiệm build IBillable (Decorator chain) và Strategy,
-     * đóng gói kết quả vào FbAdvancedCartItem rồi truyền xuống đây.
-     * Service chịu trách nhiệm: kiểm tra user, trừ tiền, trừ stock, lưu DB — trong 1 transaction.
+     * Đặt đơn hàng F&B đơn giản hóa.
      */
-    public void orderFoodAdvanced(int userId, Integer bookingId,
-                                  List<FbAdvancedCartItem> cartItems) throws BusinessException {
+    public void orderFood(int userId, Integer bookingId,
+                                  List<FbCartItem> cartItems) throws BusinessException {
         if (cartItems == null || cartItems.isEmpty()) {
             throw new BusinessException("ERR_EMPTY_CART", "Giỏ hàng trống, không thể đặt đơn.");
         }
@@ -160,9 +154,9 @@ public class FbOrderService {
                 throw new BusinessException("ERR_USER_LOCKED", "Tài khoản đang bị khóa.");
             }
 
-            // 2. Tính tổng từ cart items (giá đã tính qua Decorator + Strategy ở View)
+            // 2. Tính tổng kết từ giỏ hàng
             BigDecimal totalAmount = cartItems.stream()
-                    .map(FbAdvancedCartItem::getFinalPrice)
+                    .map(FbCartItem::getFinalPrice)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             if (currentUser.getBalance().compareTo(totalAmount) < 0) {
@@ -179,20 +173,13 @@ public class FbOrderService {
             int newOrderId = orderDAO.createOrder(conn, newOrder);
 
             // 5. Kiểm tra tính hợp lệ & Lưu từng cart item + trừ stock
-            for (FbAdvancedCartItem cartItem : cartItems) {
+            for (FbCartItem cartItem : cartItems) {
                 com.cyber.domain.fb.FbMenuItem dbItem = menuItemDAO.findById(conn, cartItem.getMenuItemId());
                 if (dbItem == null || dbItem.isDeleted()) {
                     throw new BusinessException("ITEM_INVALID", "Món ăn ID=" + cartItem.getMenuItemId() + " không tồn tại hoặc đã bị xóa.");
                 }
 
                 menuItemDAO.deductStock(conn, cartItem.getMenuItemId(), cartItem.getQuantity());
-
-                // Trừ tồn kho topping (nếu có trong configJson)
-                if (cartItem.getToppingIds() != null) {
-                    for (int toppingId : cartItem.getToppingIds()) {
-                        optionDAO.deductToppingStock(conn, toppingId, cartItem.getQuantity());
-                    }
-                }
 
                 orderDetailDAO.insertOrderDetail(
                         conn,
@@ -236,16 +223,10 @@ public class FbOrderService {
         }
     }
 
-    // -------------------------------------------------------
-    // Inner DTO: Dữ liệu một dòng trong giỏ hàng nâng cao
-    // -------------------------------------------------------
-
     /**
-     * Data carrier từ View -> Service.
-     * View build object này sau khi áp dụng Decorator + Strategy.
-     * Service chỉ nhận và persist — không chứa logic tính giá.
+     * DTO: Giỏ hàng F&B
      */
-    public static class FbAdvancedCartItem {
+    public static class FbCartItem {
         private final int        menuItemId;
         private final int        quantity;
         private final BigDecimal finalPrice;
@@ -253,9 +234,8 @@ public class FbOrderService {
         private final String     itemConfigJson;
         private BigDecimal       discountApplied;
         private String           discountStrategyName;
-        private java.util.List<Integer> toppingIds;  // Danh sách topping ID để trừ stock
 
-        public FbAdvancedCartItem(int menuItemId, int quantity, BigDecimal finalPrice,
+        public FbCartItem(int menuItemId, int quantity, BigDecimal finalPrice,
                                   String itemDescription, String itemConfigJson,
                                   BigDecimal discountApplied, String discountStrategyName) {
             this.menuItemId           = menuItemId;
@@ -274,16 +254,12 @@ public class FbOrderService {
         public String     getItemConfigJson()        { return itemConfigJson; }
         public BigDecimal getDiscountApplied()       { return discountApplied; }
         public String     getDiscountStrategyName()  { return discountStrategyName; }
-        public java.util.List<Integer> getToppingIds() { return toppingIds; }
 
         public void setDiscountApplied(BigDecimal discountApplied) {
             this.discountApplied = discountApplied;
         }
         public void setDiscountStrategyName(String discountStrategyName) {
             this.discountStrategyName = discountStrategyName;
-        }
-        public void setToppingIds(java.util.List<Integer> toppingIds) {
-            this.toppingIds = toppingIds;
         }
     }
 }

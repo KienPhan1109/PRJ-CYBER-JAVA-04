@@ -1,6 +1,6 @@
 package com.cyber.service;
 
-import com.cyber.domain.fb.*;
+import com.cyber.domain.fb.FbMenuItem;
 import com.cyber.domain.fb.discount.*;
 import com.cyber.model.enums.FBStatus;
 import com.cyber.model.enums.FbTemperature;
@@ -25,25 +25,38 @@ public class FbOrderServiceTest {
     }
 
     @Test
-    @DisplayName("Kiểm tra tính giá khi lồng ghép nhiều Decorator (Size + Topping)")
-    public void testOrderWithMultipleDecorators() {
-        IBillable drink = new SingleItem(sampleDrink);
+    @DisplayName("Kiểm tra tính giá khi cấu trúc giỏ hàng theo mô hình phẳng Flat Item")
+    public void testFlatOrderCalculation() {
+        // Cấu hình: Trà Sữa (30k) + Trân châu đen (7k)
+        // Trong mô hình phẳng, giỏ hàng (Cart) lưu trữ danh sách các FbCartItem
+        FbOrderService.FbCartItem drinkItem = new FbOrderService.FbCartItem(
+            sampleDrink.getMenuItemId(), 
+            1, 
+            sampleDrink.getBasePrice(), 
+            sampleDrink.getName(), 
+            "{}", 
+            BigDecimal.ZERO, 
+            ""
+        );
         
-        // Cấu hình: Trà Sữa Size L (+10,000) + Trân châu (+7,000) + Thạch cà phê (+6,000)
-        drink = new SizeDecorator(drink, SizeDecorator.SizeType.L);
-        drink = new ToppingDecorator(drink, "Trân châu đen", new BigDecimal("7000"));
-        drink = new ToppingDecorator(drink, "Thạch cà phê", new BigDecimal("6000"));
+        FbOrderService.FbCartItem toppingItem = new FbOrderService.FbCartItem(
+            3, // ID giả mạo cho Topping
+            1, 
+            new BigDecimal("7000"), 
+            "Trân châu đen", 
+            "{}", 
+            BigDecimal.ZERO, 
+            ""
+        );
+
+        // Tổng tiền = Base Price của Drink + Base Price của Topping = 37,000 VNĐ
+        BigDecimal expectedPrice = new BigDecimal("37000");
+        BigDecimal calculatedTotal = drinkItem.getFinalPrice().multiply(new BigDecimal(drinkItem.getQuantity()))
+                                     .add(toppingItem.getFinalPrice().multiply(new BigDecimal(toppingItem.getQuantity())));
         
-        // Tính tổng tiền mong đợi: 30000 + 10000 + 7000 + 6000 = 53000
-        BigDecimal expectedPrice = new BigDecimal("53000");
-        assertEquals(expectedPrice, drink.calculatePrice(), "Trường hợp tính sai tổng tiền Decorator!");
-        
-        // Kiểm tra Description
-        String desc = drink.getDescription();
-        assertTrue(desc.contains("Size L"), "Thiếu mô tả Size L");
-        assertTrue(desc.contains("Trân châu đen"), "Thiếu mô tả Topping 1");
-        assertTrue(desc.contains("Thạch cà phê"), "Thiếu mô tả Topping 2");
+        assertEquals(expectedPrice, calculatedTotal, "Trường hợp tính sai tổng tiền mô hình Phẳng!");
     }
+
 
     @Test
     @DisplayName("Kiểm tra các chiến lược giảm giá (Strategy Pattern)")
