@@ -13,6 +13,7 @@ public class Booking {
     private BigDecimal hourlyRateSnapshot;
     private String computerName;
     private String userName;
+    private Integer staffId;
 
     public Booking(int bookingId, int userId, int computerId, Timestamp startTime, Timestamp endTime, String status, BigDecimal totalFee, BigDecimal hourlyRateSnapshot) {
         this.bookingId = bookingId;
@@ -91,5 +92,13 @@ public class Booking {
 
     public BigDecimal getHourlyRateSnapshot() {
         return hourlyRateSnapshot;
+    }
+
+    public Integer getStaffId() {
+        return staffId;
+    }
+
+    public void setStaffId(Integer staffId) {
+        this.staffId = staffId;
     }
 }

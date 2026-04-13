@@ -301,10 +301,11 @@ public class BookingService {
                 }
             }
 
-            // Cập nhật booking: ACTIVE, start_time = thời điểm duyệt, reset total_fee
+            // Cập nhật booking: ACTIVE, start_time = thời điểm duyệt, reset total_fee, lưu staff phê duyệt
             booking.setStatus("ACTIVE");
             booking.setStartTime(new java.sql.Timestamp(System.currentTimeMillis()));
             booking.setTotalFee(BigDecimal.ZERO); // Reset — heartbeat sẽ tính tiền từ đây
+            booking.setStaffId(staffActor.getUserId());
             bookingDAO.updateBooking(conn, booking);
 
             // Chuyển máy sang IN_USE

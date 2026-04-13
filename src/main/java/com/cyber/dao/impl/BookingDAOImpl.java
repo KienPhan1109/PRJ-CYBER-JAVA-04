@@ -101,6 +101,8 @@ public class BookingDAOImpl implements IBookingDAO {
                         rs.getBigDecimal("total_fee"),
                         rs.getBigDecimal("hourly_rate_snapshot")
                     );
+                    int sId = rs.getInt("staff_id");
+                    if (!rs.wasNull()) b.setStaffId(sId);
                     b.setComputerName(rs.getString("computer_name"));
                     list.add(b);
                 }
@@ -131,6 +133,8 @@ public class BookingDAOImpl implements IBookingDAO {
                         rs.getBigDecimal("total_fee"),
                         rs.getBigDecimal("hourly_rate_snapshot")
                     );
+                    int sId = rs.getInt("staff_id");
+                    if (!rs.wasNull()) b.setStaffId(sId);
                     b.setComputerName(rs.getString("computer_name"));
                     list.add(b);
                 }
@@ -160,6 +164,8 @@ public class BookingDAOImpl implements IBookingDAO {
                         rs.getBigDecimal("total_fee"),
                         rs.getBigDecimal("hourly_rate_snapshot")
                     );
+                    int sId = rs.getInt("staff_id");
+                    if (!rs.wasNull()) b.setStaffId(sId);
                     b.setComputerName(rs.getString("computer_name"));
                     list.add(b);
                 }
@@ -193,14 +199,19 @@ public class BookingDAOImpl implements IBookingDAO {
 
     @Override
     public void updateBooking(Connection conn, Booking booking) throws SQLException {
-        String sql = "UPDATE bookings SET start_time = ?, end_time = ?, status = ?, total_fee = ?, hourly_rate_snapshot = ? WHERE booking_id = ?";
+        String sql = "UPDATE bookings SET start_time = ?, end_time = ?, status = ?, total_fee = ?, hourly_rate_snapshot = ?, staff_id = COALESCE(?, staff_id) WHERE booking_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setTimestamp(1, booking.getStartTime());
             stmt.setTimestamp(2, booking.getEndTime());
             stmt.setString(3, booking.getStatus());
             stmt.setBigDecimal(4, booking.getTotalFee());
             stmt.setBigDecimal(5, booking.getHourlyRateSnapshot());
-            stmt.setInt(6, booking.getBookingId());
+            if (booking.getStaffId() != null) {
+                stmt.setInt(6, booking.getStaffId());
+            } else {
+                stmt.setNull(6, java.sql.Types.INTEGER);
+            }
+            stmt.setInt(7, booking.getBookingId());
             stmt.executeUpdate();
         }
     }
@@ -227,6 +238,8 @@ public class BookingDAOImpl implements IBookingDAO {
                         rs.getBigDecimal("total_fee"),
                         rs.getBigDecimal("hourly_rate_snapshot")
                     );
+                    int sId = rs.getInt("staff_id");
+                    if (!rs.wasNull()) b.setStaffId(sId);
                     b.setComputerName(rs.getString("computer_name"));
                     b.setUserName(rs.getString("user_name"));
                     list.add(b);
@@ -259,6 +272,8 @@ public class BookingDAOImpl implements IBookingDAO {
                         rs.getBigDecimal("total_fee"),
                         rs.getBigDecimal("hourly_rate_snapshot")
                     );
+                    int sId = rs.getInt("staff_id");
+                    if (!rs.wasNull()) b.setStaffId(sId);
                     b.setComputerName(rs.getString("computer_name"));
                     b.setUserName(rs.getString("user_name"));
                     list.add(b);

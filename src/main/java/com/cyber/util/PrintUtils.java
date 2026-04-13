@@ -24,34 +24,26 @@ public class PrintUtils {
         return code + text + ANSI_RESET;
     }
 
-    /**
-     * In ra thông báo thành công với màu Xanh Lá
-     */
     public static void printSuccess(String message, Object... args) {
         String formattedMessage = args != null && args.length > 0 ? String.format(message, args) : message;
         System.out.println(ANSI_GREEN + "[THÀNH CÔNG] " + formattedMessage + ANSI_RESET);
     }
 
-    /**
-     * In ra thông báo lỗi với màu Đỏ
-     */
     public static void printError(String message, Object... args) {
         String formattedMessage = args != null && args.length > 0 ? String.format(message, args) : message;
         System.out.println(ANSI_RED + "[LỖI] " + formattedMessage + ANSI_RESET);
     }
 
-    /**
-     * In ra thông báo cảnh báo với màu Vàng
-     */
     public static void printWarning(String message, Object... args) {
         String formattedMessage = args != null && args.length > 0 ? String.format(message, args) : message;
         System.out.println(ANSI_YELLOW + "[CẢNH BÁO] " + formattedMessage + ANSI_RESET);
     }
 
-    /**
-     * In đường kẻ ngang phân cách bảng với chiều rộng chỉ định.
-     */
     public static void printTableSeparator(int width) {
         System.out.println("+" + "-".repeat(width - 2) + "+");
+    }
+
+    public static void printSeparator(int width) {
+        System.out.println("=".repeat(width));
     }
 }

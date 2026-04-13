@@ -96,7 +96,7 @@ public class FbOrderService {
                 throw new BusinessException("INVALID_ACTION", "Đơn hàng đã hủy, không thể thay đổi trạng thái.");
             }
 
-            orderDAO.updateOrderStatus(conn, orderId, newStatus);
+            orderDAO.updateOrderStatus(conn, orderId, newStatus, actor.getUserId());
 
             // Hoàn tiền + hoàn kho nếu staff huỷ đơn
             if (newStatus == FbOrderStatus.CANCELLED) {

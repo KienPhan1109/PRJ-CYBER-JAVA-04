@@ -33,10 +33,10 @@ public class ReportView {
             try {
                 switch (choice) {
                     case 1:
-                        showReport(LocalDate.now().atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX));
+                        showReport(LocalDate.now().atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX), null);
                         break;
                     case 2:
-                        showReport(LocalDate.now().withDayOfMonth(1).atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX));
+                        showReport(LocalDate.now().withDayOfMonth(1).atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX), null);
                         break;
                     case 3:
                         String startStr = InputUtils.inputString("Từ ngày (yyyy-MM-dd): ",
@@ -48,7 +48,7 @@ public class ReportView {
                         if (start.isAfter(end)) {
                             System.out.println("Lỗi: Ngày bắt đầu không thể sau ngày kết thúc.");
                         } else {
-                            showReport(start.atStartOfDay(), end.atTime(LocalTime.MAX));
+                            showReport(start.atStartOfDay(), end.atTime(LocalTime.MAX), null);
                         }
                         break;
                     case 0:
@@ -60,21 +60,21 @@ public class ReportView {
         }
     }
 
-    public void displayStaffReportMenu() {
-        System.out.println("\n--- BÁO CÁO DOANH THU CA HÔM NAY ---");
+    public void displayStaffReportMenu(int staffId) {
+        System.out.println("\n--- BÁO CÁO DOANH THU CÁ NHÂN (CA HÔM NAY) ---");
         try {
-            showReport(LocalDate.now().atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX));
+            showReport(LocalDate.now().atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX), staffId);
         } catch (Exception e) {
             System.out.println("Có lỗi khi tạo báo cáo: " + e.getMessage());
         }
     }
 
-    private void showReport(LocalDateTime start, LocalDateTime end) throws BusinessException {
+    private void showReport(LocalDateTime start, LocalDateTime end, Integer staffId) throws BusinessException {
         Timestamp startTs = Timestamp.valueOf(start);
         Timestamp endTs = Timestamp.valueOf(end);
 
-        BigDecimal bookingRev = reportService.getTotalBookingRevenue(startTs, endTs);
-        BigDecimal fbRev = reportService.getTotalFbRevenue(startTs, endTs);
+        BigDecimal bookingRev = reportService.getTotalBookingRevenue(startTs, endTs, staffId);
+        BigDecimal fbRev = reportService.getTotalFbRevenue(startTs, endTs, staffId);
         BigDecimal totalRev = bookingRev.add(fbRev);
 
         System.out.println("\n==========================================");
@@ -86,7 +86,7 @@ public class ReportView {
         System.out.printf("TỔNG DOANH THU     : %s%n", FormatUtils.formatVND(totalRev));
         System.out.println("==========================================\n");
 
-        List<Map<String, Object>> hotItems = reportService.getTopSellingItems(startTs, endTs, 5);
+        List<Map<String, Object>> hotItems = reportService.getTopSellingItems(startTs, endTs, 5, staffId);
         System.out.println("--- TOP 5 MÓN F&B BÁN CHẠY NHẤT ---");
         if (hotItems.isEmpty()) {
             System.out.println("Chưa có dữ liệu.");
@@ -99,7 +99,7 @@ public class ReportView {
         }
         
         System.out.println("\n--- THỐNG KÊ SỬ DỤNG MÁY ---");
-        List<Map<String, Object>> hotMachines = reportService.getMachineUsageStats(startTs, endTs);
+        List<Map<String, Object>> hotMachines = reportService.getMachineUsageStats(startTs, endTs, staffId);
         if (hotMachines.isEmpty()) {
             System.out.println("Chưa có dữ liệu.");
         } else {

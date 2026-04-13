@@ -60,7 +60,7 @@ public class StaffMainView {
                     case 3: manageFbOrders();         break;
                     case 4: manageBookingRequests();  break;
                     case 5: viewLogsMenu();           break;
-                    case 6: reportView.displayStaffReportMenu(); break;
+                    case 6: reportView.displayStaffReportMenu(staffUser.getUserId()); break;
                     case 0:
                         PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Staff...");
                         return;

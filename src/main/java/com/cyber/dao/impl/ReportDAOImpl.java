@@ -23,11 +23,17 @@ public class ReportDAOImpl implements IReportDAO {
     }
 
     @Override
-    public BigDecimal getTotalBookingRevenue(Connection conn, Timestamp start, Timestamp end) throws SQLException {
-        String sql = "SELECT SUM(total_fee) FROM bookings WHERE status = 'COMPLETED' AND created_at BETWEEN ? AND ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+    public BigDecimal getTotalBookingRevenue(Connection conn, Timestamp start, Timestamp end, Integer staffId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT SUM(total_fee) FROM bookings WHERE status = 'COMPLETED' AND created_at BETWEEN ? AND ?");
+        if (staffId != null) {
+            sql.append(" AND staff_id = ?");
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             stmt.setTimestamp(1, start);
             stmt.setTimestamp(2, end);
+            if (staffId != null) {
+                stmt.setInt(3, staffId);
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     BigDecimal val = rs.getBigDecimal(1);
@@ -39,11 +45,17 @@ public class ReportDAOImpl implements IReportDAO {
     }
 
     @Override
-    public BigDecimal getTotalFbRevenue(Connection conn, Timestamp start, Timestamp end) throws SQLException {
-        String sql = "SELECT SUM(total_amount) FROM fb_orders WHERE status = 'DELIVERED' AND created_at BETWEEN ? AND ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+    public BigDecimal getTotalFbRevenue(Connection conn, Timestamp start, Timestamp end, Integer staffId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT SUM(total_amount) FROM fb_orders WHERE status = 'DELIVERED' AND created_at BETWEEN ? AND ?");
+        if (staffId != null) {
+            sql.append(" AND staff_id = ?");
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             stmt.setTimestamp(1, start);
             stmt.setTimestamp(2, end);
+            if (staffId != null) {
+                stmt.setInt(3, staffId);
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     BigDecimal val = rs.getBigDecimal(1);
@@ -55,18 +67,28 @@ public class ReportDAOImpl implements IReportDAO {
     }
 
     @Override
-    public List<Map<String, Object>> getTopSellingItems(Connection conn, Timestamp start, Timestamp end, int limit) throws SQLException {
+    public List<Map<String, Object>> getTopSellingItems(Connection conn, Timestamp start, Timestamp end, int limit, Integer staffId) throws SQLException {
         List<Map<String, Object>> result = new ArrayList<>();
-        String sql = "SELECT item_name_snapshot, SUM(quantity) as total_qty " +
-                     "FROM fb_order_details d " +
-                     "JOIN fb_orders o ON d.order_id = o.order_id " +
-                     "WHERE o.status = 'DELIVERED' AND o.created_at BETWEEN ? AND ? " +
-                     "GROUP BY item_name_snapshot " +
-                     "ORDER BY total_qty DESC LIMIT ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT item_name_snapshot, SUM(quantity) as total_qty " +
+            "FROM fb_order_details d " +
+            "JOIN fb_orders o ON d.order_id = o.order_id " +
+            "WHERE o.status = 'DELIVERED' AND o.created_at BETWEEN ? AND ? "
+        );
+        if (staffId != null) {
+            sql.append(" AND o.staff_id = ? ");
+        }
+        sql.append("GROUP BY item_name_snapshot ORDER BY total_qty DESC LIMIT ?");
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             stmt.setTimestamp(1, start);
             stmt.setTimestamp(2, end);
-            stmt.setInt(3, limit);
+            if (staffId != null) {
+                stmt.setInt(3, staffId);
+                stmt.setInt(4, limit);
+            } else {
+                stmt.setInt(3, limit);
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Map<String, Object> map = new LinkedHashMap<>();
@@ -80,17 +102,25 @@ public class ReportDAOImpl implements IReportDAO {
     }
 
     @Override
-    public List<Map<String, Object>> getMachineUsageStats(Connection conn, Timestamp start, Timestamp end) throws SQLException {
+    public List<Map<String, Object>> getMachineUsageStats(Connection conn, Timestamp start, Timestamp end, Integer staffId) throws SQLException {
         List<Map<String, Object>> result = new ArrayList<>();
-        String sql = "SELECT c.name as computer_name, COUNT(b.booking_id) as total_bookings " +
-                     "FROM bookings b " +
-                     "JOIN computers c ON b.computer_id = c.computer_id " +
-                     "WHERE b.status = 'COMPLETED' AND b.created_at BETWEEN ? AND ? " +
-                     "GROUP BY c.name " +
-                     "ORDER BY total_bookings DESC LIMIT 10";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT c.name as computer_name, COUNT(b.booking_id) as total_bookings " +
+            "FROM bookings b " +
+            "JOIN computers c ON b.computer_id = c.computer_id " +
+            "WHERE b.status = 'COMPLETED' AND b.created_at BETWEEN ? AND ? "
+        );
+        if (staffId != null) {
+            sql.append(" AND b.staff_id = ? ");
+        }
+        sql.append("GROUP BY c.name ORDER BY total_bookings DESC LIMIT 10");
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             stmt.setTimestamp(1, start);
             stmt.setTimestamp(2, end);
+            if (staffId != null) {
+                stmt.setInt(3, staffId);
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Map<String, Object> map = new LinkedHashMap<>();

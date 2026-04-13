@@ -58,6 +58,8 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
                         s,
                         rs.getBigDecimal("total_amount")
                     );
+                    int sId = rs.getInt("staff_id");
+                    if (!rs.wasNull()) order.setStaffId(sId);
                     order.setOrderId(rs.getInt("order_id"));
                     orders.add(order);
                 }
@@ -110,6 +112,8 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
                         s,
                         rs.getBigDecimal("total_amount")
                     );
+                    int sId = rs.getInt("staff_id");
+                    if (!rs.wasNull()) order.setStaffId(sId);
                     order.setOrderId(rs.getInt("order_id"));
                     order.setUserName(rs.getString("user_name"));
                     String compName = rs.getString("computer_name");
@@ -134,11 +138,16 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
     }
 
     @Override
-    public void updateOrderStatus(Connection conn, int orderId, FbOrderStatus newStatus) throws SQLException {
-        String sql = "UPDATE fb_orders SET status = ? WHERE order_id = ?";
+    public void updateOrderStatus(Connection conn, int orderId, FbOrderStatus newStatus, Integer staffId) throws SQLException {
+        String sql = "UPDATE fb_orders SET status = ?, staff_id = COALESCE(?, staff_id) WHERE order_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, newStatus.name());
-            stmt.setInt(2, orderId);
+            if (staffId != null) {
+                stmt.setInt(2, staffId);
+            } else {
+                stmt.setNull(2, java.sql.Types.INTEGER);
+            }
+            stmt.setInt(3, orderId);
             stmt.executeUpdate();
         }
     }
@@ -161,6 +170,8 @@ public class FbOrderDAOImpl implements IFbOrderDAO {
                         s,
                         rs.getBigDecimal("total_amount")
                     );
+                    int sId = rs.getInt("staff_id");
+                    if (!rs.wasNull()) order.setStaffId(sId);
                     order.setOrderId(rs.getInt("order_id"));
                     return order;
                 }

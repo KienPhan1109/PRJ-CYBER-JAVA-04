@@ -10,6 +10,7 @@ public class FbOrder {
     private BigDecimal totalAmount;
     private String userName;
     private String computerName;
+    private Integer staffId;
 
     public FbOrder(int userId, Integer bookingId, FbOrderStatus status, BigDecimal totalAmount) {
         this.userId = userId;
@@ -56,6 +57,14 @@ public class FbOrder {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public Integer getStaffId() {
+        return staffId;
+    }
+
+    public void setStaffId(Integer staffId) {
+        this.staffId = staffId;
     }
 
     public String getComputerName() {

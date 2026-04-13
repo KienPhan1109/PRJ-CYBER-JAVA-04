@@ -19,5 +19,5 @@ public interface IFbOrderDAO {
 
     FbOrder findOrderById(Connection conn, int orderId) throws SQLException;
 
-    void updateOrderStatus(Connection conn, int orderId, FbOrderStatus newStatus) throws SQLException;
+    void updateOrderStatus(Connection conn, int orderId, FbOrderStatus newStatus, Integer staffId) throws SQLException;
 }

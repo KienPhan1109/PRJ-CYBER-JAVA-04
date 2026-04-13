@@ -37,9 +37,11 @@ CREATE TABLE bookings (
     status ENUM('PENDING', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'RESERVED') DEFAULT 'PENDING',
     total_fee DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     hourly_rate_snapshot DECIMAL(10, 2),
+    staff_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
-    FOREIGN KEY (computer_id) REFERENCES computers(computer_id) ON DELETE RESTRICT
+    FOREIGN KEY (computer_id) REFERENCES computers(computer_id) ON DELETE RESTRICT,
+    FOREIGN KEY (staff_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
 -- 4. F&B Categories
@@ -77,9 +79,11 @@ CREATE TABLE fb_orders (
     booking_id INT,
     status ENUM('PENDING', 'PREPARING', 'DELIVERED', 'CANCELLED') DEFAULT 'PENDING',
     total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    staff_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
-    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
 -- 7. Order Details
