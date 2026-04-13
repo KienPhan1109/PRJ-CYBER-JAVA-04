@@ -14,39 +14,28 @@ import java.util.List;
 import java.util.Map;
 
 public class ReportDAOImpl implements IReportDAO {
-    
-    private static ReportDAOImpl instance;
+    private static final ReportDAOImpl instance = new ReportDAOImpl();
+
     private ReportDAOImpl() {}
-    public static synchronized ReportDAOImpl getInstance() {
-        if (instance == null) instance = new ReportDAOImpl();
+
+    public static ReportDAOImpl getInstance() {
         return instance;
     }
 
     @Override
     public BigDecimal getTotalBookingRevenue(Connection conn, Timestamp start, Timestamp end, Integer staffId) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT SUM(total_fee) FROM bookings WHERE status = 'COMPLETED' AND created_at BETWEEN ? AND ?");
-        if (staffId != null) {
-            sql.append(" AND staff_id = ?");
-        }
-        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
-            stmt.setTimestamp(1, start);
-            stmt.setTimestamp(2, end);
-            if (staffId != null) {
-                stmt.setInt(3, staffId);
-            }
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    BigDecimal val = rs.getBigDecimal(1);
-                    return val != null ? val : BigDecimal.ZERO;
-                }
-            }
-        }
-        return BigDecimal.ZERO;
+        String sql = "SELECT SUM(total_fee) FROM bookings WHERE status = 'COMPLETED' AND created_at BETWEEN ? AND ?";
+        return executeRevenueQuery(conn, sql, start, end, staffId);
     }
 
     @Override
     public BigDecimal getTotalFbRevenue(Connection conn, Timestamp start, Timestamp end, Integer staffId) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT SUM(total_amount) FROM fb_orders WHERE status = 'DELIVERED' AND created_at BETWEEN ? AND ?");
+        String sql = "SELECT SUM(total_amount) FROM fb_orders WHERE status = 'DELIVERED' AND created_at BETWEEN ? AND ?";
+        return executeRevenueQuery(conn, sql, start, end, staffId);
+    }
+
+    private BigDecimal executeRevenueQuery(Connection conn, String baseSql, Timestamp start, Timestamp end, Integer staffId) throws SQLException {
+        StringBuilder sql = new StringBuilder(baseSql);
         if (staffId != null) {
             sql.append(" AND staff_id = ?");
         }
@@ -79,7 +68,7 @@ public class ReportDAOImpl implements IReportDAO {
             sql.append(" AND o.staff_id = ? ");
         }
         sql.append("GROUP BY item_name_snapshot ORDER BY total_qty DESC LIMIT ?");
-        
+
         try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             stmt.setTimestamp(1, start);
             stmt.setTimestamp(2, end);
@@ -114,7 +103,7 @@ public class ReportDAOImpl implements IReportDAO {
             sql.append(" AND b.staff_id = ? ");
         }
         sql.append("GROUP BY c.name ORDER BY total_bookings DESC LIMIT 10");
-        
+
         try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             stmt.setTimestamp(1, start);
             stmt.setTimestamp(2, end);

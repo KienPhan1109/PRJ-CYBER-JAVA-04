@@ -13,6 +13,8 @@ public class SystemLog {
     private Integer targetId;   // Nullable
     private Timestamp createdAt;
 
+    public SystemLog() {}
+
     public SystemLog(LogType logType, int actorId, String action, Integer targetId) {
         this.logType = logType;
         this.actorId = actorId;
@@ -30,37 +32,23 @@ public class SystemLog {
         this.createdAt = createdAt;
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public LogType getLogType() { return logType; }
+    public void setLogType(LogType logType) { this.logType = logType; }
 
-    public LogType getLogType() {
-        return logType;
-    }
+    public int getActorId() { return actorId; }
+    public void setActorId(int actorId) { this.actorId = actorId; }
 
-    public int getActorId() {
-        return actorId;
-    }
+    public String getAction() { return action; }
+    public void setAction(String action) { this.action = action; }
 
-    public String getAction() {
-        return action;
-    }
+    public Integer getTargetId() { return targetId; }
+    public void setTargetId(Integer targetId) { this.targetId = targetId; }
 
-    public void setAction(String action) {
-        this.action = action;
-    }
-
-    public Integer getTargetId() {
-        return targetId;
-    }
-
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
+    public Timestamp getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 
     @Override
     public String toString() {

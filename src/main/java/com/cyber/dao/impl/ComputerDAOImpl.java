@@ -10,57 +10,50 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ComputerDAOImpl implements IComputerDAO {
-    private static ComputerDAOImpl instance;
+    private static final ComputerDAOImpl instance = new ComputerDAOImpl();
+
     private ComputerDAOImpl() {}
 
-    public static synchronized ComputerDAOImpl getInstance() {
-        if (instance == null) {
-            instance = new ComputerDAOImpl();
-        }
+    public static ComputerDAOImpl getInstance() {
         return instance;
+    }
+
+    private Computer mapRowToComputer(ResultSet rs) throws SQLException {
+        Computer computer = new Computer();
+        computer.setComputerId(rs.getInt("computer_id"));
+        computer.setName(rs.getString("name"));
+
+        String zoneStr = rs.getString("zone");
+        computer.setZone(zoneStr != null ? ComputerZone.valueOf(zoneStr.toUpperCase()) : ComputerZone.STANDARD);
+
+        computer.setHardwareConfig(rs.getString("hardware_config"));
+
+        String statusStr = rs.getString("status");
+        computer.setStatus(statusStr != null ? ComputerStatus.valueOf(statusStr.toUpperCase()) : ComputerStatus.AVAILABLE);
+
+        computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
+        computer.setDeleted(rs.getBoolean("is_deleted"));
+        return computer;
     }
 
     @Override
     public List<Computer> getAllActiveComputers(Connection conn) throws SQLException {
-        List<Computer> computers = new ArrayList<>();
         String sql = "SELECT * FROM computers WHERE is_deleted = 0 AND status != 'HIDDEN' ORDER BY computer_id ASC";
-        try (PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                Computer computer = new Computer();
-                computer.setComputerId(rs.getInt("computer_id"));
-                computer.setName(rs.getString("name"));
-                String zoneStr = rs.getString("zone");
-                if (zoneStr != null) computer.setZone(ComputerZone.valueOf(zoneStr.toUpperCase()));
-                computer.setHardwareConfig(rs.getString("hardware_config"));
-                String statusStr = rs.getString("status");
-                if (statusStr != null) computer.setStatus(ComputerStatus.valueOf(statusStr.toUpperCase()));
-                computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
-                computer.setDeleted(rs.getBoolean("is_deleted"));
-                computers.add(computer);
-            }
-        }
-        return computers;
+        return executeComputerListQuery(conn, sql);
     }
 
     @Override
     public List<Computer> getAllComputersForAdmin(Connection conn) throws SQLException {
-        List<Computer> computers = new ArrayList<>();
         String sql = "SELECT * FROM computers WHERE is_deleted = 0 ORDER BY computer_id ASC";
+        return executeComputerListQuery(conn, sql);
+    }
+
+    private List<Computer> executeComputerListQuery(Connection conn, String sql) throws SQLException {
+        List<Computer> computers = new ArrayList<>();
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                Computer computer = new Computer();
-                computer.setComputerId(rs.getInt("computer_id"));
-                computer.setName(rs.getString("name"));
-                String zoneStr = rs.getString("zone");
-                if (zoneStr != null) computer.setZone(ComputerZone.valueOf(zoneStr.toUpperCase()));
-                computer.setHardwareConfig(rs.getString("hardware_config"));
-                String statusStr = rs.getString("status");
-                if (statusStr != null) computer.setStatus(ComputerStatus.valueOf(statusStr.toUpperCase()));
-                computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
-                computer.setDeleted(rs.getBoolean("is_deleted"));
-                computers.add(computer);
+                computers.add(mapRowToComputer(rs));
             }
         }
         return computers;
@@ -73,17 +66,7 @@ public class ComputerDAOImpl implements IComputerDAO {
             stmt.setInt(1, computerId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    Computer computer = new Computer();
-                    computer.setComputerId(rs.getInt("computer_id"));
-                    computer.setName(rs.getString("name"));
-                    String zoneStr = rs.getString("zone");
-                    if (zoneStr != null) computer.setZone(ComputerZone.valueOf(zoneStr.toUpperCase()));
-                    computer.setHardwareConfig(rs.getString("hardware_config"));
-                    String statusStr = rs.getString("status");
-                    if (statusStr != null) computer.setStatus(ComputerStatus.valueOf(statusStr.toUpperCase()));
-                    computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
-                    computer.setDeleted(rs.getBoolean("is_deleted"));
-                    return computer;
+                    return mapRowToComputer(rs);
                 }
             }
         }
@@ -114,7 +97,7 @@ public class ComputerDAOImpl implements IComputerDAO {
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
-                    rs.getInt(1);
+                    computer.setComputerId(rs.getInt(1));
                 }
             }
         }

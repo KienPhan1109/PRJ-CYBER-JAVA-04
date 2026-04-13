@@ -1,19 +1,42 @@
 package com.cyber.dao.impl;
+
 import com.cyber.dao.IBookingDAO;
 import com.cyber.model.Booking;
+import com.cyber.model.enums.BookingStatus;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BookingDAOImpl implements IBookingDAO {
-    private static BookingDAOImpl instance;
+    private static final BookingDAOImpl instance = new BookingDAOImpl();
+
     private BookingDAOImpl() {}
 
-    public static synchronized BookingDAOImpl getInstance() {
-        if (instance == null) {
-            instance = new BookingDAOImpl();
-        }
+    public static BookingDAOImpl getInstance() {
         return instance;
+    }
+
+    private Booking mapRowToBooking(ResultSet rs) throws SQLException {
+        String statusStr = rs.getString("status");
+        BookingStatus status = (statusStr != null) ? BookingStatus.valueOf(statusStr.toUpperCase()) : BookingStatus.ACTIVE;
+        
+        Booking b = new Booking(
+                rs.getInt("booking_id"),
+                rs.getInt("user_id"),
+                rs.getInt("computer_id"),
+                rs.getTimestamp("start_time"),
+                rs.getTimestamp("end_time"),
+                status,
+                rs.getBigDecimal("total_fee"),
+                rs.getBigDecimal("hourly_rate_snapshot")
+        );
+
+        int sId = rs.getInt("staff_id");
+        if (!rs.wasNull()) {
+            b.setStaffId(sId);
+        }
+        return b;
     }
 
     @Override
@@ -28,10 +51,11 @@ public class BookingDAOImpl implements IBookingDAO {
             } else {
                 stmt.setNull(4, Types.TIMESTAMP);
             }
-            stmt.setString(5, booking.getStatus() != null ? booking.getStatus() : "ACTIVE");
+            stmt.setString(5, booking.getStatus() != null ? booking.getStatus().name() : BookingStatus.ACTIVE.name());
             stmt.setBigDecimal(6, booking.getTotalFee());
             stmt.setBigDecimal(7, booking.getHourlyRateSnapshot());
             stmt.executeUpdate();
+
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) return rs.getInt(1);
             }
@@ -41,7 +65,6 @@ public class BookingDAOImpl implements IBookingDAO {
 
     @Override
     public boolean isComputerAvailable(Connection conn, int computerId, Timestamp start, Timestamp end) throws SQLException {
-        // Máy không khả dụng nếu đang có đơn PENDING (chờ staff) hoặc ACTIVE
         String sql = "SELECT COUNT(*) FROM bookings WHERE computer_id = ? AND status IN ('PENDING', 'ACTIVE')";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, computerId);
@@ -52,10 +75,6 @@ public class BookingDAOImpl implements IBookingDAO {
         return false;
     }
 
-    /**
-     * Kiểm tra máy có đang bị đặt trước (RESERVED) không.
-     * Nếu máy đã có booking RESERVED → không khả dụng cho đặt trước.
-     */
     @Override
     public boolean isComputerAvailableForReservation(Connection conn, int computerId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM bookings WHERE computer_id = ? AND status = 'RESERVED'";
@@ -81,91 +100,43 @@ public class BookingDAOImpl implements IBookingDAO {
 
     @Override
     public List<Booking> findActiveBookingsByUserId(Connection conn, int userId) throws SQLException {
-        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name " +
-                     "FROM bookings b " +
-                     "JOIN computers c ON b.computer_id = c.computer_id " +
-                     "WHERE b.user_id = ? AND b.status = 'ACTIVE' " +
-                     "ORDER BY b.start_time DESC";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Booking b = new Booking(
-                        rs.getInt("booking_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("computer_id"),
-                        rs.getTimestamp("start_time"),
-                        rs.getTimestamp("end_time"),
-                        rs.getString("status"),
-                        rs.getBigDecimal("total_fee"),
-                        rs.getBigDecimal("hourly_rate_snapshot")
-                    );
-                    int sId = rs.getInt("staff_id");
-                    if (!rs.wasNull()) b.setStaffId(sId);
-                    b.setComputerName(rs.getString("computer_name"));
-                    list.add(b);
-                }
-            }
-        }
-        return list;
+                "FROM bookings b " +
+                "JOIN computers c ON b.computer_id = c.computer_id " +
+                "WHERE b.user_id = ? AND b.status = 'ACTIVE' " +
+                "ORDER BY b.start_time DESC";
+        return executeBookingListQuery(conn, sql, userId);
     }
 
     @Override
     public List<Booking> findAllBookingsByUserId(Connection conn, int userId) throws SQLException {
-        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name " +
-                     "FROM bookings b " +
-                     "JOIN computers c ON b.computer_id = c.computer_id " +
-                     "WHERE b.user_id = ? " +
-                     "ORDER BY b.created_at DESC";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Booking b = new Booking(
-                        rs.getInt("booking_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("computer_id"),
-                        rs.getTimestamp("start_time"),
-                        rs.getTimestamp("end_time"),
-                        rs.getString("status"),
-                        rs.getBigDecimal("total_fee"),
-                        rs.getBigDecimal("hourly_rate_snapshot")
-                    );
-                    int sId = rs.getInt("staff_id");
-                    if (!rs.wasNull()) b.setStaffId(sId);
-                    b.setComputerName(rs.getString("computer_name"));
-                    list.add(b);
-                }
-            }
-        }
-        return list;
+                "FROM bookings b " +
+                "JOIN computers c ON b.computer_id = c.computer_id " +
+                "WHERE b.user_id = ? " +
+                "ORDER BY b.created_at DESC";
+        return executeBookingListQuery(conn, sql, userId);
     }
 
     @Override
     public List<Booking> findAllActiveBookings(Connection conn) throws SQLException {
-        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name " +
-                     "FROM bookings b " +
-                     "JOIN computers c ON b.computer_id = c.computer_id " +
-                     "WHERE b.status = 'ACTIVE' " +
-                     "ORDER BY b.start_time ASC";
+                "FROM bookings b " +
+                "JOIN computers c ON b.computer_id = c.computer_id " +
+                "WHERE b.status = 'ACTIVE' " +
+                "ORDER BY b.start_time ASC";
+        return executeBookingListQuery(conn, sql, null);
+    }
+
+    private List<Booking> executeBookingListQuery(Connection conn, String sql, Integer userId) throws SQLException {
+        List<Booking> list = new ArrayList<>();
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            if (userId != null) {
+                stmt.setInt(1, userId);
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    Booking b = new Booking(
-                        rs.getInt("booking_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("computer_id"),
-                        rs.getTimestamp("start_time"),
-                        rs.getTimestamp("end_time"),
-                        rs.getString("status"),
-                        rs.getBigDecimal("total_fee"),
-                        rs.getBigDecimal("hourly_rate_snapshot")
-                    );
-                    int sId = rs.getInt("staff_id");
-                    if (!rs.wasNull()) b.setStaffId(sId);
+                    Booking b = mapRowToBooking(rs);
                     b.setComputerName(rs.getString("computer_name"));
                     list.add(b);
                 }
@@ -181,16 +152,7 @@ public class BookingDAOImpl implements IBookingDAO {
             stmt.setInt(1, bookingId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return new Booking(
-                        rs.getInt("booking_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("computer_id"),
-                        rs.getTimestamp("start_time"),
-                        rs.getTimestamp("end_time"),
-                        rs.getString("status"),
-                        rs.getBigDecimal("total_fee"),
-                        rs.getBigDecimal("hourly_rate_snapshot")
-                    );
+                    return mapRowToBooking(rs);
                 }
             }
         }
@@ -203,13 +165,13 @@ public class BookingDAOImpl implements IBookingDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setTimestamp(1, booking.getStartTime());
             stmt.setTimestamp(2, booking.getEndTime());
-            stmt.setString(3, booking.getStatus());
+            stmt.setString(3, booking.getStatus() != null ? booking.getStatus().name() : BookingStatus.ACTIVE.name());
             stmt.setBigDecimal(4, booking.getTotalFee());
             stmt.setBigDecimal(5, booking.getHourlyRateSnapshot());
             if (booking.getStaffId() != null) {
                 stmt.setInt(6, booking.getStaffId());
             } else {
-                stmt.setNull(6, java.sql.Types.INTEGER);
+                stmt.setNull(6, Types.INTEGER);
             }
             stmt.setInt(7, booking.getBookingId());
             stmt.executeUpdate();
@@ -218,62 +180,35 @@ public class BookingDAOImpl implements IBookingDAO {
 
     @Override
     public List<Booking> findPendingBookings(Connection conn) throws SQLException {
-        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name, u.full_name as user_name " +
-                     "FROM bookings b " +
-                     "JOIN computers c ON b.computer_id = c.computer_id " +
-                     "JOIN users u ON b.user_id = u.user_id " +
-                     "WHERE b.status IN ('PENDING', 'RESERVED') " +
-                     "ORDER BY b.created_at ASC";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Booking b = new Booking(
-                        rs.getInt("booking_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("computer_id"),
-                        rs.getTimestamp("start_time"),
-                        rs.getTimestamp("end_time"),
-                        rs.getString("status"),
-                        rs.getBigDecimal("total_fee"),
-                        rs.getBigDecimal("hourly_rate_snapshot")
-                    );
-                    int sId = rs.getInt("staff_id");
-                    if (!rs.wasNull()) b.setStaffId(sId);
-                    b.setComputerName(rs.getString("computer_name"));
-                    b.setUserName(rs.getString("user_name"));
-                    list.add(b);
-                }
-            }
-        }
-        return list;
+                "FROM bookings b " +
+                "JOIN computers c ON b.computer_id = c.computer_id " +
+                "JOIN users u ON b.user_id = u.user_id " +
+                "WHERE b.status IN ('PENDING', 'RESERVED') " +
+                "ORDER BY b.created_at ASC";
+        return executeDetailedBookingListQuery(conn, sql, null);
     }
 
     @Override
     public List<Booking> findOverdueReservations(Connection conn, int overdueMinutes) throws SQLException {
-        List<Booking> list = new ArrayList<>();
         String sql = "SELECT b.*, c.name as computer_name, u.full_name as user_name " +
-                     "FROM bookings b " +
-                     "JOIN computers c ON b.computer_id = c.computer_id " +
-                     "JOIN users u ON b.user_id = u.user_id " +
-                     "WHERE b.status = 'RESERVED' " +
-                     "AND b.start_time < DATE_SUB(NOW(), INTERVAL ? MINUTE)";
+                "FROM bookings b " +
+                "JOIN computers c ON b.computer_id = c.computer_id " +
+                "JOIN users u ON b.user_id = u.user_id " +
+                "WHERE b.status = 'RESERVED' " +
+                "AND b.start_time < DATE_SUB(NOW(), INTERVAL ? MINUTE)";
+        return executeDetailedBookingListQuery(conn, sql, overdueMinutes);
+    }
+
+    private List<Booking> executeDetailedBookingListQuery(Connection conn, String sql, Integer param) throws SQLException {
+        List<Booking> list = new ArrayList<>();
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, overdueMinutes);
+            if (param != null) {
+                stmt.setInt(1, param);
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    Booking b = new Booking(
-                        rs.getInt("booking_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("computer_id"),
-                        rs.getTimestamp("start_time"),
-                        rs.getTimestamp("end_time"),
-                        rs.getString("status"),
-                        rs.getBigDecimal("total_fee"),
-                        rs.getBigDecimal("hourly_rate_snapshot")
-                    );
-                    int sId = rs.getInt("staff_id");
-                    if (!rs.wasNull()) b.setStaffId(sId);
+                    Booking b = mapRowToBooking(rs);
                     b.setComputerName(rs.getString("computer_name"));
                     b.setUserName(rs.getString("user_name"));
                     list.add(b);
@@ -290,16 +225,7 @@ public class BookingDAOImpl implements IBookingDAO {
             stmt.setInt(1, computerId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return new Booking(
-                        rs.getInt("booking_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("computer_id"),
-                        rs.getTimestamp("start_time"),
-                        rs.getTimestamp("end_time"),
-                        rs.getString("status"),
-                        rs.getBigDecimal("total_fee"),
-                        rs.getBigDecimal("hourly_rate_snapshot")
-                    );
+                    return mapRowToBooking(rs);
                 }
             }
         }

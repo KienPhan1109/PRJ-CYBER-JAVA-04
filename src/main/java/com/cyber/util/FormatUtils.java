@@ -1,5 +1,6 @@
 package com.cyber.util;
 
+import com.cyber.model.enums.BookingStatus;
 import com.cyber.model.enums.ComputerStatus;
 import com.cyber.model.enums.FBStatus;
 import com.cyber.model.enums.FbTemperature;
@@ -29,6 +30,7 @@ public class FormatUtils {
     }
 
     public static String formatId(String prefix, int id) {
+        if (prefix == null) prefix = "ID";
         return String.format("%s-%03d", prefix, id);
     }
     
@@ -105,15 +107,14 @@ public class FormatUtils {
         };
     }
 
-    public static String formatBookingStatus(String status) {
+    public static String formatBookingStatus(BookingStatus status) {
         if (status == null) return "---";
-        return switch (status.toUpperCase()) {
-            case "PENDING" -> ColorConst.YELLOW + "Chờ duyệt" + ColorConst.RESET;
-            case "ACTIVE" -> ColorConst.GREEN + "Đang chơi" + ColorConst.RESET;
-            case "COMPLETED" -> ColorConst.CYAN + "Hoàn thành" + ColorConst.RESET;
-            case "CANCELLED" -> ColorConst.RED + "Đã hủy" + ColorConst.RESET;
-            case "RESERVED" -> ColorConst.PURPLE + "Đã đặt trước" + ColorConst.RESET;
-            default -> status;
+        return switch (status) {
+            case PENDING -> ColorConst.YELLOW + "Chờ duyệt" + ColorConst.RESET;
+            case ACTIVE -> ColorConst.GREEN + "Đang chơi" + ColorConst.RESET;
+            case COMPLETED -> ColorConst.CYAN + "Hoàn thành" + ColorConst.RESET;
+            case CANCELLED -> ColorConst.RED + "Đã hủy" + ColorConst.RESET;
+            case RESERVED -> ColorConst.PURPLE + "Đã đặt trước" + ColorConst.RESET;
         };
     }
 

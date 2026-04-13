@@ -145,101 +145,39 @@ public class FbMenuItem {
         this.status = this.stockQuantity == 0 ? FBStatus.OUT_OF_STOCK : FBStatus.ACTIVE;
     }
 
-    public int getMenuItemId() {
-        return menuItemId;
-    }
+    public int getMenuItemId() { return menuItemId; }
+    public void setMenuItemId(int menuItemId) { this.menuItemId = menuItemId; }
 
-    public void setMenuItemId(int menuItemId) {
-        this.menuItemId = menuItemId;
-    }
+    public int getCategoryId() { return categoryId; }
+    public void setCategoryId(int categoryId) { this.categoryId = categoryId; }
 
-    public int getCategoryId() {
-        return categoryId;
-    }
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
 
-    public void setCategoryId(int categoryId) {
-        this.categoryId = categoryId;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getCategoryName() {
-        return categoryName;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setCategoryName(String categoryName) {
-        this.categoryName = categoryName;
-    }
+    public BigDecimal getBasePrice() { return basePrice; }
+    public void setBasePrice(BigDecimal basePrice) { this.basePrice = basePrice; }
 
-    public String getName() {
-        return name;
-    }
+    public int getStockQuantity() { return stockQuantity; }
+    public void setStockQuantity(int stockQuantity) { this.stockQuantity = stockQuantity; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public int getPrepTimeInMinutes() { return prepTimeInMinutes; }
+    public void setPrepTimeInMinutes(int prepTimeInMinutes) { this.prepTimeInMinutes = prepTimeInMinutes; }
 
-    public String getDescription() {
-        return description;
-    }
+    public String getAvailability() { return availability; }
+    public void setAvailability(String availability) { this.availability = availability; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public FbTemperature getTemperatureLevel() { return temperatureLevel; }
+    public void setTemperatureLevel(FbTemperature temperatureLevel) { this.temperatureLevel = temperatureLevel; }
 
-    public BigDecimal getBasePrice() {
-        return basePrice;
-    }
+    public FBStatus getStatus() { return status; }
+    public void setStatus(FBStatus status) { this.status = status; }
 
-    public void setBasePrice(BigDecimal basePrice) {
-        this.basePrice = basePrice;
-    }
-
-    public int getStockQuantity() {
-        return stockQuantity;
-    }
-
-    public void setStockQuantity(int stockQuantity) {
-        this.stockQuantity = stockQuantity;
-    }
-
-    public int getPrepTimeInMinutes() {
-        return prepTimeInMinutes;
-    }
-
-    public void setPrepTimeInMinutes(int prepTimeInMinutes) {
-        this.prepTimeInMinutes = prepTimeInMinutes;
-    }
-
-
-
-    public String getAvailability() {
-        return availability;
-    }
-
-    public void setAvailability(String availability) {
-        this.availability = availability;
-    }
-
-    public FbTemperature getTemperatureLevel() {
-        return temperatureLevel;
-    }
-
-    public void setTemperatureLevel(FbTemperature temperatureLevel) {
-        this.temperatureLevel = temperatureLevel;
-    }
-
-    public FBStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(FBStatus status) {
-        this.status = status;
-    }
-
-    public boolean isDeleted() {
-        return isDeleted;
-    }
-
-    public void setDeleted(boolean deleted) {
-        isDeleted = deleted;
-    }
+    public boolean isDeleted() { return isDeleted; }
+    public void setDeleted(boolean deleted) { isDeleted = deleted; }
 }

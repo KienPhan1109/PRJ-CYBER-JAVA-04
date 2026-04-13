@@ -5,6 +5,7 @@ import com.cyber.model.Booking;
 import com.cyber.model.FbOrder;
 import com.cyber.model.SystemLog;
 import com.cyber.model.User;
+import com.cyber.model.enums.BookingStatus;
 import com.cyber.model.enums.FbOrderStatus;
 import com.cyber.model.enums.LogType;
 import com.cyber.service.BookingService;
@@ -14,6 +15,7 @@ import com.cyber.service.UserService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
+import com.cyber.util.TablePaginationUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -82,45 +84,19 @@ public class StaffMainView {
             return;
         }
 
-        // Hiển thị kết quả dưới dạng bảng phân trang giống Admin
-        int pageSize = 10;
-        int totalPages = (int) Math.ceil((double) list.size() / pageSize);
-        int currentPage = 1;
+        // Hiển thị kết quả dưới dạng bảng phân trang
+        String[] headers = {"ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái"};
+        int[] widths = {5, 15, 20, 12, 15, 12, 24};
 
-        while (true) {
-            int startIdx = (currentPage - 1) * pageSize;
-            int endIdx = Math.min(startIdx + pageSize, list.size());
-
-            System.out.println("\n" + "=".repeat(120));
-            System.out.println("  KẾT QUẢ TÌM KIẾM (Trang " + currentPage + "/" + totalPages + ")");
-            System.out.println("=".repeat(120));
-            System.out.printf("%-5s | %-15s | %-20s | %-12s | %-15s | %-12s | %-15s%n",
-                    "ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái");
-            System.out.println("-".repeat(120));
-
-            for (int i = startIdx; i < endIdx; i++) {
-                User u = list.get(i);
-                System.out.printf("%-5d | %-15s | %-20s | %-12s | %-15s | %-12s | %-24s%n",
-                        u.getUserId(),
-                        FormatUtils.truncate(u.getUsername(), 15),
-                        FormatUtils.truncate(u.getFullName(), 20),
-                        FormatUtils.formatValue(u.getPhone()),
-                        FormatUtils.formatVND(u.getBalance()),
-                        u.getRole() != null ? u.getRole().name() : "---",
-                        FormatUtils.formatUserStatus(u.getStatus()));
-            }
-            System.out.println("=".repeat(120));
-            System.out.println("Tổng: " + list.size() + " người dùng | Trang " + currentPage + "/" + totalPages);
-
-            if (totalPages > 1) {
-                System.out.println("[N] Trang sau | [P] Trang trước | [S] Chọn người dùng");
-                String nav = InputUtils.inputString("Lựa chọn: ").toUpperCase();
-                if (nav.equals("N") && currentPage < totalPages) { currentPage++; continue; }
-                else if (nav.equals("P") && currentPage > 1) { currentPage--; continue; }
-                else if (!nav.equals("S")) continue;
-            }
-            break;
-        }
+        TablePaginationUtils.display(list, "KẾT QUẢ TÌM KIẾM", headers, widths, u -> new String[]{
+                String.valueOf(u.getUserId()),
+                FormatUtils.truncate(u.getUsername(), 15),
+                FormatUtils.truncate(u.getFullName(), 20),
+                FormatUtils.formatValue(u.getPhone()),
+                FormatUtils.formatVND(u.getBalance()),
+                u.getRole() != null ? u.getRole().name() : "---",
+                FormatUtils.formatUserStatus(u.getStatus())
+        });
 
         int id = InputUtils.inputInt("Nhập chính xác ID người dùng cần nạp (0 để hủy): ", 0, Integer.MAX_VALUE);
         if (id == 0) return;
@@ -168,10 +144,10 @@ public class StaffMainView {
                 return;
             }
 
-            System.out.printf("%-10s | %-20s | %-15s | %-15s | %-24s%n",
-                    "Order ID", "Tên Khách Hàng", "Tên Máy", "Tổng Tiền", "Trạng thái");
-            System.out.println("-".repeat(92));
-            for (FbOrder order : pendingOrders) {
+            String[] headers = {"Order ID", "Tên Khách Hàng", "Tên Máy", "Tổng Tiền", "Trạng thái"};
+            int[] widths = {10, 20, 15, 15, 24};
+
+            TablePaginationUtils.display(pendingOrders, "DANH SÁCH ĐƠN HÀNG PENDING & PREPARING", headers, widths, order -> {
                 String stStr = order.getStatus() != null ? order.getStatus().name() : "N/A";
                 String coloredSt = switch (stStr) {
                     case "PENDING"   -> PrintUtils.colorText(stStr, "YELLOW");
@@ -180,14 +156,14 @@ public class StaffMainView {
                     case "CANCELLED" -> PrintUtils.colorText(stStr, "RED");
                     default -> stStr;
                 };
-                System.out.printf("%-10d | %-20s | %-15s | %-15s | %-33s%n",
-                        order.getOrderId(),
-                        order.getUserName() != null ? truncate(order.getUserName(), 20) : "N/A",
-                        order.getComputerName() != null ? truncate(order.getComputerName(), 15) : "Không có",
+                return new String[]{
+                        String.valueOf(order.getOrderId()),
+                        order.getUserName() != null ? FormatUtils.truncate(order.getUserName(), 20) : "N/A",
+                        order.getComputerName() != null ? FormatUtils.truncate(order.getComputerName(), 15) : "Không có",
                         FormatUtils.formatVND(order.getTotalAmount()),
-                        coloredSt);
-            }
-            System.out.println("-".repeat(92));
+                        coloredSt
+                };
+            });
             System.out.println("Nhập Order ID để cập nhật trạng thái (0 để Quay Lại):");
             int orderId = InputUtils.inputInt("Order ID: ", 0, Integer.MAX_VALUE);
             if (orderId == 0) return;
@@ -227,22 +203,24 @@ public class StaffMainView {
                 return;
             }
 
-            System.out.printf("%-8s | %-10s | %-18s | %-12s | %-12s | %-12s | %-16s%n",
-                    "ID", "Trạng thái", "Tên Khách Hàng", "Tên Máy", "Đơn giá/h", "Tiền cọc", "Giờ đặt");
-            System.out.println("-".repeat(100));
-            for (Booking b : pendingList) {
-                String statusLabel = "RESERVED".equals(b.getStatus()) ? "ĐẶT TRƯỚC" : "MỞ MÁY";
-                String depositStr = "RESERVED".equals(b.getStatus()) && b.getTotalFee() != null
+            String[] headers = {"ID", "Trạng thái", "Tên Khách Hàng", "Tên Máy", "Đơn giá/h", "Tiền cọc", "Giờ đặt"};
+            int[] widths = {8, 10, 18, 12, 12, 12, 16};
+
+            TablePaginationUtils.display(pendingList, "DANH SÁCH YÊU CẦU MỞ MÁY", headers, widths, b -> {
+                boolean isReserved = b.getStatus() == BookingStatus.RESERVED;
+                String statusLabel = isReserved ? "ĐẶT TRƯỚC" : "MỞ MÁY";
+                String depositStr = isReserved && b.getTotalFee() != null
                         ? FormatUtils.formatVND(b.getTotalFee()) : "---";
-                System.out.printf("%-8d | %-10s | %-18s | %-12s | %-12s | %-12s | %-16s%n",
-                        b.getBookingId(),
+                return new String[]{
+                        String.valueOf(b.getBookingId()),
                         statusLabel,
-                        b.getUserName() != null ? truncate(b.getUserName(), 18) : "N/A",
-                        b.getComputerName() != null ? truncate(b.getComputerName(), 12) : "N/A",
+                        b.getUserName() != null ? FormatUtils.truncate(b.getUserName(), 18) : "N/A",
+                        b.getComputerName() != null ? FormatUtils.truncate(b.getComputerName(), 12) : "N/A",
                         b.getHourlyRateSnapshot() != null ? FormatUtils.formatVND(b.getHourlyRateSnapshot()) : "N/A",
                         depositStr,
-                        FormatUtils.formatTimestamp(b.getStartTime()));
-            }
+                        FormatUtils.formatTimestamp(b.getStartTime())
+                };
+            });
             System.out.println("-".repeat(100));
 
             int bookingId = InputUtils.inputInt("Nhập Booking ID để xử lý (0 để Quay Lại): ", 0, Integer.MAX_VALUE);
@@ -255,23 +233,24 @@ public class StaffMainView {
                 continue;
             }
 
-            String typeLabel = "RESERVED".equals(target.getStatus()) ? " (ĐẶT TRƯỚC — có cọc)" : "";
+            boolean isTargetReserved = target.getStatus() == BookingStatus.RESERVED;
+            String typeLabel = isTargetReserved ? " (ĐẶT TRƯỚC — có cọc)" : "";
             System.out.println("Xử lý yêu cầu Booking #" + bookingId + typeLabel
                     + " — Khách: " + target.getUserName() + " — Máy: " + target.getComputerName());
             System.out.println("1. Phê duyệt (Approve) — Bật máy cho khách" 
-                    + ("RESERVED".equals(target.getStatus()) ? " + Hoàn cọc" : ""));
+                    + (isTargetReserved ? " + Hoàn cọc" : ""));
             System.out.println("2. Từ chối   (Reject)  — Hủy yêu cầu"
-                    + ("RESERVED".equals(target.getStatus()) ? " + Hoàn cọc" : ""));
+                    + (isTargetReserved ? " + Hoàn cọc" : ""));
             int action = InputUtils.inputInt("Chọn thao tác (1-2): ", 1, 2);
 
             if (action == 1) {
                 bookingService.approveBooking(bookingId, staffUser);
                 PrintUtils.printSuccess("Đã PHÊ DUYỆT Booking #" + bookingId + ". Máy " + target.getComputerName() + " đã được bật cho khách."
-                        + ("RESERVED".equals(target.getStatus()) ? " Tiền cọc đã hoàn lại." : ""));
+                        + (isTargetReserved ? " Tiền cọc đã hoàn lại." : ""));
             } else {
                 bookingService.rejectBooking(bookingId, staffUser);
                 PrintUtils.printWarning("Đã TỪ CHỐI Booking #" + bookingId + ". Yêu cầu đã bị hủy."
-                        + ("RESERVED".equals(target.getStatus()) ? " Tiền cọc đã hoàn lại." : ""));
+                        + (isTargetReserved ? " Tiền cọc đã hoàn lại." : ""));
             }
         }
     }
@@ -301,29 +280,16 @@ public class StaffMainView {
     }
 
     private void printLogTable(List<SystemLog> logs, String title) {
-        System.out.println("\n" + "=".repeat(110));
-        System.out.println("  AUDIT LOG — " + title);
-        System.out.println("=".repeat(110));
-        System.out.printf("%-6s | %-8s | %-10s | %-60s | %-20s%n",
-                "ID", "Type", "Actor ID", "Hành động", "Thời gian");
-        System.out.println("-".repeat(110));
-        if (logs.isEmpty()) {
-            System.out.println("  Không có bản ghi nào.");
-        } else {
-            for (SystemLog log : logs) {
-                System.out.printf("%-6d | %-8s | %-10d | %-60s | %-20s%n",
-                        log.getId(),
-                        log.getLogType().name(),
-                        log.getActorId(),
-                        truncate(log.getAction(), 60),
-                        FormatUtils.formatTimestamp(log.getCreatedAt()));
-            }
-        }
-        System.out.println("=".repeat(110));
+        String[] headers = {"ID", "Type", "Actor ID", "Hành động", "Thời gian"};
+        int[] widths = {6, 8, 10, 60, 20};
+
+        TablePaginationUtils.display(logs, "AUDIT LOG — " + title, headers, widths, log -> new String[]{
+                String.valueOf(log.getId()),
+                log.getLogType().name(),
+                String.valueOf(log.getActorId()),
+                FormatUtils.truncate(log.getAction(), 60),
+                FormatUtils.formatTimestamp(log.getCreatedAt())
+        });
     }
 
-    private String truncate(String s, int maxLen) {
-        if (s == null) return "";
-        return s.length() <= maxLen ? s : s.substring(0, maxLen - 3) + "...";
-    }
 }

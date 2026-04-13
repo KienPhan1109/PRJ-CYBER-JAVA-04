@@ -10,13 +10,10 @@ import java.util.List;
 import java.util.Map;
 
 public class FbOrderDetailDAOImpl implements IFbOrderDetailDAO {
-    private static FbOrderDetailDAOImpl instance;
+    private static final FbOrderDetailDAOImpl instance = new FbOrderDetailDAOImpl();
     private FbOrderDetailDAOImpl() {}
 
-    public static synchronized FbOrderDetailDAOImpl getInstance() {
-        if (instance == null) {
-            instance = new FbOrderDetailDAOImpl();
-        }
+    public static FbOrderDetailDAOImpl getInstance() {
         return instance;
     }
 

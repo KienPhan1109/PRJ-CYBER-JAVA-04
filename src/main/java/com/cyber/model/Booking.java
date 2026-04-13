@@ -1,4 +1,5 @@
 package com.cyber.model;
+import com.cyber.model.enums.BookingStatus;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
@@ -8,14 +9,16 @@ public class Booking {
     private int computerId;
     private Timestamp startTime;
     private Timestamp endTime;
-    private String status;
+    private BookingStatus status;
     private BigDecimal totalFee;
     private BigDecimal hourlyRateSnapshot;
     private String computerName;
     private String userName;
     private Integer staffId;
 
-    public Booking(int bookingId, int userId, int computerId, Timestamp startTime, Timestamp endTime, String status, BigDecimal totalFee, BigDecimal hourlyRateSnapshot) {
+    public Booking() {}
+
+    public Booking(int bookingId, int userId, int computerId, Timestamp startTime, Timestamp endTime, BookingStatus status, BigDecimal totalFee, BigDecimal hourlyRateSnapshot) {
         this.bookingId = bookingId;
         this.userId = userId;
         this.computerId = computerId;
@@ -30,12 +33,20 @@ public class Booking {
         return bookingId;
     }
 
+    public void setBookingId(int bookingId) {
+        this.bookingId = bookingId;
+    }
+
     public int getUserId() {
         return userId;
     }
 
     public void setUserId(int userId) {
         this.userId = userId;
+    }
+
+    public void setComputerId(int computerId) {
+        this.computerId = computerId;
     }
 
     public int getComputerId() {
@@ -58,11 +69,11 @@ public class Booking {
         this.endTime = endTime;
     }
 
-    public String getStatus() {
+    public BookingStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(BookingStatus status) {
         this.status = status;
     }
 
@@ -92,6 +103,10 @@ public class Booking {
 
     public BigDecimal getHourlyRateSnapshot() {
         return hourlyRateSnapshot;
+    }
+
+    public void setHourlyRateSnapshot(BigDecimal hourlyRateSnapshot) {
+        this.hourlyRateSnapshot = hourlyRateSnapshot;
     }
 
     public Integer getStaffId() {

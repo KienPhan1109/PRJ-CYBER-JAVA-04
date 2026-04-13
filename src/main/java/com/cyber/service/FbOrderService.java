@@ -7,7 +7,6 @@ import com.cyber.dao.IFbOrderDetailDAO;
 import com.cyber.dao.impl.FbMenuItemDAOImpl;
 import com.cyber.dao.impl.FbOrderDAOImpl;
 import com.cyber.dao.impl.FbOrderDetailDAOImpl;
-import com.cyber.dao.impl.FbOrderDetailDAOImpl;
 import com.cyber.exception.BusinessException;
 import com.cyber.model.FbOrder;
 import com.cyber.model.User;
@@ -22,7 +21,7 @@ import java.util.Map;
 
 public class FbOrderService {
 
-    private static FbOrderService instance;
+    private static final FbOrderService INSTANCE = new FbOrderService();
     private final IFbOrderDAO       orderDAO;
     private final IFbMenuItemDAO    menuItemDAO;
     private final IFbOrderDetailDAO orderDetailDAO;
@@ -35,11 +34,8 @@ public class FbOrderService {
         this.logService     = LogService.getInstance();
     }
 
-    public static synchronized FbOrderService getInstance() {
-        if (instance == null) {
-            instance = new FbOrderService();
-        }
-        return instance;
+    public static FbOrderService getInstance() {
+        return INSTANCE;
     }
 
     // -------------------------------------------------------
@@ -218,15 +214,8 @@ public class FbOrderService {
 
             conn.commit();
         } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
-            throw new BusinessException("DB_ERROR", "Lỗi CSDL khi lên đơn nâng cao: " + e.getMessage());
-        } catch (BusinessException be) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
-            throw be;
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
+            throw new BusinessException("DB_ERROR", "Lỗi CSDL khi đặt hàng: " + e.getMessage());
         } finally {
             if (conn != null) {
                 try {

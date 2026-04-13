@@ -16,7 +16,7 @@ import java.util.List;
 
 public class ComputerService {
 
-    private static ComputerService instance;
+    private static final ComputerService INSTANCE = new ComputerService();
     private final IComputerDAO computerDAO;
     private final IBookingDAO bookingDAO;
     private final LogService logService;
@@ -27,11 +27,8 @@ public class ComputerService {
         this.logService = LogService.getInstance();
     }
 
-    public static synchronized ComputerService getInstance() {
-        if (instance == null) {
-            instance = new ComputerService();
-        }
-        return instance;
+    public static ComputerService getInstance() {
+        return INSTANCE;
     }
 
     public List<Computer> getAllComputers() throws BusinessException {
@@ -221,7 +218,7 @@ public class ComputerService {
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
-            throw new BusinessException("DB_ERROR", "Lỗi xóa máy (có thể máy đang có booking): " + e.getMessage());
+            throw new BusinessException("DB_ERROR", "Lỗi thay đổi trạng thái máy (có thể máy đang có booking): " + e.getMessage());
         } catch (BusinessException be) {
             if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw be;

@@ -10,12 +10,13 @@ import com.cyber.model.enums.LogType;
 import com.cyber.model.enums.UserStatus;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
 public class UserService {
-    private static UserService instance;
+    private static final UserService INSTANCE = new UserService();
     private final IUserDAO   userDAO;
     private final LogService logService;
 
@@ -24,11 +25,8 @@ public class UserService {
         this.logService = LogService.getInstance();
     }
 
-    public static synchronized UserService getInstance() {
-        if (instance == null) {
-            instance = new UserService();
-        }
-        return instance;
+    public static UserService getInstance() {
+        return INSTANCE;
     }
 
     public List<User> getAllUsers() throws BusinessException {
@@ -121,8 +119,7 @@ public class UserService {
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
-            throw new BusinessException("DB_ERROR",
-                    "Lỗi cập nhật trạng thái User: " + e.getMessage());
+            throw new BusinessException("DB_ERROR", "Lỗi cập nhật trạng thái User: " + e.getMessage());
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
@@ -162,8 +159,7 @@ public class UserService {
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
-            throw new BusinessException("DB_ERROR",
-                    "Lỗi nạp tiền cho User: " + e.getMessage());
+            throw new BusinessException("DB_ERROR", "Lỗi nạp tiền cho User: " + e.getMessage());
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
@@ -300,13 +296,22 @@ public class UserService {
             if (user == null) {
                 throw new BusinessException("USER_NOT_FOUND", "Không tìm thấy người dùng (ID=" + userId + ")");
             }
-            if (user.getBalance().compareTo(amount) < 0) {
+
+            BigDecimal currentBalance = user.getBalance();
+            // Làm tròn số dư hiện tại về số nguyên (0 decimals) để so sánh thực tế với VND
+            BigDecimal roundedBalance = currentBalance.setScale(0, RoundingMode.HALF_UP);
+            
+            if (roundedBalance.compareTo(amount) < 0) {
                 throw new BusinessException("INSUFFICIENT_FUNDS",
-                        "Số dư hiện tại là " + com.cyber.util.FormatUtils.formatVND(user.getBalance())
+                        "Số dư hiện tại là " + com.cyber.util.FormatUtils.formatVND(currentBalance)
                         + ", không đủ để trừ " + com.cyber.util.FormatUtils.formatVND(amount) + ". Số dư không được âm!");
             }
 
-            userDAO.deductBalance(conn, userId, amount);
+            // Nếu số dư thực tế thấp hơn số tiền trừ một chút (do sai số làm tròn),
+            // thì chúng ta chỉ trừ tối đa số dư hiện có để đưa về 0đ.
+            BigDecimal finalAmountToDeduct = (currentBalance.compareTo(amount) < 0) ? currentBalance : amount;
+
+            userDAO.deductBalance(conn, userId, finalAmountToDeduct);
 
             String action = String.format("Trừ tiền %s cho User #%d (%s)",
                     com.cyber.util.FormatUtils.formatVND(amount), userId, user.getUsername());

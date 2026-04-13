@@ -1,16 +1,13 @@
 package com.cyber.view;
 
-import com.cyber.util.PrintUtils;
+import com.cyber.util.*;
 
 import com.cyber.exception.BusinessException;
 import com.cyber.model.Computer;
 import com.cyber.model.User;
 import com.cyber.service.ComputerService;
-import com.cyber.util.FormatUtils;
-import com.cyber.util.InputUtils;
 
 import java.util.List;
-import com.cyber.util.ColorConst;
 
 public class ComputerManagementView {
     private final ComputerService computerService;
@@ -52,45 +49,17 @@ public class ComputerManagementView {
     private void displayList() {
         try {
             List<Computer> computers = computerService.getAllComputers();
-            if (computers.isEmpty()) {
-                System.out.println("Chưa có dữ liệu máy trạm trong hệ thống.");
-                return;
-            }
-            int pageSize = 10;
-            int totalPages = (int) Math.ceil((double) computers.size() / pageSize);
-            int currentPage = 1;
+            String[] headers = {"ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá / Giờ"};
+            int[] widths = {7, 15, 12, 30, 12, 15};
 
-            while (true) {
-                int start = (currentPage - 1) * pageSize;
-                int end = Math.min(start + pageSize, computers.size());
-
-                System.out.println("\n" + "=".repeat(110));
-                System.out.println("DANH SÁCH MÁY TOÀN HỆ THỐNG");
-                System.out.println("=".repeat(110));
-                System.out.printf("%-7s | %-15s | %-12s | %-30s | %-12s | %-15s%n",
-                        "ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá / Giờ");
-                System.out.println("-".repeat(110));
-
-                for (int i = start; i < end; i++) {
-                    Computer c = computers.get(i);
-                    System.out.printf("%-7s | %-15s | %-12s | %-30s | %-21s | %-15s%n",
-                            FormatUtils.formatId("C", c.getComputerId()),
-                            FormatUtils.truncate(c.getName(), 15),
-                            FormatUtils.formatValue(c.getZone()),
-                            FormatUtils.truncate(c.getHardwareConfig()),
-                            FormatUtils.formatComputerStatus(c.getStatus()),
-                            FormatUtils.formatVND(c.getPricePerHour()));
-                }
-                System.out.println("=".repeat(110));
-                System.out.println("Tổng: " + computers.size() + " máy | Trang " + currentPage + "/" + totalPages);
-
-                if (totalPages <= 1) break;
-                System.out.println("[N] Trang sau | [P] Trang trước | [Q] Thoát");
-                String nav = InputUtils.inputString("Lựa chọn: ").toUpperCase();
-                if (nav.equals("N") && currentPage < totalPages) currentPage++;
-                else if (nav.equals("P") && currentPage > 1) currentPage--;
-                else if (nav.equals("Q")) break;
-            }
+            TablePaginationUtils.display(computers, "DANH SÁCH MÁY TOÀN HỆ THỐNG", headers, widths, c -> new String[]{
+                    FormatUtils.formatId("C", c.getComputerId()),
+                    FormatUtils.truncate(c.getName(), 15),
+                    FormatUtils.formatValue(c.getZone()),
+                    FormatUtils.truncate(c.getHardwareConfig(), 30),
+                    FormatUtils.formatComputerStatus(c.getStatus()),
+                    FormatUtils.formatVND(c.getPricePerHour())
+            });
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }

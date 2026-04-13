@@ -1,21 +1,42 @@
 package com.cyber.dao.impl;
+
 import com.cyber.dao.IUserDAO;
 import com.cyber.model.User;
 import com.cyber.model.enums.UserRole;
+import com.cyber.model.enums.UserStatus;
+
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class UserDAOImpl implements IUserDAO {
-    private static UserDAOImpl instance;
+    private static final UserDAOImpl instance = new UserDAOImpl();
+
     private UserDAOImpl() {}
 
-    public static synchronized UserDAOImpl getInstance() {
-        if (instance == null) {
-            instance = new UserDAOImpl();
-        }
+    public static UserDAOImpl getInstance() {
         return instance;
+    }
+
+    private User mapRowToUser(ResultSet rs) throws SQLException {
+        User user = new User();
+        user.setUserId(rs.getInt("user_id"));
+        user.setUsername(rs.getString("username"));
+        user.setPasswordHash(rs.getString("password_hash"));
+        user.setBalance(rs.getBigDecimal("balance"));
+        user.setFullName(rs.getString("full_name"));
+        user.setPhone(rs.getString("phone"));
+        user.setCreatedAt(rs.getTimestamp("created_at"));
+
+        String roleStr = rs.getString("role");
+        user.setRole(roleStr != null ? UserRole.valueOf(roleStr) : UserRole.CUSTOMER);
+
+        String statusStr = rs.getString("status");
+        user.setStatus(statusStr != null ? UserStatus.valueOf(statusStr) : UserStatus.ACTIVE);
+
+        user.setDeleted(rs.getBoolean("is_deleted"));
+        return user;
     }
 
     @Override
@@ -25,28 +46,7 @@ public class UserDAOImpl implements IUserDAO {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    User user = new User();
-                    user.setUserId(rs.getInt("user_id"));
-                    user.setUsername(rs.getString("username"));
-                    user.setPasswordHash(rs.getString("password_hash"));
-                    user.setBalance(rs.getBigDecimal("balance"));
-                    user.setFullName(rs.getString("full_name"));
-                    user.setPhone(rs.getString("phone"));
-                    user.setCreatedAt(rs.getTimestamp("created_at"));
-                    String roleStr = rs.getString("role");
-                    if (roleStr != null) {
-                        user.setRole(UserRole.valueOf(roleStr));
-                    } else {
-                        user.setRole(UserRole.CUSTOMER);
-                    }
-                    String statusStr = rs.getString("status");
-                    if (statusStr != null) {
-                        user.setStatus(com.cyber.model.enums.UserStatus.valueOf(statusStr));
-                    } else {
-                        user.setStatus(com.cyber.model.enums.UserStatus.ACTIVE);
-                    }
-                    user.setDeleted(rs.getBoolean("is_deleted"));
-                    return user;
+                    return mapRowToUser(rs);
                 }
             }
         }
@@ -61,28 +61,7 @@ public class UserDAOImpl implements IUserDAO {
             stmt.setString(2, passwordHash);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    User user = new User();
-                    user.setUserId(rs.getInt("user_id"));
-                    user.setUsername(rs.getString("username"));
-                    user.setPasswordHash(rs.getString("password_hash"));
-                    user.setBalance(rs.getBigDecimal("balance"));
-                    user.setFullName(rs.getString("full_name"));
-                    user.setPhone(rs.getString("phone"));
-                    user.setCreatedAt(rs.getTimestamp("created_at"));
-                    String roleStr = rs.getString("role");
-                    if (roleStr != null) {
-                        user.setRole(UserRole.valueOf(roleStr));
-                    } else {
-                        user.setRole(UserRole.CUSTOMER);
-                    }
-                    String statusStr = rs.getString("status");
-                    if (statusStr != null) {
-                        user.setStatus(com.cyber.model.enums.UserStatus.valueOf(statusStr));
-                    } else {
-                        user.setStatus(com.cyber.model.enums.UserStatus.ACTIVE);
-                    }
-                    user.setDeleted(rs.getBoolean("is_deleted"));
-                    return user;
+                    return mapRowToUser(rs);
                 }
             }
         }
@@ -107,11 +86,11 @@ public class UserDAOImpl implements IUserDAO {
             stmt.setString(1, user.getUsername());
             stmt.setString(2, user.getPasswordHash());
             stmt.setString(3, user.getRole() != null ? user.getRole().name() : UserRole.CUSTOMER.name());
-            stmt.setBigDecimal(4, user.getBalance());
+            stmt.setBigDecimal(4, user.getBalance() != null ? user.getBalance() : BigDecimal.ZERO);
             stmt.setString(5, user.getFullName());
             stmt.setString(6, user.getPhone());
             stmt.executeUpdate();
-            
+
             try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     user.setUserId(generatedKeys.getInt(1));
@@ -124,7 +103,7 @@ public class UserDAOImpl implements IUserDAO {
     public void deductBalance(Connection conn, int userId, BigDecimal amount) throws SQLException {
         int rows = updateBalance(conn, userId, amount.negate());
         if (rows == 0) {
-            throw new SQLException("Không đủ số dư để thanh toán!");
+            throw new SQLException("Không đủ số dư để thanh toán hoặc tài khoản không tồn tại!");
         }
     }
 
@@ -150,28 +129,7 @@ public class UserDAOImpl implements IUserDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                User user = new User();
-                user.setUserId(rs.getInt("user_id"));
-                user.setUsername(rs.getString("username"));
-                user.setPasswordHash(rs.getString("password_hash"));
-                user.setBalance(rs.getBigDecimal("balance"));
-                user.setFullName(rs.getString("full_name"));
-                user.setPhone(rs.getString("phone"));
-                user.setCreatedAt(rs.getTimestamp("created_at"));
-                String roleStr = rs.getString("role");
-                if (roleStr != null) {
-                    user.setRole(UserRole.valueOf(roleStr));
-                } else {
-                    user.setRole(UserRole.CUSTOMER);
-                }
-                String statusStr = rs.getString("status");
-                if (statusStr != null) {
-                    user.setStatus(com.cyber.model.enums.UserStatus.valueOf(statusStr));
-                } else {
-                    user.setStatus(com.cyber.model.enums.UserStatus.ACTIVE);
-                }
-                user.setDeleted(rs.getBoolean("is_deleted"));
-                users.add(user);
+                users.add(mapRowToUser(rs));
             }
         }
         return users;
@@ -182,32 +140,12 @@ public class UserDAOImpl implements IUserDAO {
         List<User> users = new ArrayList<>();
         String sql = "SELECT * FROM users WHERE is_deleted = 0 AND (full_name LIKE ? OR username LIKE ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, "%" + name + "%");
-            stmt.setString(2, "%" + name + "%");
+            String searchPattern = "%" + name + "%";
+            stmt.setString(1, searchPattern);
+            stmt.setString(2, searchPattern);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    User user = new User();
-                    user.setUserId(rs.getInt("user_id"));
-                    user.setUsername(rs.getString("username"));
-                    user.setPasswordHash(rs.getString("password_hash"));
-                    user.setBalance(rs.getBigDecimal("balance"));
-                    user.setFullName(rs.getString("full_name"));
-                    user.setPhone(rs.getString("phone"));
-                    user.setCreatedAt(rs.getTimestamp("created_at"));
-                    String roleStr = rs.getString("role");
-                    if (roleStr != null) {
-                        user.setRole(UserRole.valueOf(roleStr));
-                    } else {
-                        user.setRole(UserRole.CUSTOMER);
-                    }
-                    String statusStr = rs.getString("status");
-                    if (statusStr != null) {
-                        user.setStatus(com.cyber.model.enums.UserStatus.valueOf(statusStr));
-                    } else {
-                        user.setStatus(com.cyber.model.enums.UserStatus.ACTIVE);
-                    }
-                    user.setDeleted(rs.getBoolean("is_deleted"));
-                    users.add(user);
+                    users.add(mapRowToUser(rs));
                 }
             }
         }
@@ -215,7 +153,7 @@ public class UserDAOImpl implements IUserDAO {
     }
 
     @Override
-    public void updateUserStatus(Connection conn, int userId, com.cyber.model.enums.UserStatus status) throws SQLException {
+    public void updateUserStatus(Connection conn, int userId, UserStatus status) throws SQLException {
         String sql = "UPDATE users SET status = ? WHERE user_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, status.name());

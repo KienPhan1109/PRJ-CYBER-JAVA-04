@@ -3,28 +3,28 @@ import com.cyber.connection.DatabaseConnection;
 import com.cyber.dao.*;
 import com.cyber.dao.impl.*;
 import com.cyber.exception.*;
-import com.cyber.model.*;
+import com.cyber.model.Booking;
+import com.cyber.model.Computer;
+import com.cyber.model.User;
+import com.cyber.model.enums.BookingStatus;
+import com.cyber.util.FormatUtils;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
-import com.cyber.util.FormatUtils;
 
 public class BookingService {
-    private static BookingService instance;
-    private IBookingDAO bookingDAO;
-    private IUserDAO userDAO;
+    private static final BookingService INSTANCE = new BookingService();
+    private final IBookingDAO bookingDAO;
+    private final IUserDAO userDAO;
 
     private BookingService() {
         this.bookingDAO = BookingDAOImpl.getInstance();
         this.userDAO = UserDAOImpl.getInstance();
     }
 
-    public static synchronized BookingService getInstance() {
-        if (instance == null) {
-            instance = new BookingService();
-        }
-        return instance;
+    public static BookingService getInstance() {
+        return INSTANCE;
     }
 
     public int bookComputer(int userId, Booking booking) throws BusinessException {
@@ -44,39 +44,24 @@ public class BookingService {
                 throw new BusinessException("ALREADY_ACTIVE", "Bạn đang có máy đang sử dụng. Vui lòng ngắt máy trước khi đặt máy mới.");
             }
             List<Booking> allList = bookingDAO.findAllBookingsByUserId(conn, userId);
-            boolean hasReserved = allList.stream().anyMatch(b -> "RESERVED".equals(b.getStatus()));
+            boolean hasReserved = allList.stream().anyMatch(b -> b.getStatus() == BookingStatus.RESERVED);
             if (hasReserved) {
                 throw new BusinessException("ALREADY_RESERVED", "Bạn đã có lịch đặt máy trước. Mỗi tài khoản chỉ được có 1 phiên duy nhất.");
             }
 
             // Đặt trạng thái PENDING — chờ Staff phê duyệt
-            booking.setStatus("PENDING");
+            booking.setStatus(BookingStatus.PENDING);
             booking.setUserId(userId);
-            int newBookingId = bookingDAO.createBooking(conn, booking);
+            bookingDAO.createBooking(conn, booking);
 
             conn.commit();
-            return newBookingId;
+            return booking.getBookingId();
         } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException rollbackEx) {}
-            }
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw new BusinessException("DB_ERROR", "Lỗi CSDL khi gửi yêu cầu đặt máy: " + e.getMessage());
-        } catch (BusinessException be) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException rollbackEx) {}
-            }
-            throw be;
-        } catch (RuntimeException re) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException rollbackEx) {}
-            }
-            throw new BusinessException("ERR_BUSINESS", re.getMessage().startsWith("ERR_") ? "Lỗi: " + re.getMessage() : re.getMessage());
         } finally {
             if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException closeEx) {}
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -118,24 +103,21 @@ public class BookingService {
             Booking booking = new Booking(0, userId, computerId, 
                     new java.sql.Timestamp(System.currentTimeMillis()), 
                     new java.sql.Timestamp(System.currentTimeMillis()), // Bắt đầu chơi
-                    "ACTIVE", BigDecimal.ZERO, currentRate);
+                    BookingStatus.ACTIVE, BigDecimal.ZERO, currentRate);
             
-            int newBookingId = bookingDAO.createBooking(conn, booking);
+            bookingDAO.createBooking(conn, booking);
 
             comp.setStatus(com.cyber.model.enums.ComputerStatus.IN_USE);
             computerDAO.updateComputer(conn, comp);
 
             conn.commit();
-            return newBookingId;
+            return booking.getBookingId();
         } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) {}
             throw new BusinessException("DB_ERROR", "Lỗi CSDL khi start session: " + e.getMessage());
         } finally {
             if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException ex) {}
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -148,11 +130,11 @@ public class BookingService {
 
             Booking booking = bookingDAO.findById(conn, bookingId);
             if (booking == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy session.");
-            if (!"ACTIVE".equals(booking.getStatus())) throw new BusinessException("INVALID_STATE", "Phiên chơi không hoạt động.");
+            if (booking.getStatus() != BookingStatus.ACTIVE) throw new BusinessException("INVALID_STATE", "Phiên chơi không hoạt động.");
 
             java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
             booking.setEndTime(now);
-            booking.setStatus("COMPLETED");
+            booking.setStatus(BookingStatus.COMPLETED);
 
             // Tính tiền sử dụng snapshot trong bảng Booking, tuyệt đối không query giá từ Computer
             long diffInMillis = now.getTime() - booking.getStartTime().getTime();
@@ -175,14 +157,11 @@ public class BookingService {
 
             conn.commit();
         } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) {}
             throw new BusinessException("DB_ERROR", "Lỗi CSDL khi end session: " + e.getMessage());
         } finally {
             if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException ex) {}
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -284,13 +263,13 @@ public class BookingService {
             Booking booking = bookingDAO.findById(conn, bookingId);
             if (booking == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy yêu cầu đặt máy.");
 
-            String oldStatus = booking.getStatus();
-            if (!"PENDING".equals(oldStatus) && !"RESERVED".equals(oldStatus)) {
+            BookingStatus oldStatus = booking.getStatus();
+            if (oldStatus != BookingStatus.PENDING && oldStatus != BookingStatus.RESERVED) {
                 throw new BusinessException("INVALID_STATE", "Yêu cầu này không ở trạng thái chờ duyệt.");
             }
 
             // Nếu là RESERVED → hoàn lại tiền cọc cho khách
-            if ("RESERVED".equals(oldStatus)) {
+            if (oldStatus == BookingStatus.RESERVED) {
                 if (System.currentTimeMillis() < booking.getStartTime().getTime()) {
                     throw new BusinessException("INVALID_TIME", "Chưa đến giờ đặt trước. Vui lòng mở máy đúng theo lịch!");
                 }
@@ -302,7 +281,7 @@ public class BookingService {
             }
 
             // Cập nhật booking: ACTIVE, start_time = thời điểm duyệt, reset total_fee, lưu staff phê duyệt
-            booking.setStatus("ACTIVE");
+            booking.setStatus(BookingStatus.ACTIVE);
             booking.setStartTime(new java.sql.Timestamp(System.currentTimeMillis()));
             booking.setTotalFee(BigDecimal.ZERO); // Reset — heartbeat sẽ tính tiền từ đây
             booking.setStaffId(staffActor.getUserId());
@@ -317,7 +296,7 @@ public class BookingService {
             }
 
             // Ghi log
-            String logMsg = "RESERVED".equals(oldStatus)
+            String logMsg = oldStatus == BookingStatus.RESERVED
                     ? String.format("Phê duyệt mở máy (ĐẶT TRƯỚC — hoàn cọc %s): Booking #%d, Máy: %s, Khách: UserID=%d",
                             FormatUtils.formatVND(booking.getTotalFee()), bookingId,
                             comp != null ? comp.getName() : String.valueOf(booking.getComputerId()),
@@ -330,14 +309,11 @@ public class BookingService {
 
             conn.commit();
         } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) {}
             throw new BusinessException("DB_ERROR", "Lỗi CSDL khi phê duyệt: " + e.getMessage());
-        } catch (BusinessException be) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw be;
         } finally {
             if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -356,24 +332,24 @@ public class BookingService {
             Booking booking = bookingDAO.findById(conn, bookingId);
             if (booking == null) throw new BusinessException("NOT_FOUND", "Không tìm thấy yêu cầu đặt máy.");
 
-            String oldStatus = booking.getStatus();
-            if (!"PENDING".equals(oldStatus) && !"RESERVED".equals(oldStatus)) {
+            BookingStatus oldStatus = booking.getStatus();
+            if (oldStatus != BookingStatus.PENDING && oldStatus != BookingStatus.RESERVED) {
                 throw new BusinessException("INVALID_STATE", "Yêu cầu này không ở trạng thái chờ duyệt.");
             }
 
             // Nếu là RESERVED → hoàn lại tiền cọc cho khách
-            if ("RESERVED".equals(oldStatus)) {
+            if (oldStatus == BookingStatus.RESERVED) {
                 BigDecimal deposit = booking.getTotalFee();
                 if (deposit != null && deposit.compareTo(BigDecimal.ZERO) > 0) {
                     userDAO.updateBalance(conn, booking.getUserId(), deposit);
                 }
             }
 
-            booking.setStatus("CANCELLED");
+            booking.setStatus(BookingStatus.CANCELLED);
             bookingDAO.updateBooking(conn, booking);
 
             // Ghi log
-            String logMsg = "RESERVED".equals(oldStatus)
+            String logMsg = oldStatus == BookingStatus.RESERVED
                     ? String.format("Từ chối yêu cầu đặt trước (hoàn cọc %s): Booking #%d, Máy ID=%d, Khách: UserID=%d",
                             FormatUtils.formatVND(booking.getTotalFee()), bookingId, booking.getComputerId(), booking.getUserId())
                     : String.format("Từ chối yêu cầu mở máy: Booking #%d, Máy ID=%d, Khách: UserID=%d",
@@ -382,14 +358,11 @@ public class BookingService {
 
             conn.commit();
         } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) {}
             throw new BusinessException("DB_ERROR", "Lỗi CSDL khi từ chối: " + e.getMessage());
-        } catch (BusinessException be) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw be;
         } finally {
             if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -419,7 +392,7 @@ public class BookingService {
                 throw new BusinessException("ALREADY_ACTIVE", "Bạn đang có máy đang sử dụng. Không thể đặt thêm lịch mới.");
             }
             List<Booking> allList = bookingDAO.findAllBookingsByUserId(conn, userId);
-            boolean hasReserved = allList.stream().anyMatch(b -> "RESERVED".equals(b.getStatus()));
+            boolean hasReserved = allList.stream().anyMatch(b -> b.getStatus() == BookingStatus.RESERVED);
             if (hasReserved) {
                 throw new BusinessException("ALREADY_RESERVED", "Bạn đã có lịch đặt máy trước rồi.");
             }
@@ -442,7 +415,7 @@ public class BookingService {
 
             // Tạo booking RESERVED — total_fee lưu số tiền cọc
             Booking booking = new Booking(0, userId, computerId,
-                    startTime, null, "RESERVED", deposit, comp.getPricePerHour());
+                    startTime, null, BookingStatus.RESERVED, deposit, comp.getPricePerHour());
             int newBookingId = bookingDAO.createBooking(conn, booking);
 
             // Ghi log
@@ -454,16 +427,13 @@ public class BookingService {
                     newBookingId);
 
             conn.commit();
-            return newBookingId;
+            return booking.getBookingId();
         } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) {}
             throw new BusinessException("DB_ERROR", "Lỗi CSDL khi đặt máy trước: " + e.getMessage());
-        } catch (BusinessException be) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            throw be;
         } finally {
             if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -478,7 +448,7 @@ public class BookingService {
             for (Booking b : overdueList) {
                 conn.setAutoCommit(false);
                 try {
-                    b.setStatus("CANCELLED");
+                    b.setStatus(BookingStatus.CANCELLED);
                     bookingDAO.updateBooking(conn, b);
 
                     User systemAdmin = new User();

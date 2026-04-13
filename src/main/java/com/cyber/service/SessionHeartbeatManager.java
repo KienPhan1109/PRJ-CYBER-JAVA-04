@@ -5,7 +5,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class SessionHeartbeatManager {
-    private static SessionHeartbeatManager instance;
+    private static final SessionHeartbeatManager INSTANCE = new SessionHeartbeatManager();
     private ScheduledExecutorService scheduler;
 
     private SessionHeartbeatManager() {
@@ -13,11 +13,8 @@ public class SessionHeartbeatManager {
         this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
-    public static synchronized SessionHeartbeatManager getInstance() {
-        if (instance == null) {
-            instance = new SessionHeartbeatManager();
-        }
-        return instance;
+    public static SessionHeartbeatManager getInstance() {
+        return INSTANCE;
     }
 
     public void startHeartbeat() {

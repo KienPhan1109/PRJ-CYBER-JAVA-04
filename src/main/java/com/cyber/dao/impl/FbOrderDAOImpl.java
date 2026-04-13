@@ -9,13 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FbOrderDAOImpl implements IFbOrderDAO {
-    private static FbOrderDAOImpl instance;
+    private static final FbOrderDAOImpl instance = new FbOrderDAOImpl();
     private FbOrderDAOImpl() {}
 
-    public static synchronized FbOrderDAOImpl getInstance() {
-        if (instance == null) {
-            instance = new FbOrderDAOImpl();
-        }
+    public static FbOrderDAOImpl getInstance() {
         return instance;
     }
 

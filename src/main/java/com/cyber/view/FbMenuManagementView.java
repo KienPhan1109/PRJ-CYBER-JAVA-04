@@ -7,6 +7,7 @@ import com.cyber.service.FbMenuService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
+import com.cyber.util.TablePaginationUtils;
 
 import java.util.List;
 
@@ -57,49 +58,21 @@ public class FbMenuManagementView {
     private void displayMenuList() {
         try {
             List<FbMenuItem> items = menuService.getAllMenuItemsForAdmin();
-            if (items.isEmpty()) {
-                System.out.println("  Chưa có món nào trong menu.");
-                return;
-            }
-            int pageSize = 10;
-            int totalPages = (int) Math.ceil((double) items.size() / pageSize);
-            int currentPage = 1;
+            String[] headers = {"ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái"};
+            int[] widths = {6, 10, 22, 30, 12, 6, 5, 19, 10, 21};
 
-            while (true) {
-                int start = (currentPage - 1) * pageSize;
-                int end = Math.min(start + pageSize, items.size());
-
-                System.out.println("\n" + "=".repeat(140));
-                System.out.println("DANH SÁCH MÓN TOÀN HỆ THỐNG");
-                System.out.println("=".repeat(140));
-                System.out.printf("%-6s | %-10s | %-22s | %-30s | %-12s | %-6s | %-5s | %-10s | %-10s | %-12s%n",
-                        "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái");
-                System.out.println("-".repeat(140));
-
-                for (int i = start; i < end; i++) {
-                    FbMenuItem item = items.get(i);
-                    System.out.printf("%-6s | %-10s | %-22s | %-30s | %-12s | %-6d | %-5d | %-19s | %-10s | %-21s%n",
-                            FormatUtils.formatId("IT", item.getMenuItemId()),
-                            FormatUtils.formatValue(item.getCategoryName()),
-                            FormatUtils.truncate(item.getName(), 22),
-                            FormatUtils.truncate(item.getDescription()),
-                            FormatUtils.formatVND(item.getBasePrice()),
-                            item.getStockQuantity(),
-                            item.getPrepTimeInMinutes(),
-                            FormatUtils.formatFbTemperature(item.getTemperatureLevel()),
-                            FormatUtils.formatFbAvailability(item.getAvailability()),
-                            FormatUtils.formatFbStatus(item.getStatus()));
-                }
-                System.out.println("=".repeat(140));
-                System.out.println("Tổng: " + items.size() + " món | Trang " + currentPage + "/" + totalPages);
-
-                if (totalPages <= 1) break;
-                System.out.println("[N] Trang sau | [P] Trang trước | [Q] Thoát");
-                String nav = InputUtils.inputString("Lựa chọn: ").toUpperCase();
-                if (nav.equals("N") && currentPage < totalPages) currentPage++;
-                else if (nav.equals("P") && currentPage > 1) currentPage--;
-                else if (nav.equals("Q")) break;
-            }
+            TablePaginationUtils.display(items, "DANH SÁCH MÓN TOÀN HỆ THỐNG", headers, widths, item -> new String[]{
+                    FormatUtils.formatId("IT", item.getMenuItemId()),
+                    FormatUtils.formatValue(item.getCategoryName()),
+                    FormatUtils.truncate(item.getName(), 22),
+                    FormatUtils.truncate(item.getDescription(), 30),
+                    FormatUtils.formatVND(item.getBasePrice()),
+                    String.valueOf(item.getStockQuantity()),
+                    String.valueOf(item.getPrepTimeInMinutes()),
+                    FormatUtils.formatFbTemperature(item.getTemperatureLevel()),
+                    FormatUtils.formatFbAvailability(item.getAvailability()),
+                    FormatUtils.formatFbStatus(item.getStatus())
+            });
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }

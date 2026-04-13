@@ -14,18 +14,15 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class AuthService {
-    private static AuthService instance;
+    private static final AuthService INSTANCE = new AuthService();
     private final IUserDAO userDAO;
 
     private AuthService() {
         this.userDAO = UserDAOImpl.getInstance();
     }
 
-    public static synchronized AuthService getInstance() {
-        if (instance == null) {
-            instance = new AuthService();
-        }
-        return instance;
+    public static AuthService getInstance() {
+        return INSTANCE;
     }
 
     public User login(String username, String password) throws BusinessException {
@@ -98,10 +95,7 @@ public class AuthService {
             throw new BusinessException("DB_ERROR", "Lỗi CSDL khi đăng ký: " + e.getMessage());
         } finally {
             if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {}
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
             }
         }
     }

@@ -20,6 +20,17 @@ public class Computer {
 
     public Computer() {}
 
+    public Computer(int computerId, String name, ComputerZone zone, String hardwareConfig, 
+                    ComputerStatus status, BigDecimal pricePerHour, boolean isDeleted) {
+        this.computerId = computerId;
+        this.name = name;
+        this.zone = zone;
+        this.hardwareConfig = hardwareConfig;
+        this.status = status;
+        this.pricePerHour = pricePerHour;
+        this.isDeleted = isDeleted;
+    }
+
     public void inputData(boolean isEdit, String preValidatedName) {
         this.name = preValidatedName;
 
@@ -83,59 +94,24 @@ public class Computer {
         }
     }
 
-    public int getComputerId() {
-        return computerId;
-    }
+    public int getComputerId() { return computerId; }
+    public void setComputerId(int computerId) { this.computerId = computerId; }
 
-    public void setComputerId(int computerId) {
-        this.computerId = computerId;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
+    public ComputerZone getZone() { return zone; }
+    public void setZone(ComputerZone zone) { this.zone = zone; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public String getHardwareConfig() { return hardwareConfig; }
+    public void setHardwareConfig(String hardwareConfig) { this.hardwareConfig = hardwareConfig; }
 
-    public ComputerZone getZone() {
-        return zone;
-    }
+    public ComputerStatus getStatus() { return status; }
+    public void setStatus(ComputerStatus status) { this.status = status; }
 
-    public void setZone(ComputerZone zone) {
-        this.zone = zone;
-    }
+    public BigDecimal getPricePerHour() { return pricePerHour; }
+    public void setPricePerHour(BigDecimal pricePerHour) { this.pricePerHour = pricePerHour; }
 
-    public String getHardwareConfig() {
-        return hardwareConfig;
-    }
-
-    public void setHardwareConfig(String hardwareConfig) {
-        this.hardwareConfig = hardwareConfig;
-    }
-
-    public ComputerStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(ComputerStatus status) {
-        this.status = status;
-    }
-
-    public BigDecimal getPricePerHour() {
-        return pricePerHour;
-    }
-
-    public void setPricePerHour(BigDecimal pricePerHour) {
-        this.pricePerHour = pricePerHour;
-    }
-
-    public boolean isDeleted() {
-        return isDeleted;
-    }
-
-    public void setDeleted(boolean deleted) {
-        isDeleted = deleted;
-    }
+    public boolean isDeleted() { return isDeleted; }
+    public void setDeleted(boolean deleted) { isDeleted = deleted; }
 }

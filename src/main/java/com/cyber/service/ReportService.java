@@ -13,16 +13,15 @@ import java.util.List;
 import java.util.Map;
 
 public class ReportService {
-    private static ReportService instance;
+    private static final ReportService INSTANCE = new ReportService();
     private final IReportDAO reportDAO;
 
     private ReportService() {
         this.reportDAO = ReportDAOImpl.getInstance();
     }
 
-    public static synchronized ReportService getInstance() {
-         if (instance == null) instance = new ReportService();
-         return instance;
+    public static ReportService getInstance() {
+         return INSTANCE;
     }
 
     public BigDecimal getTotalBookingRevenue(Timestamp start, Timestamp end, Integer staffId) throws BusinessException {

@@ -11,6 +11,7 @@ import com.cyber.service.UserService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
+import com.cyber.util.TablePaginationUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -72,42 +73,18 @@ public class UserManagementView {
 
     /** In bảng User có phân trang (dùng chung) */
     private void printUserTable(List<User> users, String title) {
-        int pageSize = 10;
-        int totalPages = (int) Math.ceil((double) users.size() / pageSize);
-        int currentPage = 1;
+        String[] headers = {"ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái"};
+        int[] widths = {5, 15, 20, 12, 15, 12, 24};
 
-        while (true) {
-            int start = (currentPage - 1) * pageSize;
-            int end = Math.min(start + pageSize, users.size());
-
-            System.out.println("\n" + "=".repeat(120));
-            System.out.println("  " + title + " (Trang " + currentPage + "/" + totalPages + ")");
-            System.out.println("=".repeat(120));
-            System.out.printf("%-5s | %-15s | %-20s | %-12s | %-15s | %-12s | %-15s%n",
-                    "ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái");
-            System.out.println("-".repeat(120));
-
-            for (int i = start; i < end; i++) {
-                User u = users.get(i);
-                System.out.printf("%-5d | %-15s | %-20s | %-12s | %-15s | %-12s | %-24s%n",
-                        u.getUserId(),
-                        FormatUtils.truncate(u.getUsername(), 15),
-                        FormatUtils.truncate(u.getFullName(), 20),
-                        FormatUtils.formatValue(u.getPhone()),
-                        FormatUtils.formatVND(u.getBalance()),
-                        u.getRole() != null ? u.getRole().name() : "---",
-                        FormatUtils.formatUserStatus(u.getStatus()));
-            }
-            System.out.println("=".repeat(120));
-            System.out.println("Tổng: " + users.size() + " người dùng | Trang " + currentPage + "/" + totalPages);
-
-            if (totalPages <= 1) break;
-            System.out.println("[N] Trang sau | [P] Trang trước | [Q] Thoát");
-            String nav = InputUtils.inputString("Lựa chọn: ").toUpperCase();
-            if (nav.equals("N") && currentPage < totalPages) currentPage++;
-            else if (nav.equals("P") && currentPage > 1) currentPage--;
-            else if (nav.equals("Q")) break;
-        }
+        TablePaginationUtils.display(users, title, headers, widths, u -> new String[]{
+                String.valueOf(u.getUserId()),
+                FormatUtils.truncate(u.getUsername(), 15),
+                FormatUtils.truncate(u.getFullName(), 20),
+                FormatUtils.formatValue(u.getPhone()),
+                FormatUtils.formatVND(u.getBalance()),
+                u.getRole() != null ? u.getRole().name() : "---",
+                FormatUtils.formatUserStatus(u.getStatus())
+        });
     }
 
     private void addUser() throws BusinessException {

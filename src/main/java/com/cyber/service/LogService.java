@@ -28,18 +28,15 @@ import java.util.List;
  */
 public class LogService {
 
-    private static LogService instance;
+    private static final LogService INSTANCE = new LogService();
     private final ILogDAO logDAO;
 
     private LogService() {
         this.logDAO = LogDAOImpl.getInstance();
     }
 
-    public static synchronized LogService getInstance() {
-        if (instance == null) {
-            instance = new LogService();
-        }
-        return instance;
+    public static LogService getInstance() {
+        return INSTANCE;
     }
 
     // =====================================================
@@ -114,13 +111,13 @@ public class LogService {
                 ? currentUser.getRole().name()
                 : "";
 
-        try {
-            if ("ADMIN".equalsIgnoreCase(roleName)) {
-                // Admin xem toàn bộ mọi loại log
-                return logDAO.getLogsByType(logType);
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            if ("ADMIN".equalsIgnoreCase(roleName) || logType == LogType.COMPUTER || logType == LogType.FB) {
+                // Admin xem toàn bộ; Staff xem toàn bộ COMPUTER & FB log
+                return logDAO.getLogsByType(conn, logType);
             } else {
-                // Staff: chỉ xem log do chính mình thực hiện (USER + FB)
-                return logDAO.getLogsByTypeAndActor(logType,
+                // Staff: chỉ xem USER log do chính mình thực hiện
+                return logDAO.getLogsByTypeAndActor(conn, logType,
                         currentUser.getUserId());
             }
         } catch (SQLException e) {
