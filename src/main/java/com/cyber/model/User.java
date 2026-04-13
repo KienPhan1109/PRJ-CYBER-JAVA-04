@@ -19,6 +19,9 @@ public class User {
     private Timestamp createdAt;
     private boolean isDeleted;
 
+    public static final String PHONE_REGEX = "^(0|\\+84)[3|5|7|8|9][0-9]{8}$";
+    public static final String PHONE_ERROR_MSG = "Số điện thoại không đúng định dạng VN (VD: 09xxxxxxxx hoặc +849xxxxxxxx).";
+
     public User() {}
 
     public String inputRegisterData() {
@@ -34,7 +37,7 @@ public class User {
             }
         }
         this.fullName = InputUtils.inputString("Họ và tên: ");
-        this.phone = InputUtils.inputString("Số điện thoại: ", "^(0|\\+84)[3|5|7|8|9][0-9]{8}$", "Số điện thoại không đúng định dạng VN (VD: 09xxxxxxxx hoặc +849xxxxxxxx).");
+        this.phone = InputUtils.inputString("Số điện thoại: ", PHONE_REGEX, PHONE_ERROR_MSG);
         return password;
     }
 

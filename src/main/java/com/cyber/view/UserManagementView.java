@@ -139,32 +139,62 @@ public class UserManagementView {
             return;
         }
 
-        System.out.println("Sửa thông tin cho Username: " + existing.getUsername());
+        System.out.println("Đang thao tác với Username: " + existing.getUsername());
+        System.out.println("1. Sửa thông tin cơ bản (Họ tên, SĐT, Quyền)");
+        System.out.println("2. Đổi thông tin đăng nhập (Username, Mật khẩu)");
+        int choice = InputUtils.inputInt("Chọn chức năng (1-2): ", 1, 2);
 
-        // Cho phép sửa tài khoản (Username)
-        String newUsername = InputUtils.inputStringUpdate(
-                "Tài khoản mới (Cũ: " + existing.getUsername() + ") [Enter để giữ nguyên]: ", existing.getUsername());
-        existing.setUsername(newUsername);
-        
-        String newName = InputUtils.inputStringUpdate(
-                "Nhập họ tên mới (Cũ: " + existing.getFullName() + ") [Enter để giữ nguyên]: ", existing.getFullName());
-        existing.setFullName(newName);
-        
-        String oldPhone = existing.getPhone() != null ? existing.getPhone() : "";
-        String newPhone = InputUtils.inputStringUpdate(
-                "Nhập SĐT mới (Cũ: " + (oldPhone.isEmpty() ? "---" : oldPhone) + ") [Enter để giữ nguyên]: ", oldPhone);
-        existing.setPhone(newPhone);
-        
-        // Chỉ cho phép chọn STAFF hoặc CUSTOMER
-        String oldRoleName = existing.getRole() != null ? existing.getRole().name() : "CUSTOMER";
-        System.out.println("Chọn Role (1. STAFF | 2. CUSTOMER - Cũ: " + oldRoleName + "): ");
-        int oldRoleInt = existing.getRole() == UserRole.STAFF ? 1 : 2;
-        int rChoice = InputUtils.inputIntUpdate("Nhập Role mới [Enter để giữ nguyên]: ", oldRoleInt, 1, 2);
-        existing.setRole(rChoice == 1 ? UserRole.STAFF : UserRole.CUSTOMER);
+        if (choice == 1) {
+            String newName = InputUtils.inputStringUpdate(
+                    "Nhập họ tên mới (Cũ: " + existing.getFullName() + ") [Enter để giữ nguyên]: ", existing.getFullName());
+            existing.setFullName(newName);
+            
+            String oldPhone = existing.getPhone() != null ? existing.getPhone() : "";
+            String newPhone = InputUtils.inputStringUpdate(
+                    "Nhập SĐT mới (Cũ: " + (oldPhone.isEmpty() ? "---" : oldPhone) + ") [Enter để giữ nguyên]: ", 
+                    oldPhone, User.PHONE_REGEX, User.PHONE_ERROR_MSG);
+            existing.setPhone(newPhone);
+            
+            // Chỉ cho phép chọn STAFF hoặc CUSTOMER
+            String oldRoleName = existing.getRole() != null ? existing.getRole().name() : "CUSTOMER";
+            System.out.println("Chọn Role (1. STAFF | 2. CUSTOMER - Cũ: " + oldRoleName + "): ");
+            int oldRoleInt = existing.getRole() == UserRole.STAFF ? 1 : 2;
+            int rChoice = InputUtils.inputIntUpdate("Nhập Role mới [Enter để giữ nguyên]: ", oldRoleInt, 1, 2);
+            existing.setRole(rChoice == 1 ? UserRole.STAFF : UserRole.CUSTOMER);
 
-        userService.updateUser(existing, adminUser);
-        PrintUtils.printSuccess("Cập nhật thông tin thành công!");
+            userService.updateUser(existing, adminUser);
+            PrintUtils.printSuccess("Cập nhật thông tin cơ bản thành công!");
+        } else {
+            // Username
+            while (true) {
+                String newUsername = InputUtils.inputStringUpdate(
+                        "Tài khoản mới (Cũ: " + existing.getUsername() + ") [Enter để giữ nguyên]: ", existing.getUsername());
+                if (!newUsername.equalsIgnoreCase(existing.getUsername()) && userService.checkUsernameDuplicate(newUsername, existing.getUserId())) {
+                    PrintUtils.printError("Username đã tồn tại, vui lòng chọn tên khác!");
+                } else {
+                    existing.setUsername(newUsername);
+                    break;
+                }
+            }
+            userService.updateUser(existing, adminUser); // Update username info
+            
+            // Password
+            String updatePwd = InputUtils.inputString("Bạn có muốn đổi mật khẩu không? (Y/N): ");
+            if (updatePwd.equalsIgnoreCase("Y")) {
+                String oldRaw = InputUtils.inputPassword("Nhập mật khẩu cũ hiện tại (bắt buộc): ");
+                String newRaw;
+                while (true) {
+                    newRaw = InputUtils.inputRegisterPassword("Nhập mật khẩu mới: ");
+                    String confirm = InputUtils.inputPassword("Xác nhận mật khẩu mới: ");
+                    if (newRaw.equals(confirm)) break;
+                    PrintUtils.printError("Mật khẩu xác nhận không khớp!");
+                }
+                authService.changeUserPassword(existing.getUserId(), oldRaw, newRaw);
+                PrintUtils.printSuccess("Đổi thông tin đăng nhập thành công!");
+            }
+        }
     }
+
 
     private void toggleUserStatus() throws BusinessException {
         System.out.println("\n[KHÓA / MỞ KHÓA TÀI KHOẢN]");

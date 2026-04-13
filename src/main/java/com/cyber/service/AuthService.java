@@ -106,7 +106,32 @@ public class AuthService {
         }
     }
 
-    private String hashPassword(String rawPassword) {
+    public void changeUserPassword(int userId, String oldRaw, String newRaw) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            User user = userDAO.findById(conn, userId);
+            if (user == null) {
+                throw new BusinessException("NOT_FOUND", "Không tìm thấy người dùng.");
+            }
+            if (user.getRole() == com.cyber.model.enums.UserRole.ADMIN) {
+                 // Check if it's actually admin changing their own pass? In this project, admin is just role.
+                 // We rely on caller to verify, but just in case.
+            }
+            String oldHashed = hashPassword(oldRaw);
+            if (!user.getPasswordHash().equals(oldHashed)) {
+                // Thử check password chưa hash (dữ liệu cũ)
+                if (!oldRaw.equals(user.getPasswordHash())) {
+                    throw new BusinessException("WRONG_PASSWORD", "Mật khẩu cũ không chính xác.");
+                }
+            }
+            
+            String newHashed = hashPassword(newRaw);
+            userDAO.updatePassword(conn, userId, newHashed);
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi đổi mật khẩu: " + e.getMessage());
+        }
+    }
+
+    public String hashPassword(String rawPassword) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(rawPassword.getBytes());

@@ -63,6 +63,30 @@ public class UserService {
         }
     }
 
+    public boolean checkUsernameDuplicate(String username, int excludeUserId) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            List<User> all = userDAO.getAllUsers(conn);
+            return all.stream().anyMatch(u -> u.getUserId() != excludeUserId && u.getUsername().equalsIgnoreCase(username));
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi kiểm tra trùng lặp: " + e.getMessage());
+        }
+    }
+
+    public boolean verifyPassword(int userId, String rawPassword) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            User user = userDAO.findById(conn, userId);
+            if (user == null) return false;
+            // Dùng AuthService để hash nhưng AuthService đóng gói, ta cần hash ở đây
+            // Giải pháp gọn là check qua userDAO.findByUsernameAndPassword
+            // Tuy nhiên hash string là private trong AuthService.
+            // Để tái sử dụng, gọi thủ công mãnh liệt qua hàm login nếu được, 
+            // hoặc ta add hàm updateLoginInfo vào AuthService xử lý cho chuẩn.
+            throw new BusinessException("NOT_IMPL", "Chưa hỗ trợ");
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi kiểm tra mật khẩu: " + e.getMessage());
+        }
+    }
+
     public void updateUserStatus(int userId, UserStatus status,
                                   User actor) throws BusinessException {
         Connection conn = null;

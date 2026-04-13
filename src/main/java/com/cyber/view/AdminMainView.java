@@ -16,6 +16,7 @@ public class AdminMainView {
     private final FbMenuManagementView    fbMenuView;
     private final UserManagementView      userView;
     private final LogService              logService;
+    private final ReportView              reportView;
 
     public AdminMainView(User adminUser) {
         this.adminUser = adminUser;
@@ -23,6 +24,7 @@ public class AdminMainView {
         this.fbMenuView = new FbMenuManagementView(adminUser);
         this.userView = new UserManagementView(adminUser);
         this.logService = LogService.getInstance();
+        this.reportView = new ReportView();
     }
 
     public void displayMenu() {
@@ -35,16 +37,18 @@ public class AdminMainView {
             System.out.println("2. Quản lý Menu F&B");
             System.out.println("3. Quản lý hệ thống Người dùng");
             System.out.println("4. Xem Lịch sử Log (Audit)");
+            System.out.println("5. Thống kê & Báo cáo");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-4): ", 0, 4);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-5): ", 0, 5);
 
             switch (choice) {
                 case 1 -> computerView.displayMenu();
                 case 2 -> fbMenuView.displayMenu();
                 case 3 -> userView.displayMenu();
                 case 4 -> viewLogsMenu();
+                case 5 -> reportView.displayAdminReportMenu();
                 case 0 -> {
                     PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Admin...");
                     return;
@@ -57,6 +61,7 @@ public class AdminMainView {
     // Xem Audit Log (Admin — xem toàn bộ)
     // -------------------------------------------------------
     private void viewLogsMenu() {
+
         try {
             System.out.println("\n--- XEM LỊCH SỬ LOG (ADMIN) ---");
             System.out.println("1. USER log   (toàn bộ hành động user)");

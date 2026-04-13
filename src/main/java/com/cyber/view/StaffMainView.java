@@ -25,6 +25,7 @@ public class StaffMainView {
     private final FbOrderService fbOrderService;
     private final BookingService bookingService;
     private final LogService     logService;
+    private final ReportView     reportView;
 
     public StaffMainView(User staffUser) {
         this.staffUser       = staffUser;
@@ -32,6 +33,7 @@ public class StaffMainView {
         this.fbOrderService  = FbOrderService.getInstance();
         this.bookingService  = BookingService.getInstance();
         this.logService      = LogService.getInstance();
+        this.reportView      = new ReportView();
     }
 
     public void displayMenu() {
@@ -44,10 +46,11 @@ public class StaffMainView {
             System.out.println("2. Quản lý Đơn hàng F&B");
             System.out.println("3. Quản lý Yêu cầu mở máy (Booking)");
             System.out.println("4. Xem Lịch sử Log (Audit)");
+            System.out.println("5. Thống kê & Báo cáo");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-4): ", 0, 4);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-5): ", 0, 5);
 
             try {
                 switch (choice) {
@@ -55,6 +58,7 @@ public class StaffMainView {
                     case 2: manageFbOrders();         break;
                     case 3: manageBookingRequests();  break;
                     case 4: viewLogsMenu();           break;
+                    case 5: reportView.displayStaffReportMenu(); break;
                     case 0:
                         PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Staff...");
                         return;

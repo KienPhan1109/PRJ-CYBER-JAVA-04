@@ -226,12 +226,13 @@ public class UserDAOImpl implements IUserDAO {
 
     @Override
     public void updateUser(Connection conn, User user) throws SQLException {
-        String sql = "UPDATE users SET full_name = ?, phone = ?, role = ? WHERE user_id = ?";
+        String sql = "UPDATE users SET username = ?, full_name = ?, phone = ?, role = ? WHERE user_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, user.getFullName());
-            stmt.setString(2, user.getPhone());
-            stmt.setString(3, user.getRole() != null ? user.getRole().name() : UserRole.CUSTOMER.name());
-            stmt.setInt(4, user.getUserId());
+            stmt.setString(1, user.getUsername());
+            stmt.setString(2, user.getFullName());
+            stmt.setString(3, user.getPhone());
+            stmt.setString(4, user.getRole() != null ? user.getRole().name() : UserRole.CUSTOMER.name());
+            stmt.setInt(5, user.getUserId());
             stmt.executeUpdate();
         }
     }
