@@ -106,10 +106,6 @@ public class AuthService {
             if (user == null) {
                 throw new BusinessException("NOT_FOUND", "Không tìm thấy người dùng.");
             }
-            if (user.getRole() == com.cyber.model.enums.UserRole.ADMIN) {
-                 // Check if it's actually admin changing their own pass? In this project, admin is just role.
-                 // We rely on caller to verify, but just in case.
-            }
             String oldHashed = hashPassword(oldRaw);
             if (!user.getPasswordHash().equals(oldHashed)) {
                 // Thử check password chưa hash (dữ liệu cũ)

@@ -1,5 +1,6 @@
 package com.cyber.util;
 
+import com.cyber.constant.ColorConstant;
 import com.cyber.model.enums.BookingStatus;
 import com.cyber.model.enums.ComputerStatus;
 import com.cyber.model.enums.FBStatus;
@@ -70,29 +71,29 @@ public class FormatUtils {
     public static String formatComputerStatus(ComputerStatus status) {
         if (status == null) return "---";
         return switch (status) {
-            case AVAILABLE -> ColorConst.GREEN + "Sẵn sàng" + ColorConst.RESET;
-            case IN_USE -> ColorConst.YELLOW + "Đang sử dụng" + ColorConst.RESET;
-            case MAINTENANCE -> ColorConst.CYAN + "Bảo trì" + ColorConst.RESET;
-            case HIDDEN -> ColorConst.RED + "Đã ẩn"+ ColorConst.RESET;
+            case AVAILABLE -> ColorConstant.GREEN + "Sẵn sàng" + ColorConstant.RESET;
+            case IN_USE -> ColorConstant.YELLOW + "Đang sử dụng" + ColorConstant.RESET;
+            case MAINTENANCE -> ColorConstant.CYAN + "Bảo trì" + ColorConstant.RESET;
+            case HIDDEN -> ColorConstant.RED + "Đã ẩn"+ ColorConstant.RESET;
         };
     }
 
     public static String formatFbTemperature(FbTemperature temperature) {
         if (temperature == null) return "---";
         return switch (temperature) {
-            case HOT  -> ColorConst.RED + "Nóng" + ColorConst.RESET;
-            case COLD -> ColorConst.BLUE + "Lạnh" + ColorConst.RESET;
-            case ICED -> ColorConst.CYAN + "Đá" + ColorConst.RESET;
-            case NONE -> ColorConst.WHITE + "Không" + ColorConst.RESET;
+            case HOT  -> ColorConstant.RED + "Nóng" + ColorConstant.RESET;
+            case COLD -> ColorConstant.BLUE + "Lạnh" + ColorConstant.RESET;
+            case ICED -> ColorConstant.CYAN + "Đá" + ColorConstant.RESET;
+            case NONE -> ColorConstant.WHITE + "Không" + ColorConstant.RESET;
         };
     }
 
     public static String formatFbStatus(FBStatus status) {
         if (status == null) return "---";
         return switch (status) {
-            case ACTIVE -> ColorConst.GREEN + "Đang bán" + ColorConst.RESET;
-            case OUT_OF_STOCK -> ColorConst.YELLOW + "Hết hàng" + ColorConst.RESET;
-            case HIDDEN -> ColorConst.RED + "Đã ẩn" + ColorConst.RESET;
+            case ACTIVE -> ColorConstant.GREEN + "Đang bán" + ColorConstant.RESET;
+            case OUT_OF_STOCK -> ColorConstant.YELLOW + "Hết hàng" + ColorConstant.RESET;
+            case HIDDEN -> ColorConstant.RED + "Đã ẩn" + ColorConstant.RESET;
         };
     }
 
@@ -110,19 +111,19 @@ public class FormatUtils {
     public static String formatBookingStatus(BookingStatus status) {
         if (status == null) return "---";
         return switch (status) {
-            case PENDING -> ColorConst.YELLOW + "Chờ duyệt" + ColorConst.RESET;
-            case ACTIVE -> ColorConst.GREEN + "Đang chơi" + ColorConst.RESET;
-            case COMPLETED -> ColorConst.CYAN + "Hoàn thành" + ColorConst.RESET;
-            case CANCELLED -> ColorConst.RED + "Đã hủy" + ColorConst.RESET;
-            case RESERVED -> ColorConst.PURPLE + "Đã đặt trước" + ColorConst.RESET;
+            case PENDING -> ColorConstant.YELLOW + "Chờ duyệt" + ColorConstant.RESET;
+            case ACTIVE -> ColorConstant.GREEN + "Đang chơi" + ColorConstant.RESET;
+            case COMPLETED -> ColorConstant.CYAN + "Hoàn thành" + ColorConstant.RESET;
+            case CANCELLED -> ColorConstant.RED + "Đã hủy" + ColorConstant.RESET;
+            case RESERVED -> ColorConstant.PURPLE + "Đã đặt trước" + ColorConstant.RESET;
         };
     }
 
     public static String formatUserStatus(UserStatus status) {
         if (status == null) return "---";
         return switch (status) {
-            case ACTIVE -> ColorConst.GREEN + "Hoạt động" + ColorConst.RESET;
-            case LOCKED -> ColorConst.RED + "Bị khóa" + ColorConst.RESET;
+            case ACTIVE -> ColorConstant.GREEN + "Hoạt động" + ColorConstant.RESET;
+            case LOCKED -> ColorConstant.RED + "Bị khóa" + ColorConstant.RESET;
         };
     }
 }

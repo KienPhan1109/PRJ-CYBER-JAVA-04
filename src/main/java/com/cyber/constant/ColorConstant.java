@@ -1,6 +1,6 @@
-package com.cyber.util;
+package com.cyber.constant;
 
-public class ColorConst {
+public class ColorConstant {
     public static final String RESET = "\033[0m";
     public static final String RED = "\033[31m";
     public static final String GREEN = "\033[32m";

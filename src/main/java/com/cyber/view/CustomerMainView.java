@@ -1,6 +1,7 @@
 package com.cyber.view;
 
 
+import com.cyber.constant.ColorConstant;
 import com.cyber.domain.fb.FbMenuItem;
 
 import com.cyber.domain.fb.discount.FixedAmountDiscountStrategy;
@@ -177,7 +178,7 @@ public class CustomerMainView {
                         
                         PrintUtils.printTableSeparator(70);
                         if (minsToRes > 5) {
-                            System.out.printf("| %-66s |\n", com.cyber.util.ColorConst.YELLOW + "⚠️ TIẾP THEO: Có người đặt lúc " + FormatUtils.formatTimestamp(nextRes.getStartTime()) + " (Khoảng " + minsToRes + " phút nữa)" + com.cyber.util.ColorConst.RESET);
+                            System.out.printf("| %-66s |\n", ColorConstant.YELLOW + "⚠️ TIẾP THEO: Có người đặt lúc " + FormatUtils.formatTimestamp(nextRes.getStartTime()) + " (Khoảng " + minsToRes + " phút nữa)" + ColorConstant.RESET);
                         } else {
                             System.out.println("| \033[31m[!!!] CẢNH BÁO ĐỎ: Hệ thống sẽ NGẮT MÁY BẢN TRONG " + minsToRes + " PHÚT TỚI!\033[0m |");
                             System.out.println("| \033[31m[!!!] Vui lòng lưu lại công việc của bạn ngay bây giờ.\033[0m               |");
@@ -445,10 +446,10 @@ public class CustomerMainView {
 
             for (FbOrder o : allOrders) {
                 String statusVn = switch (o.getStatus().name()) {
-                    case "PENDING"   -> com.cyber.util.ColorConst.YELLOW + "Chờ xử lý"    + com.cyber.util.ColorConst.RESET;
-                    case "PREPARING" -> com.cyber.util.ColorConst.BLUE   + "Đang làm"      + com.cyber.util.ColorConst.RESET;
-                    case "DELIVERED" -> com.cyber.util.ColorConst.GREEN  + "Đã giao"       + com.cyber.util.ColorConst.RESET;
-                    case "CANCELLED" -> com.cyber.util.ColorConst.RED    + "Đã hủy"        + com.cyber.util.ColorConst.RESET;
+                    case "PENDING"   -> ColorConstant.YELLOW + "Chờ xử lý"    + ColorConstant.RESET;
+                    case "PREPARING" -> ColorConstant.BLUE   + "Đang làm"      + ColorConstant.RESET;
+                    case "DELIVERED" -> ColorConstant.GREEN  + "Đã giao"       + ColorConstant.RESET;
+                    case "CANCELLED" -> ColorConstant.RED    + "Đã hủy"        + ColorConstant.RESET;
                     default          -> o.getStatus().name();
                 };
 
