@@ -26,17 +26,17 @@ public class PrintUtils {
 
     public static void printSuccess(String message, Object... args) {
         String formattedMessage = args != null && args.length > 0 ? String.format(message, args) : message;
-        System.out.println(ANSI_GREEN + "[THÀNH CÔNG] " + formattedMessage + ANSI_RESET);
+        System.out.println(ColorConst.GREEN + "[THÀNH CÔNG] " + formattedMessage + ColorConst.RESET);
     }
 
     public static void printError(String message, Object... args) {
         String formattedMessage = args != null && args.length > 0 ? String.format(message, args) : message;
-        System.out.println(ANSI_RED + "[LỖI] " + formattedMessage + ANSI_RESET);
+        System.out.println(ColorConst.RED + "[LỖI] " + formattedMessage + ColorConst.RESET);
     }
 
     public static void printWarning(String message, Object... args) {
         String formattedMessage = args != null && args.length > 0 ? String.format(message, args) : message;
-        System.out.println(ANSI_YELLOW + "[CẢNH BÁO] " + formattedMessage + ANSI_RESET);
+        System.out.println(ColorConst.YELLOW + "[CẢNH BÁO] " + formattedMessage + ColorConst.RESET);
     }
 
     public static void printTableSeparator(int width) {

@@ -1,9 +1,6 @@
 package com.cyber.util;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
@@ -63,12 +60,7 @@ public class InputUtils {
 
     public static BigDecimal inputBigDecimal(String message, BigDecimal min) {
         while (true) {
-            System.out.print(message);
-            String input = SCANNER.nextLine();
-            if (input == null || input.trim().isEmpty()) {
-                PrintUtils.printError("Dữ liệu không được để trống.");
-                continue;
-            }
+            String input = inputString(message);
             try {
                 BigDecimal value = new BigDecimal(input.trim());
                 if (value.compareTo(min) >= 0) {
@@ -82,27 +74,6 @@ public class InputUtils {
         }
     }
 
-    public static LocalDate inputLocalDate(String message, String pattern) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
-        while (true) {
-            System.out.print(message + " (" + pattern + "): ");
-            String input = SCANNER.nextLine();
-            if (input == null || input.trim().isEmpty()) {
-                PrintUtils.printError("Dữ liệu không được để trống.");
-                continue;
-            }
-            try {
-                return LocalDate.parse(input.trim(), formatter);
-            } catch (DateTimeParseException e) {
-                PrintUtils.printError("Ngày không hợp lệ hoặc không đúng định dạng " + pattern + ".");
-            }
-        }
-    }
-
-    /**
-     * Nhập chuỗi cho phép trống. Nếu user nhấn Enter không nhập gì → trả về chuỗi rỗng "".
-     * Dùng cho các trường không bắt buộc như mô tả, tags, từ khóa tìm kiếm.
-     */
     public static String inputStringOptional(String message) {
         System.out.print(message);
         String input = SCANNER.nextLine();
@@ -111,7 +82,6 @@ public class InputUtils {
     }
 
     public static String inputPassword(String message) {
-        // Hàm này gọi khi login, không cần validate format
         while (true) {
             System.out.print(message);
             String input = SCANNER.nextLine();
@@ -140,14 +110,12 @@ public class InputUtils {
     }
 
     public static String inputStringUpdate(String message, String oldValue) {
-        while (true) {
-            System.out.print(message);
-            String input = SCANNER.nextLine();
-            if (input == null || input.trim().isEmpty()) {
-                return oldValue;
-            } else {
-                return input.trim();
-            }
+        System.out.print(message);
+        String input = SCANNER.nextLine();
+        if (input == null || input.trim().isEmpty()) {
+            return oldValue;
+        } else {
+            return input.trim();
         }
     }
 
@@ -203,20 +171,6 @@ public class InputUtils {
                 }
             } catch (NumberFormatException e) {
                 PrintUtils.printError("Vui lòng nhập định dạng số thập phân hợp lệ.");
-            }
-        }
-    }
-
-    public static String inputPasswordUpdate(String message, String oldPassword) {
-        while (true) {
-            System.out.print(message);
-            String password = SCANNER.nextLine();
-            if (password == null || password.trim().isEmpty()) {
-                return oldPassword;
-            } else if (password.length() < 6) {
-                PrintUtils.printError("Mật khẩu phải có tối thiểu 6 ký tự.");
-            } else {
-                return password;
             }
         }
     }
