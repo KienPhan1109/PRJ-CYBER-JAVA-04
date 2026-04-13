@@ -43,22 +43,24 @@ public class StaffMainView {
             System.out.println("          Xin chào: " + staffUser.getFullName());
             System.out.println("==========================================");
             System.out.println("1. Nạp tiền cho Khách Hàng");
-            System.out.println("2. Quản lý Đơn hàng F&B");
-            System.out.println("3. Quản lý Yêu cầu mở máy (Booking)");
-            System.out.println("4. Xem Lịch sử Log (Audit)");
-            System.out.println("5. Thống kê & Báo cáo");
+            System.out.println("2. Trừ tiền / Rút tiền");
+            System.out.println("3. Quản lý Đơn hàng F&B");
+            System.out.println("4. Quản lý Yêu cầu mở máy (Booking)");
+            System.out.println("5. Xem Lịch sử Log (Audit)");
+            System.out.println("6. Thống kê & Báo cáo");
             System.out.println("0. Đăng xuất");
             System.out.println("==========================================");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-5): ", 0, 5);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-6): ", 0, 6);
 
             try {
                 switch (choice) {
                     case 1: topUpUser();              break;
-                    case 2: manageFbOrders();         break;
-                    case 3: manageBookingRequests();  break;
-                    case 4: viewLogsMenu();           break;
-                    case 5: reportView.displayStaffReportMenu(); break;
+                    case 2: deductUserBalance();      break;
+                    case 3: manageFbOrders();         break;
+                    case 4: manageBookingRequests();  break;
+                    case 5: viewLogsMenu();           break;
+                    case 6: reportView.displayStaffReportMenu(); break;
                     case 0:
                         PrintUtils.printWarning("Đang đăng xuất khỏi hệ thống Staff...");
                         return;
@@ -138,6 +140,23 @@ public class StaffMainView {
         // Truyền staffUser (actor) để ghi vào system_logs
         userService.topUpUser(id, amount, staffUser);
         PrintUtils.printSuccess("Đã nạp " + FormatUtils.formatVND(amount) + " thành công cho User: " + targetUser.getUsername());
+    }
+
+    private void deductUserBalance() throws BusinessException {
+        System.out.println("\n--- TRỪ TIỀN / RÚT TIỀN ---");
+        int id = InputUtils.inputInt("Nhập ID người dùng cần trừ tiền: ", 1, Integer.MAX_VALUE);
+
+        User targetUser = userService.getUserById(id);
+        System.out.println("Tài khoản: " + targetUser.getUsername() + " | Số dư hiện tại: " + FormatUtils.formatVND(targetUser.getBalance()));
+
+        if (targetUser.getBalance().compareTo(BigDecimal.ZERO) == 0) {
+            PrintUtils.printWarning("Tài khoản đã có số dư = 0đ, không cần trừ thêm.");
+            return;
+        }
+
+        BigDecimal amount = InputUtils.inputBigDecimal("Nhập số tiền muốn trừ (VND): ", BigDecimal.ONE);
+        userService.deductBalanceManual(id, amount, staffUser);
+        PrintUtils.printSuccess("Đã trừ " + FormatUtils.formatVND(amount) + " thành công cho User: " + targetUser.getUsername());
     }
 
     private void manageFbOrders() throws BusinessException {

@@ -260,9 +260,11 @@ public class UserDAOImpl implements IUserDAO {
 
     @Override
     public void deleteUser(Connection conn, int userId) throws SQLException {
-        String sql = "UPDATE users SET is_deleted = 1 WHERE user_id = ?";
+        String suffix = "_del_" + System.currentTimeMillis();
+        String sql = "UPDATE users SET is_deleted = 1, username = CONCAT(username, ?) WHERE user_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
+            stmt.setString(1, suffix);
+            stmt.setInt(2, userId);
             stmt.executeUpdate();
         }
     }

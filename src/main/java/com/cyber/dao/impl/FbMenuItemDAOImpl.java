@@ -58,6 +58,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
         List<FbMenuItem> result = new ArrayList<>();
         String sql = "SELECT m.*, c.category_name FROM fb_menu_items m " +
                      "JOIN fb_categories c ON m.category_id = c.category_id " +
+                     "WHERE m.is_deleted = 0 " +
                      "ORDER BY m.menu_item_id ASC";
         try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -205,9 +206,11 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
 
     @Override
     public void deleteItem(Connection conn, int menuItemId) throws SQLException {
-        String sql = "UPDATE fb_menu_items SET status = 'HIDDEN' WHERE menu_item_id=?";
+        String suffix = "_del_" + System.currentTimeMillis();
+        String sql = "UPDATE fb_menu_items SET is_deleted = 1, name = CONCAT(name, ?) WHERE menu_item_id=?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, menuItemId);
+            ps.setString(1, suffix);
+            ps.setInt(2, menuItemId);
             ps.executeUpdate();
         }
     }

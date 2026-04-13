@@ -34,14 +34,16 @@ public class FbMenuManagementView {
             System.out.println("2. Thêm món mới vào Menu");
             System.out.println("3. Sửa thông tin món");
             System.out.println("4. Ẩn / Hiện món");
+            System.out.println("5. Xóa món (Vĩnh viễn)");
             System.out.println("0. Quay lại");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-4): ", 0, 4);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-5): ", 0, 5);
             switch (choice) {
                 case 1 -> displayMenuList();
                 case 2 -> handleAddItem();
                 case 3 -> handleEditItem();
                 case 4 -> handleDeleteItem();
+                case 5 -> handlePermanentDelete();
                 case 0 -> {
                     return;
                 }
@@ -202,5 +204,28 @@ public class FbMenuManagementView {
         }
     }
 
+    // -------------------------------------------------------
+    // 5. Xóa vĩnh viễn (Soft Delete)
+    // -------------------------------------------------------
+    private void handlePermanentDelete() {
+        System.out.println("\n--- XÓA MÓN (VĨNH VIỄN) ---");
+        PrintUtils.printWarning("Lưu ý: Món bị xóa sẽ không thể khôi phục. Lịch sử đơn hàng vẫn được giữ nguyên.");
+        PrintUtils.printWarning("Lưu ý: Chỉ có thể xóa món đang ở trạng thái ẨN (HIDDEN).");
+        int id = InputUtils.inputInt("Nhập Menu Item ID cần xóa (0 để hủy): ", 0, Integer.MAX_VALUE);
+        if (id == 0) return;
 
+        try {
+            FbMenuItem item = menuService.getMenuItemById(id);
+            System.out.println("Bạn sắp XÓA món: " + item.getName() + " (Giá: " + FormatUtils.formatVND(item.getBasePrice()) + ")");
+            String confirm = InputUtils.inputString("Xác nhận XÓA? (Nhập 'DELETE' để xác nhận): ");
+            if (confirm.equals("DELETE")) {
+                menuService.deleteMenuItem(id, adminUser);
+                PrintUtils.printSuccess("Đã xóa món [%s] thành công!", item.getName());
+            } else {
+                System.out.println("Đã hủy thao tác.");
+            }
+        } catch (BusinessException e) {
+            PrintUtils.printError(e.getMessage());
+        }
+    }
 }

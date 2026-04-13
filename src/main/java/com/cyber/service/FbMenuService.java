@@ -74,7 +74,7 @@ public class FbMenuService {
     public FbMenuItem getMenuItemById(int menuItemId) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             FbMenuItem item = menuItemDAO.findById(conn, menuItemId);
-            if (item == null) {
+            if (item == null || item.isDeleted()) {
                 throw new BusinessException("ERR_ITEM_NOT_FOUND", "Không tìm thấy món với ID=" + menuItemId);
             }
             return item;
@@ -138,7 +138,7 @@ public class FbMenuService {
         validateMenuItem(item);
         try (Connection conn = DatabaseConnection.getConnection()) {
             FbMenuItem existing = menuItemDAO.findById(conn, item.getMenuItemId());
-            if (existing == null) {
+            if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("ERR_ITEM_NOT_FOUND", "Không tìm thấy món cần sửa!");
             }
             if (existing.getStatus() == com.cyber.model.enums.FBStatus.HIDDEN) {
@@ -170,7 +170,7 @@ public class FbMenuService {
     public void toggleMenuItemStatus(int menuItemId, User actor) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             FbMenuItem existing = menuItemDAO.findById(conn, menuItemId);
-            if (existing == null) {
+            if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("ERR_ITEM_NOT_FOUND",
                         "Không tìm thấy món (ID=" + menuItemId + ")");
             }
@@ -218,5 +218,27 @@ public class FbMenuService {
             throw new BusinessException("ERR_VALIDATION", "Chưa chọn danh mục hợp lệ.");
         }
         // description và tags cho phép null — không validate
+    }
+
+    /**
+     * Xóa vĩnh viễn (Soft Delete) một món ăn.
+     */
+    public void deleteMenuItem(int menuItemId, User actor) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            FbMenuItem existing = menuItemDAO.findById(conn, menuItemId);
+            if (existing == null || existing.isDeleted()) {
+                throw new BusinessException("ERR_ITEM_NOT_FOUND", "Không tìm thấy món (ID=" + menuItemId + ")");
+            }
+            if (existing.getStatus() != com.cyber.model.enums.FBStatus.HIDDEN) {
+                throw new BusinessException("INVALID_STATUS", "Chỉ có thể xóa món khi đang ở trạng thái ẨN (HIDDEN). Vui lòng Ẩn món trước khi xóa.");
+            }
+            menuItemDAO.deleteItem(conn, menuItemId);
+            if (actor != null) {
+                logService.logStandalone(LogType.FB, actor,
+                        "Xóa (soft) món: " + existing.getName() + " (ID=" + menuItemId + ")", menuItemId);
+            }
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi xóa món: " + e.getMessage());
+        }
     }
 }

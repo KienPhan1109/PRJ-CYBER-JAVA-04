@@ -56,13 +56,12 @@ public class FbMenuItem {
         System.out.println(isEdit ? "Danh mục (Cũ: " + this.categoryId + "):" : "Chọn danh mục:");
         System.out.println("1. FOOD | 2. DRINK | 3. SNACK | 4. TOPPING");
         if (isEdit) {
-            int oldChoice = (this.categoryId == 5) ? 4 : this.categoryId;
             int choice = InputUtils.inputIntUpdate(
-                    "Lựa chọn mới (1-4) [Enter giữ nguyên]: ", oldChoice, 1, 4);
-            this.categoryId = (choice == 4) ? 5 : choice;
+                    "Lựa chọn mới (1-4) [Enter giữ nguyên]: ", this.categoryId, 1, 4);
+            this.categoryId = choice;
         } else {
             int choice = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
-            this.categoryId = (choice == 4) ? 5 : choice;
+            this.categoryId = choice;
         }
 
         // Mô tả (cho phép null)

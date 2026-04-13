@@ -183,7 +183,6 @@ INSERT INTO fb_categories (category_name, description) VALUES
 ('FOOD',  'Cơm, Mì, Bún thơm ngon'),
 ('DRINK', 'Trà sữa, Cafe, Nước ngọt mát lạnh'),
 ('SNACK', 'Đồ ăn vặt, hướng dương, khoai tây'),
-('COMBO', 'Các gói kết hợp tiết kiệm'),
 ('TOPPING', 'Các loại topping thêm');
 
 -- 4. FB Menu Items
@@ -224,18 +223,11 @@ INSERT INTO fb_menu_items (category_id, name, description, base_price, stock_qua
 (3, 'Xúc Xích Đức Nướng', '1 thanh lớn', 15000.00, 100, 5, 'NONE'),
 (3, 'Cá Viên Chiên', 'Phần 10 viên', 20000.00, 50, 7, 'NONE'),
 
--- COMBO (Gói tiết kiệm)
-(4, 'Combo Cày Đêm', '1 Mì xào bò + 1 Pepsi + 1 Khăn lạnh', 55000.00, 999, 10, 'NONE'),
-(4, 'Combo Buổi Sáng', '1 Bánh mì + 1 Cafe sữa', 40000.00, 999, 7, 'NONE'),
-(4, 'Combo Ranker', '1 Mì cay + 1 Sting dâu + 1 Khô gà', 95000.00, 999, 15, 'NONE'),
-(4, 'Combo Học Sinh', '1 Mì tôm trứng + 1 Trà chanh', 45000.00, 999, 7, 'NONE'),
-(4, 'Combo Streamer', '1 Cơm gà + 1 Trà đào + 1 Khoai tây', 90000.00, 999, 15, 'NONE'),
-
 -- TOPPING (Món thêm)
-(5, 'Trân châu đen', 'Thêm vào trà sữa', 7000.00, 999, 1, 'NONE'),
-(5, 'Thạch nha đam', 'Thêm vào trà trái cây', 6000.00, 999, 1, 'NONE'),
-(5, 'Kem cheese mặn', 'Kem béo ngậy', 10000.00, 50, 2, 'NONE'),
-(5, 'Trứng ốp la', 'Thêm vào cơm/mì', 5000.00, 999, 2, 'NONE'),
-(5, 'Thêm bò xào', 'Thêm 50g thịt bò', 15000.00, 100, 5, 'NONE'),
-(5, 'Thêm xúc xích', 'Thêm 1 thanh', 10000.00, 200, 3, 'NONE'),
-(5, 'Pate thêm', 'Thêm vào bánh mì', 8000.00, 100, 1, 'NONE');
+(4, 'Trân châu đen', 'Thêm vào trà sữa', 7000.00, 999, 1, 'NONE'),
+(4, 'Thạch nha đam', 'Thêm vào trà trái cây', 6000.00, 999, 1, 'NONE'),
+(4, 'Kem cheese mặn', 'Kem béo ngậy', 10000.00, 50, 2, 'NONE'),
+(4, 'Trứng ốp la', 'Thêm vào cơm/mì', 5000.00, 999, 2, 'NONE'),
+(4, 'Thêm bò xào', 'Thêm 50g thịt bò', 15000.00, 100, 5, 'NONE'),
+(4, 'Thêm xúc xích', 'Thêm 1 thanh', 10000.00, 200, 3, 'NONE'),
+(4, 'Pate thêm', 'Thêm vào bánh mì', 8000.00, 100, 1, 'NONE');

@@ -117,7 +117,11 @@ public class ComputerService {
     
     public Computer getComputerById(int id) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            return computerDAO.findById(conn, id);
+            Computer existing = computerDAO.findById(conn, id);
+            if (existing == null || existing.isDeleted()) {
+                throw new BusinessException("NOT_FOUND", "Không tìm thấy máy có ID = " + id);
+            }
+            return existing;
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi tìm kiếm máy: " + e.getMessage());
         }
@@ -188,6 +192,12 @@ public class ComputerService {
                 throw new BusinessException("IN_USE", "Lỗi: Máy đang có khách sử dụng. Khách phải đăng xuất thì Admin mới được phép Sửa/Xóa/Bảo trì máy này!");
             }
 
+            // Chặn Hiện/Ẩn nếu máy đang có người chờ Staff xác thực (PENDING booking)
+            boolean isAvail = bookingDAO.isComputerAvailable(conn, id, null, null);
+            if (!isAvail) {
+                throw new BusinessException("PENDING", "Lỗi: Máy đang trong trạng thái chờ Staff xác thực. Không thể Hiện/Ẩn lúc này!");
+            }
+
             // Toggle Soft delete / Hidden status
             String actionVerb;
             if (existing.getStatus() == com.cyber.model.enums.ComputerStatus.HIDDEN) {
@@ -212,6 +222,39 @@ public class ComputerService {
         } catch (SQLException e) {
             if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw new BusinessException("DB_ERROR", "Lỗi xóa máy (có thể máy đang có booking): " + e.getMessage());
+        } catch (BusinessException be) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
+            throw be;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
+        }
+    }
+
+    public void deleteComputer(int id, User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            Computer existing = computerDAO.findById(conn, id);
+            if (existing == null || existing.isDeleted()) {
+                throw new BusinessException("NOT_FOUND", "Không tìm thấy máy có ID = " + id);
+            }
+            if (existing.getStatus() != com.cyber.model.enums.ComputerStatus.HIDDEN) {
+                throw new BusinessException("INVALID_STATUS", "Chỉ có thể xóa máy khi đang ở trạng thái ẨN (HIDDEN). Vui lòng Ẩn máy trước khi xóa.");
+            }
+
+            computerDAO.deleteComputer(conn, id);
+
+            String action = String.format("Xóa (soft) máy trạm: %s (ID: %d)", existing.getName(), id);
+            logService.log(conn, LogType.COMPUTER, actor, action, id);
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
+            throw new BusinessException("DB_ERROR", "Lỗi xóa máy: " + e.getMessage());
         } catch (BusinessException be) {
             if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw be;

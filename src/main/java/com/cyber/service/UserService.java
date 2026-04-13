@@ -105,6 +105,12 @@ public class UserService {
                 throw new BusinessException("SECURITY_ERROR", "Không được phép thay đổi trạng thái của Quản trị viên (ADMIN).");
             }
 
+            // Ràng buộc: Muốn KHÓA phải có số dư = 0
+            if (status == UserStatus.LOCKED && user.getBalance().compareTo(BigDecimal.ZERO) > 0) {
+                throw new BusinessException("BALANCE_EXISTS",
+                        "Không thể khóa tài khoản khi số dư còn " + com.cyber.util.FormatUtils.formatVND(user.getBalance()) + ". Vui lòng rút tiền về 0đ trước!");
+            }
+
             userDAO.updateUserStatus(conn, userId, status);
 
             // Ghi log trong cùng transaction
@@ -216,18 +222,37 @@ public class UserService {
         }
     }
 
-    public void deleteUser(int userId) throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
+    public void deleteUser(int userId, User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
             User existing = userDAO.findById(conn, userId);
             if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("USER_NOT_FOUND", "Không tìm thấy người dùng");
             }
-            if (existing.getBalance().compareTo(BigDecimal.ZERO) > 0) {
-                throw new BusinessException("BALANCE_EXISTS", "Lỗi: Tài khoản này vẫn còn số dư. Vui lòng rút tiền về 0đ trước khi xóa/khóa tài khoản!");
+            if (existing.getRole() == com.cyber.model.enums.UserRole.ADMIN) {
+                throw new BusinessException("SECURITY_ERROR", "Không được phép xóa tài khoản Quản trị viên (ADMIN).");
             }
+            if (existing.getBalance().compareTo(BigDecimal.ZERO) > 0) {
+                throw new BusinessException("BALANCE_EXISTS",
+                        "Tài khoản vẫn còn số dư " + com.cyber.util.FormatUtils.formatVND(existing.getBalance()) + ". Vui lòng rút tiền về 0đ trước khi xóa!");
+            }
+
             userDAO.deleteUser(conn, userId);
+
+            String action = String.format("Xóa (soft) User #%d (%s)", userId, existing.getUsername());
+            logService.log(conn, LogType.USER, actor, action, userId);
+
+            conn.commit();
         } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
             throw new BusinessException("DB_ERROR", "Lỗi xóa User: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
         }
     }
 
@@ -246,6 +271,46 @@ public class UserService {
             User staffActor = new User();
             staffActor.setUserId(staffId);
             logService.log(conn, LogType.USER, staffActor, reason, userId);
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
+            throw new BusinessException("DB_ERROR", "Lỗi trừ tiền: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
+        }
+    }
+
+    /**
+     * Trừ tiền thủ công cho User (Admin/Staff thao tác).
+     * Không cho số dư âm.
+     */
+    public void deductBalanceManual(int userId, BigDecimal amount, User actor) throws BusinessException {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("INVALID_AMOUNT", "Số tiền trừ phải lớn hơn 0.");
+        }
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            User user = userDAO.findById(conn, userId);
+            if (user == null) {
+                throw new BusinessException("USER_NOT_FOUND", "Không tìm thấy người dùng (ID=" + userId + ")");
+            }
+            if (user.getBalance().compareTo(amount) < 0) {
+                throw new BusinessException("INSUFFICIENT_FUNDS",
+                        "Số dư hiện tại là " + com.cyber.util.FormatUtils.formatVND(user.getBalance())
+                        + ", không đủ để trừ " + com.cyber.util.FormatUtils.formatVND(amount) + ". Số dư không được âm!");
+            }
+
+            userDAO.deductBalance(conn, userId, amount);
+
+            String action = String.format("Trừ tiền %s cho User #%d (%s)",
+                    com.cyber.util.FormatUtils.formatVND(amount), userId, user.getUsername());
+            logService.log(conn, LogType.USER, actor, action, userId);
 
             conn.commit();
         } catch (SQLException e) {

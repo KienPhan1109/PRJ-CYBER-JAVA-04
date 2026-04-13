@@ -30,16 +30,18 @@ public class ComputerManagementView {
             System.out.println("2. Thêm máy trạm mới");
             System.out.println("3. Sửa thông tin máy");
             System.out.println("4. Ẩn/Hiện máy trạm");
+            System.out.println("5. Xóa máy trạm");
             System.out.println("0. Quay lại");
             System.out.println("====================================");
 
-            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-4): ", 0, 4);
+            int choice = InputUtils.inputInt("Vui lòng chọn chức năng (0-5): ", 0, 5);
 
             switch (choice) {
                 case 1 -> displayList();
                 case 2 -> handleAdd();
                 case 3 -> handleEdit();
                 case 4 -> handleToggleHideShow();
+                case 5 -> handleDelete();
                 case 0 -> {
                     return;
                 }
@@ -181,6 +183,32 @@ public class ComputerManagementView {
             if (confirm.equalsIgnoreCase("Y")) {
                 computerService.toggleComputerStatus(id, adminUser);
                 PrintUtils.printSuccess("Đã " + action + " máy trạm [" + comp.getName() + "] thành công!");
+            } else {
+                System.out.println("Đã hủy thao tác.");
+            }
+        } catch (BusinessException e) {
+            PrintUtils.printError(e.getMessage());
+        }
+    }
+
+    private void handleDelete() {
+        System.out.println("\n--- XÓA MÁY TRẠM (VĨNH VIỄN) ---");
+        PrintUtils.printWarning("Lưu ý: Máy bị xóa sẽ không thể khôi phục. Lịch sử booking vẫn được giữ nguyên.");
+        PrintUtils.printWarning("Lưu ý: Chỉ có thể xóa máy đang ở trạng thái ẨN (HIDDEN).");
+        int id = InputUtils.inputInt("Nhập ID máy cần xóa (0 để hủy): ", 0, Integer.MAX_VALUE);
+        if (id == 0) return;
+
+        try {
+            Computer comp = computerService.getComputerById(id);
+            if (comp == null) {
+                PrintUtils.printWarning("Không tìm thấy máy với ID " + FormatUtils.formatId("C", id));
+                return;
+            }
+            System.out.println("Bạn sắp XÓA máy: " + comp.getName() + " (Khu vực: " + comp.getZone() + ")");
+            String confirm = InputUtils.inputString("Xác nhận XÓA? (Nhập 'DELETE' để xác nhận): ");
+            if (confirm.equals("DELETE")) {
+                computerService.deleteComputer(id, adminUser);
+                PrintUtils.printSuccess("Đã xóa máy trạm [" + comp.getName() + "] thành công!");
             } else {
                 System.out.println("Đã hủy thao tác.");
             }

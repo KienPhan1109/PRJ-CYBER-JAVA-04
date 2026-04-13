@@ -41,11 +41,10 @@ public class BookingDAOImpl implements IBookingDAO {
 
     @Override
     public boolean isComputerAvailable(Connection conn, int computerId, Timestamp start, Timestamp end) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM bookings WHERE computer_id = ? AND status != 'CANCELLED' AND (start_time < ? AND end_time > ?)";
+        // Máy không khả dụng nếu đang có đơn PENDING (chờ staff) hoặc ACTIVE
+        String sql = "SELECT COUNT(*) FROM bookings WHERE computer_id = ? AND status IN ('PENDING', 'ACTIVE')";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, computerId);
-            stmt.setTimestamp(2, end);
-            stmt.setTimestamp(3, start);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) return rs.getInt(1) == 0;
             }

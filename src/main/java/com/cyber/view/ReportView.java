@@ -39,8 +39,12 @@ public class ReportView {
                         showReport(LocalDate.now().withDayOfMonth(1).atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX));
                         break;
                     case 3:
-                        LocalDate start = InputUtils.inputLocalDate("Từ ngày", "yyyy-MM-dd");
-                        LocalDate end = InputUtils.inputLocalDate("Đến ngày", "yyyy-MM-dd");
+                        String startStr = InputUtils.inputString("Từ ngày (yyyy-MM-dd): ",
+                                "^\\d{4}-\\d{2}-\\d{2}$", "Định dạng không hợp lệ. VD: 2026-04-01");
+                        String endStr = InputUtils.inputString("Đến ngày (yyyy-MM-dd): ",
+                                "^\\d{4}-\\d{2}-\\d{2}$", "Định dạng không hợp lệ. VD: 2026-04-30");
+                        LocalDate start = LocalDate.parse(startStr);
+                        LocalDate end = LocalDate.parse(endStr);
                         if (start.isAfter(end)) {
                             System.out.println("Lỗi: Ngày bắt đầu không thể sau ngày kết thúc.");
                         } else {

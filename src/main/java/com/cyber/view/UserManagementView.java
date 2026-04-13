@@ -37,9 +37,11 @@ public class UserManagementView {
             System.out.println("3. Sửa thông tin người dùng");
             System.out.println("4. Khóa / Mở khóa tài khoản");
             System.out.println("5. Nạp tiền cho tài khoản");
+            System.out.println("6. Trừ tiền / Rút tiền");
+            System.out.println("7. Xóa tài khoản");
             System.out.println("0. Quay Lại");
 
-            int choice = InputUtils.inputInt("Chọn (0-5): ", 0, 5);
+            int choice = InputUtils.inputInt("Chọn (0-7): ", 0, 7);
             try {
                 switch (choice) {
                     case 1: showAllUsers();    break;
@@ -47,6 +49,8 @@ public class UserManagementView {
                     case 3: editUser();         break;
                     case 4: toggleUserStatus(); break;
                     case 5: topUpBalance();     break;
+                    case 6: deductBalance();    break;
+                    case 7: handleDeleteUser(); break;
                     case 0: return;
                 }
             } catch (BusinessException e) {
@@ -253,4 +257,48 @@ public class UserManagementView {
         userService.topUpUser(id, amount, adminUser);
         PrintUtils.printSuccess("Đã nạp " + FormatUtils.formatVND(amount) + " thành công cho User: " + targetUser.getUsername());
     }
+
+    private void deductBalance() throws BusinessException {
+        System.out.println("\n[TRỪ TIỀN / RÚT TIỀN]");
+        int id = InputUtils.inputInt("Nhập ID người dùng cần trừ tiền: ", 1, Integer.MAX_VALUE);
+
+        User targetUser = userService.getUserById(id);
+
+        if (targetUser.getRole() == UserRole.ADMIN) {
+            PrintUtils.printWarning("Không được phép trừ tiền tài khoản ADMIN.");
+            return;
+        }
+
+        System.out.println("Tài khoản: " + targetUser.getUsername() + " | Số dư hiện tại: " + FormatUtils.formatVND(targetUser.getBalance()));
+
+        if (targetUser.getBalance().compareTo(BigDecimal.ZERO) == 0) {
+            PrintUtils.printWarning("Tài khoản đã có số dư = 0đ, không cần trừ thêm.");
+            return;
+        }
+
+        BigDecimal amount = InputUtils.inputBigDecimal("Nhập số tiền muốn trừ (VND): ", BigDecimal.ONE);
+        
+        userService.deductBalanceManual(id, amount, adminUser);
+        PrintUtils.printSuccess("Đã trừ " + FormatUtils.formatVND(amount) + " thành công cho User: " + targetUser.getUsername());
+    }
+
+    private void handleDeleteUser() throws BusinessException {
+        System.out.println("\n[XÓA TÀI KHOẢN (VĨNH VIỄN)]");
+        PrintUtils.printWarning("Lưu ý: Tài khoản bị xóa sẽ không thể khôi phục. Dữ liệu lịch sử giao dịch vẫn được giữ.");
+        int id = InputUtils.inputInt("Nhập ID người dùng cần xóa (0 để hủy): ", 0, Integer.MAX_VALUE);
+        if (id == 0) return;
+
+        User targetUser = userService.getUserById(id);
+        System.out.println("Bạn sắp XÓA tài khoản: " + targetUser.getUsername() + " (" + targetUser.getFullName() + ")");
+        System.out.println("Số dư hiện tại: " + FormatUtils.formatVND(targetUser.getBalance()));
+
+        String confirm = InputUtils.inputString("Xác nhận XÓA? (Nhập 'DELETE' để xác nhận): ");
+        if (confirm.equals("DELETE")) {
+            userService.deleteUser(id, adminUser);
+            PrintUtils.printSuccess("Đã xóa tài khoản " + targetUser.getUsername() + " thành công!");
+        } else {
+            System.out.println("Đã hủy thao tác.");
+        }
+    }
 }
+

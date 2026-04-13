@@ -136,9 +136,11 @@ public class ComputerDAOImpl implements IComputerDAO {
 
     @Override
     public void deleteComputer(Connection conn, int computerId) throws SQLException {
-        String sql = "UPDATE computers SET status = 'HIDDEN' WHERE computer_id = ?";
+        String suffix = "_del_" + System.currentTimeMillis();
+        String sql = "UPDATE computers SET is_deleted = 1, name = CONCAT(name, ?) WHERE computer_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, computerId);
+            stmt.setString(1, suffix);
+            stmt.setInt(2, computerId);
             stmt.executeUpdate();
         }
     }
