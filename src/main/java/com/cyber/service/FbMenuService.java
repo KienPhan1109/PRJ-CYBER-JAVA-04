@@ -14,14 +14,6 @@ import java.util.Map;
 import com.cyber.model.User;
 import com.cyber.model.enums.LogType;
 
-/**
- * Service Layer cho quản lý Menu F&B.
- * Tuân thủ 3-Tier: View -> FbMenuService -> DAO.
- * View KHÔNG được gọi DAO trực tiếp.
- *
- * <p>Chỉ tầng này mới quản lý Connection và Transaction.
- * DAO chỉ nhận Connection được pass vào, không tự mở.</p>
- */
 public class FbMenuService {
 
     private static final FbMenuService INSTANCE = new FbMenuService();
@@ -37,13 +29,6 @@ public class FbMenuService {
         return INSTANCE;
     }
 
-    // -------------------------------------------------------
-    // READ Operations (không cần transaction)
-    // -------------------------------------------------------
-
-    /**
-     * Lấy toàn bộ menu đang ACTIVE hoặc OUT_OF_STOCK (cho User).
-     */
     public List<FbMenuItem> getAllActiveMenuItems() throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             return menuItemDAO.getAllActiveItems(conn);
@@ -52,9 +37,7 @@ public class FbMenuService {
         }
     }
 
-    /**
-     * Lấy toàn bộ menu bao gồm cả HIDDEN (cho Admin).
-     */
+
     public List<FbMenuItem> getAllMenuItemsForAdmin() throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             return menuItemDAO.getAllItemsForAdmin(conn);
@@ -63,11 +46,6 @@ public class FbMenuService {
         }
     }
 
-    /**
-     * Tìm MenuItem theo ID.
-     *
-     * @throws BusinessException ERR_ITEM_NOT_FOUND nếu không tìm thấy
-     */
     public FbMenuItem getMenuItemById(int menuItemId) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             FbMenuItem item = menuItemDAO.findById(conn, menuItemId);
@@ -80,9 +58,6 @@ public class FbMenuService {
         }
     }
 
-    /**
-     * Kiểm tra xem tên món đã tồn tại trong DB chưa (dùng cho validate tức thì).
-     */
     public boolean isNameExists(String name) throws BusinessException {
         try (Connection conn = DatabaseConnection.getConnection()) {
             return menuItemDAO.findByName(conn, name) != null;
@@ -91,17 +66,6 @@ public class FbMenuService {
         }
     }
 
-
-    // -------------------------------------------------------
-    // WRITE Operations (cần transaction khi multi-step)
-    // -------------------------------------------------------
-
-    /**
-     * Tạo mới một MenuItem. Validate trước khi ghi DB.
-     *
-     * @return ID của MenuItem vừa tạo
-     * @throws BusinessException ERR_VALIDATION nếu dữ liệu không hợp lệ
-     */
     public int createMenuItem(FbMenuItem item, User actor) throws BusinessException {
         validateMenuItem(item);
         Connection conn = null;
@@ -130,16 +94,10 @@ public class FbMenuService {
         }
     }
 
-    /** Backward compat - không có actor thì không log */
     public int createMenuItem(FbMenuItem item) throws BusinessException {
         return createMenuItem(item, null);
     }
 
-    /**
-     * Cập nhật thông tin một MenuItem.
-     *
-     * @throws BusinessException ERR_ITEM_NOT_FOUND | ERR_VALIDATION
-     */
     public void updateMenuItem(FbMenuItem item, User actor) throws BusinessException {
         validateMenuItem(item);
         Connection conn = null;
@@ -179,10 +137,6 @@ public class FbMenuService {
         updateMenuItem(item, null);
     }
 
-    /**
-     * Thay đổi trạng thái Món ăn (Toggle): Ẩn <-> Hiện.
-     * @throws BusinessException ERR_ITEM_NOT_FOUND
-     */
     public void toggleMenuItemStatus(int menuItemId, User actor) throws BusinessException {
         Connection conn = null;
         try {
@@ -221,12 +175,6 @@ public class FbMenuService {
         toggleMenuItemStatus(menuItemId, null);
     }
 
-
-
-    // -------------------------------------------------------
-    // Private Validation
-    // -------------------------------------------------------
-
     private void validateMenuItem(FbMenuItem item) throws BusinessException {
         if (item == null) {
             throw new BusinessException("ERR_VALIDATION", "Dữ liệu món không được null.");
@@ -246,9 +194,6 @@ public class FbMenuService {
         // description và tags cho phép null — không validate
     }
 
-    /**
-     * Xóa vĩnh viễn (Soft Delete) một món ăn.
-     */
     public void deleteMenuItem(int menuItemId, User actor) throws BusinessException {
         Connection conn = null;
         try {

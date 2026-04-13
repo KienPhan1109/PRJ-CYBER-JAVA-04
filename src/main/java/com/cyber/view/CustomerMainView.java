@@ -19,7 +19,7 @@ import com.cyber.service.FbOrderService.FbCartItem;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
-import com.cyber.util.TablePaginationUtils;
+
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -178,7 +178,7 @@ public class CustomerMainView {
                         
                         PrintUtils.printTableSeparator(70);
                         if (minsToRes > 5) {
-                            System.out.printf("| %-66s |\n", ColorConstant.YELLOW + "⚠️ TIẾP THEO: Có người đặt lúc " + FormatUtils.formatTimestamp(nextRes.getStartTime()) + " (Khoảng " + minsToRes + " phút nữa)" + ColorConstant.RESET);
+                            System.out.printf("| %-66s |\n", ColorConstant.YELLOW + "TIẾP THEO: Có người đặt lúc " + FormatUtils.formatTimestamp(nextRes.getStartTime()) + " (Khoảng " + minsToRes + " phút nữa)" + ColorConstant.RESET);
                         } else {
                             System.out.println("| \033[31m[!!!] CẢNH BÁO ĐỎ: Hệ thống sẽ NGẮT MÁY BẢN TRONG " + minsToRes + " PHÚT TỚI!\033[0m |");
                             System.out.println("| \033[31m[!!!] Vui lòng lưu lại công việc của bạn ngay bây giờ.\033[0m               |");
@@ -246,16 +246,23 @@ public class CustomerMainView {
         }
 
         // Phân trang bảng máy
-        String[] headers = {"ID", "Tên Máy", "Khu Vực", "Cấu hình", "Đơn giá/h"};
-        int[] widths = {5, 15, 12, 35, 15};
+        System.out.println("\n" + "=".repeat(85));
+        System.out.println("  DANH SÁCH MÁY TRỐNG");
+        System.out.println("=".repeat(85));
+        System.out.printf("%-5s | %-15s | %-12s | %-35s | %-15s%n", "ID", "Tên Máy", "Khu Vực", "Cấu hình", "Đơn giá/h");
+        System.out.println("-".repeat(85));
 
-        TablePaginationUtils.display(availableComputers, "DANH SÁCH MÁY TRỐNG", headers, widths, c -> new String[]{
-                String.valueOf(c.getComputerId()),
-                FormatUtils.truncate(c.getName(), 15),
-                FormatUtils.formatValue(c.getZone()),
-                FormatUtils.truncate(c.getHardwareConfig(), 35),
-                FormatUtils.formatVND(c.getPricePerHour())
-        }, "Chọn máy");
+        for (Computer c : availableComputers) {
+            System.out.printf("%-5s | %-15s | %-12s | %-35s | %-15s%n",
+                    String.valueOf(c.getComputerId()),
+                    FormatUtils.truncate(c.getName(), 15),
+                    FormatUtils.formatValue(c.getZone()),
+                    FormatUtils.truncate(c.getHardwareConfig(), 35),
+                    FormatUtils.formatVND(c.getPricePerHour())
+            );
+        }
+        System.out.println("=".repeat(85));
+        System.out.println("Tổng cộng: " + availableComputers.size() + " máy trống.");
 
         int computerId = InputUtils.inputInt("Nhập ID máy muốn đặt (0 để hủy): ", 0, Integer.MAX_VALUE);
         if (computerId == 0) { System.out.println("Đã hủy đặt máy."); return; }
@@ -361,16 +368,23 @@ public class CustomerMainView {
         }
 
         // Phân trang
-        String[] headers = {"ID", "Tên Máy", "Khu Vực", "Cấu hình", "Đơn giá/h"};
-        int[] widths = {5, 15, 12, 35, 15};
+        System.out.println("\n" + "=".repeat(85));
+        System.out.println("  DANH SÁCH MÁY TRỐNG LÚC " + dateTimeStr);
+        System.out.println("=".repeat(85));
+        System.out.printf("%-5s | %-15s | %-12s | %-35s | %-15s%n", "ID", "Tên Máy", "Khu Vực", "Cấu hình", "Đơn giá/h");
+        System.out.println("-".repeat(85));
 
-        TablePaginationUtils.display(available, "DANH SÁCH MÁY TRỐNG LÚC " + dateTimeStr, headers, widths, c -> new String[]{
-                String.valueOf(c.getComputerId()),
-                FormatUtils.truncate(c.getName(), 15),
-                FormatUtils.formatValue(c.getZone()),
-                FormatUtils.truncate(c.getHardwareConfig(), 35),
-                FormatUtils.formatVND(c.getPricePerHour())
-        }, "Tiếp tục chọn");
+        for (Computer c : available) {
+            System.out.printf("%-5s | %-15s | %-12s | %-35s | %-15s%n",
+                    String.valueOf(c.getComputerId()),
+                    FormatUtils.truncate(c.getName(), 15),
+                    FormatUtils.formatValue(c.getZone()),
+                    FormatUtils.truncate(c.getHardwareConfig(), 35),
+                    FormatUtils.formatVND(c.getPricePerHour())
+            );
+        }
+        System.out.println("=".repeat(85));
+        System.out.println("Tổng cộng: " + available.size() + " máy khả dụng.");
 
         int computerId = InputUtils.inputInt("Nhập ID máy muốn đặt trước (0 để hủy): ", 0, Integer.MAX_VALUE);
         if (computerId == 0) { System.out.println("Đã hủy."); return; }
@@ -416,18 +430,25 @@ public class CustomerMainView {
             return;
         }
         
-        String[] headers = {"ID", "Máy", "Bắt đầu", "Kết thúc", "Tổng tiền", "Đơn giá/h", "Trạng thái"};
-        int[] widths = {5, 12, 20, 20, 15, 15, 24};
+        System.out.println("\n" + "=".repeat(120));
+        System.out.println("  LỊCH SỬ ĐẶT MÁY");
+        System.out.println("=".repeat(120));
+        System.out.printf("%-5s | %-12s | %-20s | %-20s | %-15s | %-15s | %-24s%n", "ID", "Máy", "Bắt đầu", "Kết thúc", "Tổng tiền", "Đơn giá/h", "Trạng thái");
+        System.out.println("-".repeat(120));
 
-        TablePaginationUtils.display(list, "LỊCH SỬ ĐẶT MÁY", headers, widths, b -> new String[]{
-                String.valueOf(b.getBookingId()),
-                FormatUtils.formatValue(b.getComputerName() != null ? b.getComputerName() : String.valueOf(b.getComputerId())),
-                FormatUtils.formatTimestamp(b.getStartTime()),
-                FormatUtils.formatTimestamp(b.getEndTime()),
-                FormatUtils.formatVND(b.getTotalFee()),
-                FormatUtils.formatVND(b.getHourlyRateSnapshot()),
-                FormatUtils.formatBookingStatus(b.getStatus())
-        });
+        for (Booking b : list) {
+            System.out.printf("%-5s | %-12s | %-20s | %-20s | %-15s | %-15s | %-24s%n",
+                    String.valueOf(b.getBookingId()),
+                    FormatUtils.formatValue(b.getComputerName() != null ? b.getComputerName() : String.valueOf(b.getComputerId())),
+                    FormatUtils.formatTimestamp(b.getStartTime()),
+                    FormatUtils.formatTimestamp(b.getEndTime()),
+                    FormatUtils.formatVND(b.getTotalFee()),
+                    FormatUtils.formatVND(b.getHourlyRateSnapshot()),
+                    FormatUtils.formatBookingStatus(b.getStatus())
+            );
+        }
+        System.out.println("=".repeat(120));
+        System.out.println("Tổng cộng: " + list.size() + " bản ghi.");
     }
 
     private void viewCurrentStatus() throws BusinessException {
@@ -604,13 +625,17 @@ public class CustomerMainView {
      * In bảng menu có phân trang.
      */
     private void printMenuTablePaginated(List<FbMenuItem> menuItems) {
-        String[] headers = {"ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái"};
-        int[] widths = {6, 10, 22, 30, 12, 6, 5, 19, 10, 21};
+        System.out.println("\n" + "=".repeat(155));
+        System.out.println("  MENU F&B");
+        System.out.println("=".repeat(155));
+        System.out.printf("%-6s | %-10s | %-22s | %-30s | %-12s | %-6s | %-5s | %-19s | %-10s | %-21s%n",
+                "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái");
+        System.out.println("-".repeat(155));
 
-        TablePaginationUtils.display(menuItems, "MENU F&B", headers, widths, m -> {
+        for (FbMenuItem m : menuItems) {
             String stockStr = m.getStockQuantity() > 0 ? String.valueOf(m.getStockQuantity()) : "[HẾT]";
             String desc = FormatUtils.truncate(m.getDescription() != null ? m.getDescription() : "(Không có)", 28);
-            return new String[]{
+            System.out.printf("%-6s | %-10s | %-22s | %-30s | %-12s | %-6s | %-5s | %-19s | %-10s | %-21s%n",
                     FormatUtils.formatId("IT", m.getMenuItemId()),
                     m.getCategoryName() != null ? m.getCategoryName() : "-",
                     FormatUtils.truncate(m.getName(), 22),
@@ -621,8 +646,10 @@ public class CustomerMainView {
                     FormatUtils.formatFbTemperature(m.getTemperatureLevel()),
                     FormatUtils.formatFbAvailability(m.getAvailability()),
                     FormatUtils.formatFbStatus(m.getStatus())
-            };
-        });
+            );
+        }
+        System.out.println("=".repeat(155));
+        System.out.println("Tổng cộng: " + menuItems.size() + " món ăn.");
     }
 
     private void printCartSummary(List<FbCartItem> cart, BigDecimal preDiscountTotal,

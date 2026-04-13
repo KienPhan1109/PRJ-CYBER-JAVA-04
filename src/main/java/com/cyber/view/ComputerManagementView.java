@@ -1,6 +1,8 @@
 package com.cyber.view;
 
-import com.cyber.util.*;
+import com.cyber.util.FormatUtils;
+import com.cyber.util.InputUtils;
+import com.cyber.util.PrintUtils;
 
 import com.cyber.exception.BusinessException;
 import com.cyber.model.Computer;
@@ -49,17 +51,24 @@ public class ComputerManagementView {
     private void displayList() {
         try {
             List<Computer> computers = computerService.getAllComputers();
-            String[] headers = {"ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá / Giờ"};
-            int[] widths = {7, 15, 12, 30, 12, 15};
+            System.out.println("\n" + "=".repeat(100));
+            System.out.println("  DANH SÁCH MÁY TOÀN HỆ THỐNG");
+            System.out.println("=".repeat(100));
+            System.out.printf("%-7s | %-15s | %-12s | %-30s | %-12s | %-15s%n", "ID Máy", "Tên", "Khu Vực", "Cấu hình", "Trạng thái", "Giá / Giờ");
+            System.out.println("-".repeat(100));
 
-            TablePaginationUtils.display(computers, "DANH SÁCH MÁY TOÀN HỆ THỐNG", headers, widths, c -> new String[]{
-                    FormatUtils.formatId("C", c.getComputerId()),
-                    FormatUtils.truncate(c.getName(), 15),
-                    FormatUtils.formatValue(c.getZone()),
-                    FormatUtils.truncate(c.getHardwareConfig(), 30),
-                    FormatUtils.formatComputerStatus(c.getStatus()),
-                    FormatUtils.formatVND(c.getPricePerHour())
-            });
+            for (Computer c : computers) {
+                System.out.printf("%-7s | %-15s | %-12s | %-30s | %-21s | %-15s%n",
+                        FormatUtils.formatId("C", c.getComputerId()),
+                        FormatUtils.truncate(c.getName(), 15),
+                        FormatUtils.formatValue(c.getZone()),
+                        FormatUtils.truncate(c.getHardwareConfig(), 30),
+                        FormatUtils.formatComputerStatus(c.getStatus()),
+                        FormatUtils.formatVND(c.getPricePerHour())
+                );
+            }
+            System.out.println("=".repeat(100));
+            System.out.println("Tổng cộng: " + computers.size() + " máy tính.");
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }

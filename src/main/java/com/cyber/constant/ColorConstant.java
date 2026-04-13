@@ -9,5 +9,5 @@ public class ColorConstant {
     public static final String PURPLE = "\033[35m";
     public static final String CYAN = "\033[36m";
     public static final String GRAY = "\033[37m";
-    public static final String WHITE = "\033[97m"; // White sáng
+    public static final String WHITE = "\033[97m";
 }

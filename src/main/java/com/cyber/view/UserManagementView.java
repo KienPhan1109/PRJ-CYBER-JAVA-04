@@ -11,7 +11,7 @@ import com.cyber.service.UserService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
-import com.cyber.util.TablePaginationUtils;
+
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -73,18 +73,25 @@ public class UserManagementView {
 
     /** In bảng User có phân trang (dùng chung) */
     private void printUserTable(List<User> users, String title) {
-        String[] headers = {"ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái"};
-        int[] widths = {5, 15, 20, 12, 15, 12, 24};
+        System.out.println("\n" + "=".repeat(110));
+        System.out.println("  " + title);
+        System.out.println("=".repeat(110));
+        System.out.printf("%-5s | %-15s | %-20s | %-12s | %-15s | %-10s | %-20s%n", "ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái");
+        System.out.println("-".repeat(110));
 
-        TablePaginationUtils.display(users, title, headers, widths, u -> new String[]{
-                String.valueOf(u.getUserId()),
-                FormatUtils.truncate(u.getUsername(), 15),
-                FormatUtils.truncate(u.getFullName(), 20),
-                FormatUtils.formatValue(u.getPhone()),
-                FormatUtils.formatVND(u.getBalance()),
-                u.getRole() != null ? u.getRole().name() : "---",
-                FormatUtils.formatUserStatus(u.getStatus())
-        });
+        for (User u : users) {
+             System.out.printf("%-5s | %-15s | %-20s | %-12s | %-15s | %-10s | %-20s%n",
+                    String.valueOf(u.getUserId()),
+                    FormatUtils.truncate(u.getUsername(), 15),
+                    FormatUtils.truncate(u.getFullName(), 20),
+                    FormatUtils.formatValue(u.getPhone()),
+                    FormatUtils.formatVND(u.getBalance()),
+                    u.getRole() != null ? u.getRole().name() : "---",
+                    FormatUtils.formatUserStatus(u.getStatus())
+            );
+        }
+        System.out.println("=".repeat(110));
+        System.out.println("Tổng cộng: " + users.size() + " người dùng.");
     }
 
     private void addUser() throws BusinessException {

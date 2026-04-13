@@ -7,7 +7,7 @@ import com.cyber.service.LogService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
-import com.cyber.util.TablePaginationUtils;
+
 
 import java.util.List;
 
@@ -89,15 +89,23 @@ public class AdminMainView {
     }
 
     private void printLogTable(List<SystemLog> logs, String title) {
-        String[] headers = {"ID", "Type", "Actor ID", "Hành động", "Thời gian"};
-        int[] widths = {6, 8, 10, 60, 20};
+        System.out.println("\n" + "=".repeat(110));
+        System.out.println("  AUDIT LOG — " + title);
+        System.out.println("=".repeat(110));
+        System.out.printf("%-6s | %-8s | %-10s | %-60s | %-20s%n", "ID", "Type", "Actor ID", "Hành động", "Thời gian");
+        System.out.println("-".repeat(110));
 
-        TablePaginationUtils.display(logs, "AUDIT LOG — " + title, headers, widths, log -> new String[]{
-                String.valueOf(log.getId()),
-                log.getLogType().name(),
-                String.valueOf(log.getActorId()),
-                FormatUtils.truncate(log.getAction(), 60),
-                log.getCreatedAt() != null ? log.getCreatedAt().toString().substring(0, 19) : "N/A"
-        });
+        for (SystemLog log : logs) {
+            String timeStr = log.getCreatedAt() != null ? log.getCreatedAt().toString().substring(0, 19) : "N/A";
+            System.out.printf("%-6s | %-8s | %-10s | %-60s | %-20s%n",
+                    String.valueOf(log.getId()),
+                    log.getLogType().name(),
+                    String.valueOf(log.getActorId()),
+                    FormatUtils.truncate(log.getAction(), 60),
+                    timeStr
+            );
+        }
+        System.out.println("=".repeat(110));
+        System.out.println("Tổng cộng: " + logs.size() + " bản ghi.");
     }
 }

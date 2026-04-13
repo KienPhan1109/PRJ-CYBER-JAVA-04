@@ -7,7 +7,7 @@ import com.cyber.service.FbMenuService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
-import com.cyber.util.TablePaginationUtils;
+
 
 import java.util.List;
 
@@ -58,21 +58,31 @@ public class FbMenuManagementView {
     private void displayMenuList() {
         try {
             List<FbMenuItem> items = menuService.getAllMenuItemsForAdmin();
-            String[] headers = {"ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái"};
-            int[] widths = {6, 10, 22, 30, 12, 6, 5, 19, 10, 21};
+            System.out.println("\n" + "=".repeat(155));
+            System.out.println("  DANH SÁCH MÓN TOÀN HỆ THỐNG");
+            System.out.println("=".repeat(155));
+            System.out.printf("%-6s | %-12s | %-22s | %-30s | %-12s | %-6s | %-5s | %-10s | %-10s | %-21s%n",
+                    "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái");
+            System.out.println("-".repeat(155));
 
-            TablePaginationUtils.display(items, "DANH SÁCH MÓN TOÀN HỆ THỐNG", headers, widths, item -> new String[]{
-                    FormatUtils.formatId("IT", item.getMenuItemId()),
-                    FormatUtils.formatValue(item.getCategoryName()),
-                    FormatUtils.truncate(item.getName(), 22),
-                    FormatUtils.truncate(item.getDescription(), 30),
-                    FormatUtils.formatVND(item.getBasePrice()),
-                    String.valueOf(item.getStockQuantity()),
-                    String.valueOf(item.getPrepTimeInMinutes()),
-                    FormatUtils.formatFbTemperature(item.getTemperatureLevel()),
-                    FormatUtils.formatFbAvailability(item.getAvailability()),
-                    FormatUtils.formatFbStatus(item.getStatus())
-            });
+            for (FbMenuItem item : items) {
+                String stockStr = item.getStockQuantity() > 0 ? String.valueOf(item.getStockQuantity()) : "[HẾT]";
+                String desc = FormatUtils.truncate(item.getDescription() != null ? item.getDescription() : "(Không có)", 30);
+                System.out.printf("%-6s | %-12s | %-22s | %-30s | %-12s | %-6s | %-5s | %-19s | %-10s | %-21s%n",
+                        FormatUtils.formatId("IT", item.getMenuItemId()),
+                        FormatUtils.formatValue(item.getCategoryName()),
+                        FormatUtils.truncate(item.getName(), 22),
+                        desc,
+                        FormatUtils.formatVND(item.getBasePrice()),
+                        stockStr,
+                        String.valueOf(item.getPrepTimeInMinutes()),
+                        FormatUtils.formatFbTemperature(item.getTemperatureLevel()),
+                        FormatUtils.formatFbAvailability(item.getAvailability()),
+                        FormatUtils.formatFbStatus(item.getStatus())
+                );
+            }
+            System.out.println("=".repeat(155));
+            System.out.println("Tổng cộng: " + items.size() + " món ăn.");
         } catch (BusinessException e) {
             PrintUtils.printError(e.getMessage());
         }
