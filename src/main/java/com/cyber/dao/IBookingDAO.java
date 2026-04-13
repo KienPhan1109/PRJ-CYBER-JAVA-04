@@ -13,6 +13,8 @@ public interface IBookingDAO {
 
     boolean isComputerAvailable(Connection conn, int computerId, Timestamp start, Timestamp end) throws SQLException;
 
+    boolean isComputerAvailableForReservation(Connection conn, int computerId) throws SQLException;
+
     List<Booking> findActiveBookingsByUserId(Connection conn, int userId) throws SQLException;
 
     List<Booking> findAllBookingsByUserId(Connection conn, int userId) throws SQLException;

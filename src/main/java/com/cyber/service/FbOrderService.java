@@ -162,10 +162,16 @@ public class FbOrderService {
                 throw new BusinessException("ERR_USER_LOCKED", "Tài khoản đang bị khóa.");
             }
 
-            // 2. Tính tổng kết từ giỏ hàng
+            // 2. Tính tổng kết từ giỏ hàng (Sau khi trừ giảm giá)
             BigDecimal totalAmount = cartItems.stream()
                     .map(FbCartItem::getFinalPrice)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            BigDecimal totalDiscount = cartItems.stream()
+                    .map(i -> i.getDiscountApplied() != null ? i.getDiscountApplied() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            totalAmount = totalAmount.subtract(totalDiscount);
 
             if (currentUser.getBalance().compareTo(totalAmount) < 0) {
                 throw new BusinessException("ERR_INSUFFICIENT_BALANCE",

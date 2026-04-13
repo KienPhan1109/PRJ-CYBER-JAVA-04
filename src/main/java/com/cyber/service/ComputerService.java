@@ -61,6 +61,28 @@ public class ComputerService {
         }
     }
 
+    /**
+     * Lấy danh sách máy khả dụng cho luồng ĐẶT TRƯỚC.
+     * Logic: Máy phải AVAILABLE và không có booking nào ở trạng thái RESERVED.
+     */
+    public List<Computer> getAvailableComputersForReservation(com.cyber.model.enums.ComputerZone zone) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return computerDAO.getAllActiveComputers(conn).stream()
+                .filter(c -> c.getStatus() == com.cyber.model.enums.ComputerStatus.AVAILABLE
+                          && (zone == null || c.getZone() == zone))
+                .filter(c -> {
+                    try {
+                        return bookingDAO.isComputerAvailableForReservation(conn, c.getComputerId());
+                    } catch (SQLException e) {
+                        return false;
+                    }
+                })
+                .collect(java.util.stream.Collectors.toList());
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi lấy danh sách máy cho đặt trước: " + e.getMessage());
+        }
+    }
+
     public void addComputer(Computer computer, User actor) throws BusinessException {
         Connection conn = null;
         try {

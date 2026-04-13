@@ -53,6 +53,22 @@ public class BookingDAOImpl implements IBookingDAO {
         return false;
     }
 
+    /**
+     * Kiểm tra máy có đang bị đặt trước (RESERVED) không.
+     * Nếu máy đã có booking RESERVED → không khả dụng cho đặt trước.
+     */
+    @Override
+    public boolean isComputerAvailableForReservation(Connection conn, int computerId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM bookings WHERE computer_id = ? AND status = 'RESERVED'";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, computerId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) return rs.getInt(1) == 0;
+            }
+        }
+        return false;
+    }
+
     @Override
     public boolean hasDependentBookings(Connection conn, int computerId) throws SQLException {
         String sql = "SELECT 1 FROM bookings WHERE computer_id = ? LIMIT 1";

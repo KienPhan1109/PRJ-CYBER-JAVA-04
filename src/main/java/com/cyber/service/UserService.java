@@ -155,6 +155,18 @@ public class UserService {
                 throw new BusinessException("SECURITY_ERROR", "Không được phép chỉnh sửa thông tin của Quản trị viên (ADMIN).");
             }
 
+            // Kiểm tra trùng username nếu username thay đổi
+            if (!existing.getUsername().equalsIgnoreCase(user.getUsername())) {
+                List<User> allUsers = userDAO.getAllUsers(conn);
+                boolean duplicateExists = allUsers.stream()
+                        .anyMatch(u -> u.getUserId() != user.getUserId()
+                                && u.getUsername().equalsIgnoreCase(user.getUsername()));
+                if (duplicateExists) {
+                    throw new BusinessException("DUPLICATE_USERNAME",
+                            "Tên tài khoản '" + user.getUsername() + "' đã tồn tại! Vui lòng chọn tên khác.");
+                }
+            }
+
             conn.setAutoCommit(false);
             try {
                 userDAO.updateUser(conn, user);

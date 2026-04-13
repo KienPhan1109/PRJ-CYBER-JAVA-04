@@ -56,10 +56,13 @@ public class FbMenuItem {
         System.out.println(isEdit ? "Danh mục (Cũ: " + this.categoryId + "):" : "Chọn danh mục:");
         System.out.println("1. FOOD | 2. DRINK | 3. SNACK | 4. TOPPING");
         if (isEdit) {
-            this.categoryId = InputUtils.inputIntUpdate(
-                    "Lựa chọn mới (1-4) [Enter giữ nguyên]: ", this.categoryId, 1, 4);
+            int oldChoice = (this.categoryId == 5) ? 4 : this.categoryId;
+            int choice = InputUtils.inputIntUpdate(
+                    "Lựa chọn mới (1-4) [Enter giữ nguyên]: ", oldChoice, 1, 4);
+            this.categoryId = (choice == 4) ? 5 : choice;
         } else {
-            this.categoryId = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
+            int choice = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
+            this.categoryId = (choice == 4) ? 5 : choice;
         }
 
         // Mô tả (cho phép null)
@@ -76,7 +79,7 @@ public class FbMenuItem {
         // Giá gốc
         if (isEdit) {
             this.basePrice = InputUtils.inputBigDecimalUpdate(
-                    "Giá gốc mới [Enter giữ nguyên]: ", this.basePrice, BigDecimal.ZERO);
+                    "Giá gốc mới (Cũ: " + FormatUtils.formatVND(this.basePrice) + ") [Enter giữ nguyên]: ", this.basePrice, BigDecimal.ZERO);
         } else {
             this.basePrice = InputUtils.inputBigDecimal("Giá gốc (VND): ", BigDecimal.ZERO);
         }
@@ -84,7 +87,7 @@ public class FbMenuItem {
         // Tồn kho
         if (isEdit) {
             this.stockQuantity = InputUtils.inputIntUpdate(
-                    "Tồn kho mới [Enter giữ nguyên]: ", this.stockQuantity, 0, 99999);
+                    "Tồn kho mới (Cũ: " + this.stockQuantity + ") [Enter giữ nguyên]: ", this.stockQuantity, 0, 99999);
         } else {
             this.stockQuantity = InputUtils.inputInt("Tồn kho ban đầu: ", 0, 99999);
         }
@@ -92,17 +95,15 @@ public class FbMenuItem {
         // Thời gian chuẩn bị
         if (isEdit) {
             this.prepTimeInMinutes = InputUtils.inputIntUpdate(
-                    "Thời gian chuẩn bị (phút) [Enter giữ nguyên]: ", this.prepTimeInMinutes, 0, 120);
+                    "Thời gian chuẩn bị mới (Cũ: " + this.prepTimeInMinutes + " phút) [Enter giữ nguyên]: ", this.prepTimeInMinutes, 0, 120);
         } else {
             this.prepTimeInMinutes = InputUtils.inputInt("Thời gian chuẩn bị (phút): ", 0, 120);
         }
 
-
-
         // Khung giờ phục vụ
         if (isEdit) {
             this.availability = InputUtils.inputStringUpdate(
-                    "Khung giờ [Enter giữ nguyên]: ", this.availability != null ? this.availability : "ALL");
+                    "Khung giờ phục vụ mới (Cũ: " + this.availability + ") [Enter giữ nguyên]: ", this.availability != null ? this.availability : "ALL");
         } else {
             this.availability = InputUtils.inputString("Khung giờ phục vụ (ALL hoặc VD: 06:00-22:00): ");
         }

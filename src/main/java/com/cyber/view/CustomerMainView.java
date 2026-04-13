@@ -175,7 +175,7 @@ public class CustomerMainView {
                         
                         PrintUtils.printTableSeparator(70);
                         if (minsToRes > 5) {
-                            System.out.printf("| %-66s |\n", "⚠️ TIẾP THEO: Có người đặt lúc " + FormatUtils.formatTimestamp(nextRes.getStartTime()) + " (Khoảng " + minsToRes + " phút nữa)");
+                            System.out.printf("| %-66s |\n", com.cyber.util.ColorConst.YELLOW + "⚠️ TIẾP THEO: Có người đặt lúc " + FormatUtils.formatTimestamp(nextRes.getStartTime()) + " (Khoảng " + minsToRes + " phút nữa)" + com.cyber.util.ColorConst.RESET);
                         } else {
                             System.out.println("| \033[31m[!!!] CẢNH BÁO ĐỎ: Hệ thống sẽ NGẮT MÁY BẢN TRONG " + minsToRes + " PHÚT TỚI!\033[0m |");
                             System.out.println("| \033[31m[!!!] Vui lòng lưu lại công việc của bạn ngay bây giờ.\033[0m               |");
@@ -374,9 +374,10 @@ public class CustomerMainView {
         java.sql.Timestamp endTime = new java.sql.Timestamp(startTime.getTime() + 3600000L);
 
         // Hiển thị toàn bộ máy (không chọn zone), có phân trang
-        List<Computer> available = computerService.getAvailableComputersByZone(null, startTime, endTime);
+        // Dùng method riêng cho đặt trước: chỉ loại máy đã có RESERVED
+        List<Computer> available = computerService.getAvailableComputersForReservation(null);
         if (available.isEmpty()) {
-            PrintUtils.printWarning("Không có máy nào khả dụng vào thời gian bạn chọn.");
+            PrintUtils.printWarning("Không có máy nào khả dụng để đặt trước.");
             return;
         }
 
@@ -514,7 +515,7 @@ public class CustomerMainView {
             for (FbOrder o : allOrders) {
                 String statusVn = switch (o.getStatus().name()) {
                     case "PENDING"   -> com.cyber.util.ColorConst.YELLOW + "Chờ xử lý"    + com.cyber.util.ColorConst.RESET;
-                    case "PREPARING" -> com.cyber.util.ColorConst.BLUE   + "Đang pha chế"  + com.cyber.util.ColorConst.RESET;
+                    case "PREPARING" -> com.cyber.util.ColorConst.BLUE   + "Đang làm"      + com.cyber.util.ColorConst.RESET;
                     case "DELIVERED" -> com.cyber.util.ColorConst.GREEN  + "Đã giao"       + com.cyber.util.ColorConst.RESET;
                     case "CANCELLED" -> com.cyber.util.ColorConst.RED    + "Đã hủy"        + com.cyber.util.ColorConst.RESET;
                     default          -> o.getStatus().name();
