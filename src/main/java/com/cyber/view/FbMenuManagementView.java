@@ -67,19 +67,19 @@ public class FbMenuManagementView {
                 int start = (currentPage - 1) * pageSize;
                 int end = Math.min(start + pageSize, items.size());
 
-                System.out.println("\n" + "=".repeat(150));
+                System.out.println("\n" + "=".repeat(140));
                 System.out.println("DANH SÁCH MÓN TOÀN HỆ THỐNG");
-                System.out.println("=".repeat(150));
-                System.out.printf("%-6s | %-10s | %-20s | %-30s | %-12s | %-6s | %-5s | %-10s | %-10s | %-12s%n",
+                System.out.println("=".repeat(140));
+                System.out.printf("%-6s | %-10s | %-22s | %-30s | %-12s | %-6s | %-5s | %-10s | %-10s | %-12s%n",
                         "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái");
-                System.out.println("-".repeat(150));
+                System.out.println("-".repeat(140));
 
                 for (int i = start; i < end; i++) {
                     FbMenuItem item = items.get(i);
-                    System.out.printf("%-6s | %-10s | %-20s | %-30s | %-12s | %-6d | %-5d | %-19s | %-10s | %-21s%n",
+                    System.out.printf("%-6s | %-10s | %-22s | %-30s | %-12s | %-6d | %-5d | %-19s | %-10s | %-21s%n",
                             FormatUtils.formatId("IT", item.getMenuItemId()),
                             FormatUtils.formatValue(item.getCategoryName()),
-                            FormatUtils.truncate(item.getName(), 20),
+                            FormatUtils.truncate(item.getName(), 22),
                             FormatUtils.truncate(item.getDescription()),
                             FormatUtils.formatVND(item.getBasePrice()),
                             item.getStockQuantity(),
@@ -88,7 +88,7 @@ public class FbMenuManagementView {
                             FormatUtils.formatFbAvailability(item.getAvailability()),
                             FormatUtils.formatFbStatus(item.getStatus()));
                 }
-                System.out.println("=".repeat(150));
+                System.out.println("=".repeat(140));
                 System.out.println("Tổng: " + items.size() + " món | Trang " + currentPage + "/" + totalPages);
 
                 if (totalPages <= 1) break;

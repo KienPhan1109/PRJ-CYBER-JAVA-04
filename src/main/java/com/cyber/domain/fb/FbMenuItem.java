@@ -15,7 +15,7 @@ public class FbMenuItem {
     private BigDecimal basePrice;
     private int stockQuantity;
     private int prepTimeInMinutes;
-    private String itemTags;
+
     private String availability;
     private FbTemperature temperatureLevel;
     private FBStatus status;
@@ -97,16 +97,7 @@ public class FbMenuItem {
             this.prepTimeInMinutes = InputUtils.inputInt("Thời gian chuẩn bị (phút): ", 0, 120);
         }
 
-        // Tags (cho phép null)
-        if (isEdit) {
-            String oldTags = this.itemTags != null ? this.itemTags : "";
-            this.itemTags = InputUtils.inputStringUpdate(
-                    "Tags (Cũ: " + (oldTags.isEmpty() ? "Không có" : oldTags) + ") [Enter giữ nguyên]: ", oldTags);
-            if (this.itemTags != null && this.itemTags.isBlank()) this.itemTags = null;
-        } else {
-            String tags = InputUtils.inputStringOptional("Tags (VD: Spicy,Vegan,BestSeller) [Enter để bỏ qua]: ");
-            this.itemTags = tags.isEmpty() ? null : tags;
-        }
+
 
         // Khung giờ phục vụ
         if (isEdit) {
@@ -218,13 +209,7 @@ public class FbMenuItem {
         this.prepTimeInMinutes = prepTimeInMinutes;
     }
 
-    public String getItemTags() {
-        return itemTags;
-    }
 
-    public void setItemTags(String itemTags) {
-        this.itemTags = itemTags;
-    }
 
     public String getAvailability() {
         return availability;

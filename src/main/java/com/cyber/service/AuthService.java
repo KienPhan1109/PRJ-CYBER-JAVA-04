@@ -57,6 +57,13 @@ public class AuthService {
     }
 
     public void register(User newUser, String rawPassword) throws BusinessException {
+        register(newUser, rawPassword, null);
+    }
+
+    /**
+     * Đăng ký người dùng mới (có ghi log nếu actor != null).
+     */
+    public void register(User newUser, String rawPassword, User actor) throws BusinessException {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
@@ -72,6 +79,16 @@ public class AuthService {
             conn.setAutoCommit(false);
             try {
                 userDAO.registerUser(conn, newUser);
+
+                // Ghi audit log nếu được gọi từ trang quản lý (actor != null)
+                if (actor != null) {
+                    String roleName = newUser.getRole() != null ? newUser.getRole().name() : "CUSTOMER";
+                    String action = String.format("Thêm người dùng mới: %s (%s) - Role: %s",
+                            newUser.getUsername(), newUser.getFullName(), roleName);
+                    LogService.getInstance().log(conn,
+                            com.cyber.model.enums.LogType.USER, actor, action, null);
+                }
+
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();

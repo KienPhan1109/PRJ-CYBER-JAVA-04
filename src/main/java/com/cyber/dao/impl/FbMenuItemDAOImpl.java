@@ -37,7 +37,6 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
                 item.setBasePrice(rs.getBigDecimal("base_price"));
                 item.setStockQuantity(rs.getInt("stock_quantity"));
                 item.setPrepTimeInMinutes(rs.getInt("prep_time_minutes"));
-                item.setItemTags(rs.getString("item_tags"));
                 item.setAvailability(rs.getString("availability"));
                 item.setDeleted(rs.getBoolean("is_deleted"));
                 String tempStr = rs.getString("temperature_level");
@@ -72,7 +71,6 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
                 item.setBasePrice(rs.getBigDecimal("base_price"));
                 item.setStockQuantity(rs.getInt("stock_quantity"));
                 item.setPrepTimeInMinutes(rs.getInt("prep_time_minutes"));
-                item.setItemTags(rs.getString("item_tags"));
                 item.setAvailability(rs.getString("availability"));
                 item.setDeleted(rs.getBoolean("is_deleted"));
                 String tempStr = rs.getString("temperature_level");
@@ -107,7 +105,6 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
                     item.setBasePrice(rs.getBigDecimal("base_price"));
                     item.setStockQuantity(rs.getInt("stock_quantity"));
                     item.setPrepTimeInMinutes(rs.getInt("prep_time_minutes"));
-                    item.setItemTags(rs.getString("item_tags"));
                     item.setAvailability(rs.getString("availability"));
                     item.setDeleted(rs.getBoolean("is_deleted"));
                     String tempStr = rs.getString("temperature_level");
@@ -145,7 +142,6 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
                     item.setBasePrice(rs.getBigDecimal("base_price"));
                     item.setStockQuantity(rs.getInt("stock_quantity"));
                     item.setPrepTimeInMinutes(rs.getInt("prep_time_minutes"));
-                    item.setItemTags(rs.getString("item_tags"));
                     item.setAvailability(rs.getString("availability"));
                     item.setDeleted(rs.getBoolean("is_deleted"));
                     String tempStr = rs.getString("temperature_level");
@@ -166,8 +162,8 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     @Override
     public int create(Connection conn, FbMenuItem item) throws SQLException {
         String sql = "INSERT INTO fb_menu_items " +
-                     "(category_id, name, description, base_price, stock_quantity, prep_time_minutes, item_tags, availability, temperature_level, status) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     "(category_id, name, description, base_price, stock_quantity, prep_time_minutes, availability, temperature_level, status) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, item.getCategoryId());
             ps.setString(2, item.getName());
@@ -175,10 +171,9 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             ps.setBigDecimal(4, item.getBasePrice());
             ps.setInt(5, item.getStockQuantity());
             ps.setInt(6, item.getPrepTimeInMinutes());
-            ps.setString(7, item.getItemTags());
-            ps.setString(8, item.getAvailability());
-            ps.setString(9, item.getTemperatureLevel() != null ? item.getTemperatureLevel().name() : null);
-            ps.setString(10, item.getStatus() != null ? item.getStatus().name() : "ACTIVE");
+            ps.setString(7, item.getAvailability());
+            ps.setString(8, item.getTemperatureLevel() != null ? item.getTemperatureLevel().name() : null);
+            ps.setString(9, item.getStatus() != null ? item.getStatus().name() : "ACTIVE");
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) return keys.getInt(1);
@@ -191,7 +186,7 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
     public void update(Connection conn, FbMenuItem item) throws SQLException {
         String sql = "UPDATE fb_menu_items SET " +
                      "category_id=?, name=?, description=?, base_price=?, stock_quantity=?, " +
-                     "prep_time_minutes=?, item_tags=?, availability=?, temperature_level=?, status=? " +
+                     "prep_time_minutes=?, availability=?, temperature_level=?, status=? " +
                      "WHERE menu_item_id=?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, item.getCategoryId());
@@ -200,11 +195,10 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
             ps.setBigDecimal(4, item.getBasePrice());
             ps.setInt(5, item.getStockQuantity());
             ps.setInt(6, item.getPrepTimeInMinutes());
-            ps.setString(7, item.getItemTags());
-            ps.setString(8, item.getAvailability());
-            ps.setString(9, item.getTemperatureLevel() != null ? item.getTemperatureLevel().name() : null);
-            ps.setString(10, item.getStatus() != null ? item.getStatus().name() : "ACTIVE");
-            ps.setInt(11, item.getMenuItemId());
+            ps.setString(7, item.getAvailability());
+            ps.setString(8, item.getTemperatureLevel() != null ? item.getTemperatureLevel().name() : null);
+            ps.setString(9, item.getStatus() != null ? item.getStatus().name() : "ACTIVE");
+            ps.setInt(10, item.getMenuItemId());
             ps.executeUpdate();
         }
     }
@@ -267,7 +261,6 @@ public class FbMenuItemDAOImpl implements IFbMenuItemDAO {
                     item.setBasePrice(rs.getBigDecimal("base_price"));
                     item.setStockQuantity(rs.getInt("stock_quantity"));
                     item.setPrepTimeInMinutes(rs.getInt("prep_time_minutes"));
-                    item.setItemTags(rs.getString("item_tags"));
                     item.setAvailability(rs.getString("availability"));
                     item.setDeleted(rs.getBoolean("is_deleted"));
                     String tempStr = rs.getString("temperature_level");

@@ -141,8 +141,10 @@ public class UserService {
         }
     }
 
-    public void updateUser(User user) throws BusinessException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
+    public void updateUser(User user, User actor) throws BusinessException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
             User existing = userDAO.findById(conn, user.getUserId());
             if (existing == null || existing.isDeleted()) {
                 throw new BusinessException("USER_NOT_FOUND", "Không tìm thấy người dùng");
@@ -153,9 +155,28 @@ public class UserService {
                 throw new BusinessException("SECURITY_ERROR", "Không được phép chỉnh sửa thông tin của Quản trị viên (ADMIN).");
             }
 
-            userDAO.updateUser(conn, user);
+            conn.setAutoCommit(false);
+            try {
+                userDAO.updateUser(conn, user);
+
+                // Ghi audit log
+                if (actor != null) {
+                    String action = String.format("Sửa thông tin User #%d (%s)",
+                            user.getUserId(), user.getUsername());
+                    logService.log(conn, LogType.USER, actor, action, user.getUserId());
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
             throw new BusinessException("DB_ERROR", "Lỗi cập nhật User: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
         }
     }
 

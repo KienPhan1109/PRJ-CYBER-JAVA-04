@@ -9,7 +9,6 @@ import com.cyber.domain.fb.discount.NoDiscountStrategy;
 import com.cyber.domain.fb.discount.PercentageDiscountStrategy;
 import com.cyber.exception.BusinessException;
 import com.cyber.model.*;
-import com.cyber.model.enums.FBStatus;
 import com.cyber.service.BookingService;
 import com.cyber.service.ComputerService;
 import com.cyber.service.FbMenuService;
@@ -619,6 +618,10 @@ public class CustomerMainView {
             
             cart.add(singleCartItem);
             cartTotal = cartTotal.add(finalPrice);
+
+            // Fix: Trừ tồn kho local ngay lập tức để tránh đặt vượt quá số lượng thực tế
+            selectedItem.setStockQuantity(selectedItem.getStockQuantity() - qty);
+
             PrintUtils.printSuccess("Đã thêm [%s] x%d vào giỏ. Đơn giá: %s",
                     singleCartItem.getItemDescription(), qty,
                     FormatUtils.formatVND(singleCartItem.getFinalPrice()));
@@ -676,32 +679,31 @@ public class CustomerMainView {
             int startIdx = (currentPage - 1) * pageSize;
             int endIdx = Math.min(startIdx + pageSize, menuItems.size());
 
-            System.out.println("\n" + "=".repeat(130));
+            System.out.println("\n" + "=".repeat(140));
             System.out.println("  MENU F&B (Trang " + currentPage + "/" + totalPages + ")");
-            System.out.println("=".repeat(130));
-            System.out.printf("%-5s | %-10s | %-22s | %-25s | %-12s | %-8s | %-6s | %-15s%n",
-                    "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Tồn kho", "T.gian", "Tags");
-            System.out.println("-".repeat(130));
+            System.out.println("=".repeat(140));
+            System.out.printf("%-6s | %-10s | %-22s | %-30s | %-12s | %-6s | %-5s | %-10s | %-10s | %-12s%n",
+                    "ID", "Danh mục", "Tên món", "Mô tả", "Giá gốc", "Kho", "Phút", "Nhiệt độ", "Giờ P.Vụ", "Trạng thái");
+            System.out.println("-".repeat(140));
             for (int i = startIdx; i < endIdx; i++) {
                 FbMenuItem m = menuItems.get(i);
-                String stockStr = m.getStockQuantity() > 0 ? String.valueOf(m.getStockQuantity()) : "[HẾT HÀNG]";
-                String nameCol = m.getStatus() == FBStatus.OUT_OF_STOCK 
-                                 ? PrintUtils.colorText(m.getName(), "YELLOW") 
-                                 : m.getName();
+                String stockStr = m.getStockQuantity() > 0 ? String.valueOf(m.getStockQuantity()) : "[HẾT]";
                 String desc = m.getDescription() != null ? m.getDescription() : "(Không có)";
-                if (desc.length() > 23) desc = desc.substring(0, 20) + "...";
+                if (desc.length() > 28) desc = desc.substring(0, 25) + "...";
 
-                System.out.printf("%-5d | %-10s | %-22s | %-25s | %-12s | %-8s | %-6d' | %-15s%n",
-                        m.getMenuItemId(),
+                System.out.printf("%-6s | %-10s | %-22s | %-30s | %-12s | %-6s | %-5d | %-19s | %-10s | %-21s%n",
+                        FormatUtils.formatId("IT", m.getMenuItemId()),
                         m.getCategoryName() != null ? m.getCategoryName() : "-",
-                        nameCol,
+                        FormatUtils.truncate(m.getName(), 22),
                         desc,
                         FormatUtils.formatVND(m.getBasePrice()),
                         stockStr,
                         m.getPrepTimeInMinutes(),
-                        m.getItemTags() != null ? m.getItemTags() : "-");
+                        FormatUtils.formatFbTemperature(m.getTemperatureLevel()),
+                        FormatUtils.formatFbAvailability(m.getAvailability()),
+                        FormatUtils.formatFbStatus(m.getStatus()));
             }
-            System.out.println("=".repeat(130));
+            System.out.println("=".repeat(140));
             System.out.println("Tổng: " + menuItems.size() + " món | Trang " + currentPage + "/" + totalPages);
 
             if (totalPages <= 1) break;

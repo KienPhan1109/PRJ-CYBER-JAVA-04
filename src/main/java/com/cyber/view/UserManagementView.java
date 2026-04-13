@@ -115,7 +115,7 @@ public class UserManagementView {
         int roleChoice = InputUtils.inputInt("Nhập (1-2) [Mặc định 2]: ", 1, 2);
         user.setRole(roleChoice == 1 ? UserRole.STAFF : UserRole.CUSTOMER);
         
-        authService.register(user, pw);
+        authService.register(user, pw, adminUser);
         PrintUtils.printSuccess("Thêm người dùng thành công!");
     }
 
@@ -162,7 +162,7 @@ public class UserManagementView {
         int rChoice = InputUtils.inputIntUpdate("Nhập Role mới [Enter để giữ nguyên]: ", oldRoleInt, 1, 2);
         existing.setRole(rChoice == 1 ? UserRole.STAFF : UserRole.CUSTOMER);
 
-        userService.updateUser(existing);
+        userService.updateUser(existing, adminUser);
         PrintUtils.printSuccess("Cập nhật thông tin thành công!");
     }
 
