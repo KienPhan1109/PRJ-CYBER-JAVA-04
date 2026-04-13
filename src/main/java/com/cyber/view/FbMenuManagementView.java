@@ -3,15 +3,12 @@ package com.cyber.view;
 import com.cyber.domain.fb.FbMenuItem;
 import com.cyber.exception.BusinessException;
 import com.cyber.model.enums.FBStatus;
-import com.cyber.model.enums.FbTemperature;
 import com.cyber.service.FbMenuService;
 import com.cyber.util.FormatUtils;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 /**
  * View quản lý Menu F&B nâng cao dành cho Admin.
@@ -107,51 +104,29 @@ public class FbMenuManagementView {
     }
 
     // -------------------------------------------------------
-    // 2. Thêm món mới (desc & tags cho phép null)
+    // 2. Thêm món mới (validate tên tức thì + inputData)
     // -------------------------------------------------------
     private void handleAddItem() {
         System.out.println("\n--- THÊM MÓN MỚI VÀO MENU ---");
-        System.out.println("Chọn danh mục:");
-        System.out.println("1. FOOD | 2. DRINK | 3. SNACK | 4. TOPPING");
-        int categoryId = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
 
-        String name = InputUtils.inputString("Tên món: ");
-
-        // Mô tả: cho phép null (Enter để bỏ qua)
-        String desc = InputUtils.inputStringOptional("Mô tả (Enter để bỏ qua): ");
-        if (desc.isEmpty()) desc = null;
-
-        BigDecimal price = InputUtils.inputBigDecimal("Giá gốc (VND): ", BigDecimal.ZERO);
-        int stock = InputUtils.inputInt("Tồn kho ban đầu: ", 0, 99999);
-        int prepTime = InputUtils.inputInt("Thời gian chuẩn bị (phút): ", 0, 120);
-
-        // Tags: cho phép null (Enter để bỏ qua)
-        String tags = InputUtils.inputStringOptional("Tags (VD: Spicy,Vegan,BestSeller) [Enter để bỏ qua]: ");
-        if (tags.isEmpty()) tags = null;
-
-        String availability = InputUtils.inputString("Khung giờ phục vụ (ALL hoặc VD: 06:00-22:00): ");
-
-        System.out.println("Chọn nhiệt độ:");
-        System.out.println("1. HOT | 2. COLD | 3. ICED | 4. NONE");
-        int tempChoice = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
-        FbTemperature temperatureLevel = switch (tempChoice) {
-            case 1 -> FbTemperature.HOT;
-            case 2 -> FbTemperature.COLD;
-            case 3 -> FbTemperature.ICED;
-            default -> FbTemperature.NONE;
-        };
+        // Validate tên món ngay lập tức
+        String name;
+        while (true) {
+            name = InputUtils.inputString("Tên món: ");
+            try {
+                if (menuService.isNameExists(name)) {
+                    PrintUtils.printError("Tên món '" + name + "' đã tồn tại! Vui lòng nhập tên khác.");
+                    continue;
+                }
+                break; // Tên hợp lệ, cho nhập tiếp
+            } catch (BusinessException e) {
+                PrintUtils.printError(e.getMessage());
+                return;
+            }
+        }
 
         FbMenuItem newItem = new FbMenuItem();
-        newItem.setCategoryId(categoryId);
-        newItem.setName(name);
-        newItem.setDescription(desc);
-        newItem.setBasePrice(price);
-        newItem.setStockQuantity(stock);
-        newItem.setPrepTimeInMinutes(prepTime);
-        newItem.setItemTags(tags);
-        newItem.setAvailability(availability);
-        newItem.setTemperatureLevel(temperatureLevel);
-        newItem.setStatus(stock == 0 ? FBStatus.OUT_OF_STOCK : FBStatus.ACTIVE);
+        newItem.inputData(false, name);
 
         try {
             int newId = menuService.createMenuItem(newItem, adminUser);
@@ -162,7 +137,7 @@ public class FbMenuManagementView {
     }
 
     // -------------------------------------------------------
-    // 3. Sửa món (desc & tags cho phép để trống → null)
+    // 3. Sửa món (validate tên tức thì + inputData)
     // -------------------------------------------------------
     private void handleEditItem() {
         System.out.println("\n--- SỬA THÔNG TIN MÓN ---");
@@ -175,44 +150,26 @@ public class FbMenuManagementView {
                 return;
             }
 
-            System.out.println("Danh mục: 1. FOOD | 2. DRINK | 3. SNACK | 4. TOPPING");
-            int catId = InputUtils.inputIntUpdate(
-                    "Danh mục mới (Cũ: " + existing.getCategoryId() + ") [Enter giữ nguyên]: ", existing.getCategoryId(), 1, 4);
+            // Validate tên món ngay lập tức (cho phép giữ nguyên tên cũ)
+            String name;
+            while (true) {
+                name = InputUtils.inputStringUpdate(
+                        "Tên mới (Cũ: " + existing.getName() + ") [Enter giữ nguyên]: ", existing.getName());
+                if (!name.equals(existing.getName())) {
+                    try {
+                        if (menuService.isNameExists(name)) {
+                            PrintUtils.printError("Tên món '" + name + "' đã tồn tại! Vui lòng nhập tên khác.");
+                            continue;
+                        }
+                    } catch (BusinessException e) {
+                        PrintUtils.printError(e.getMessage());
+                        return;
+                    }
+                }
+                break;
+            }
 
-            String name = InputUtils.inputStringUpdate(
-                    "Tên mới (Cũ: " + existing.getName() + ") [Enter giữ nguyên]: ", existing.getName());
-
-            // Mô tả: cho phép để trống
-            String oldDesc = existing.getDescription() != null ? existing.getDescription() : "";
-            String desc = InputUtils.inputStringUpdate(
-                    "Mô tả mới (Cũ: " + (oldDesc.isEmpty() ? "Không có" : oldDesc) + ") [Enter giữ nguyên]: ", oldDesc);
-            if (desc != null && desc.isBlank()) desc = null;
-
-            BigDecimal price = InputUtils.inputBigDecimalUpdate(
-                    "Giá gốc mới [Enter giữ nguyên]: ", existing.getBasePrice(), BigDecimal.ZERO);
-            int stock = InputUtils.inputIntUpdate(
-                    "Tồn kho mới [Enter giữ nguyên]: ", existing.getStockQuantity(), 0, 99999);
-            int prepTime = InputUtils.inputIntUpdate(
-                    "Thời gian chuẩn bị (phút) [Enter giữ nguyên]: ", existing.getPrepTimeInMinutes(), 0, 120);
-
-            // Tags: cho phép để trống
-            String oldTags = existing.getItemTags() != null ? existing.getItemTags() : "";
-            String tags = InputUtils.inputStringUpdate(
-                    "Tags (Cũ: " + (oldTags.isEmpty() ? "Không có" : oldTags) + ") [Enter giữ nguyên]: ", oldTags);
-            if (tags != null && tags.isBlank()) tags = null;
-
-            String avail = InputUtils.inputStringUpdate(
-                    "Khung giờ [Enter giữ nguyên]: ", existing.getAvailability() != null ? existing.getAvailability() : "ALL");
-
-            existing.setCategoryId(catId);
-            existing.setName(name);
-            existing.setDescription(desc);
-            existing.setBasePrice(price);
-            existing.setStockQuantity(stock);
-            existing.setPrepTimeInMinutes(prepTime);
-            existing.setItemTags(tags);
-            existing.setAvailability(avail);
-            existing.setStatus(stock == 0 ? FBStatus.OUT_OF_STOCK : FBStatus.ACTIVE);
+            existing.inputData(true, name);
 
             menuService.updateMenuItem(existing, adminUser);
             PrintUtils.printSuccess("Cập nhật món thành công!");

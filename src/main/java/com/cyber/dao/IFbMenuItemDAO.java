@@ -15,7 +15,11 @@ public interface IFbMenuItemDAO {
 
     List<FbMenuItem> findByCategoryId(Connection conn, int categoryId) throws SQLException;
 
+    int create(Connection conn, FbMenuItem item) throws SQLException;
+
     void update(Connection conn, FbMenuItem item) throws SQLException;
+
+    void deleteItem(Connection conn, int menuItemId) throws SQLException;
 
     void deductStock(Connection conn, int menuItemId, int quantity) throws SQLException;
 

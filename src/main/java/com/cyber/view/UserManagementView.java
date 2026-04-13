@@ -1,10 +1,9 @@
 package com.cyber.view;
 
 import com.cyber.exception.BusinessException;
-import com.cyber.model.Role;
-import com.cyber.model.SystemLog;
 import com.cyber.model.User;
 import com.cyber.model.enums.LogType;
+import com.cyber.model.enums.UserRole;
 import com.cyber.model.enums.UserStatus;
 import com.cyber.service.AuthService;
 import com.cyber.service.LogService;
@@ -92,7 +91,7 @@ public class UserManagementView {
                         FormatUtils.truncate(u.getFullName(), 20),
                         FormatUtils.formatValue(u.getPhone()),
                         FormatUtils.formatVND(u.getBalance()),
-                        u.getRole() != null ? u.getRole().getRoleName() : "---",
+                        u.getRole() != null ? u.getRole().name() : "---",
                         FormatUtils.formatUserStatus(u.getStatus()));
             }
             System.out.println("=".repeat(120));
@@ -114,9 +113,7 @@ public class UserManagementView {
         
         System.out.println("Chọn Role (1. STAFF | 2. CUSTOMER): ");
         int roleChoice = InputUtils.inputInt("Nhập (1-2) [Mặc định 2]: ", 1, 2);
-        String roleName = roleChoice == 1 ? "STAFF" : "CUSTOMER";
-        int roleId = roleChoice == 1 ? 2 : 3;
-        user.setRole(new Role(roleId, roleName));
+        user.setRole(roleChoice == 1 ? UserRole.STAFF : UserRole.CUSTOMER);
         
         authService.register(user, pw);
         PrintUtils.printSuccess("Thêm người dùng thành công!");
@@ -133,7 +130,7 @@ public class UserManagementView {
         }
         
         // Chặn sửa Admin
-        if (existing.getRole() != null && existing.getRole().getRoleId() == 1) {
+        if (existing.getRole() == UserRole.ADMIN) {
             PrintUtils.printWarning("Không được phép sửa thông tin của Quản trị viên (ADMIN).");
             return;
         }
@@ -159,10 +156,11 @@ public class UserManagementView {
         existing.setPhone(newPhone);
         
         // Chỉ cho phép chọn STAFF hoặc CUSTOMER
-        int oldRoleId = existing.getRole() != null ? existing.getRole().getRoleId() : 3;
-        System.out.println("Chọn Role (2. STAFF | 3. CUSTOMER - Cũ: " + oldRoleId + "): ");
-        int rId = InputUtils.inputIntUpdate("Nhập Role mới [Enter để giữ nguyên]: ", oldRoleId, 2, 3);
-        existing.setRole(new Role(rId, rId == 2 ? "STAFF" : "CUSTOMER"));
+        String oldRoleName = existing.getRole() != null ? existing.getRole().name() : "CUSTOMER";
+        System.out.println("Chọn Role (1. STAFF | 2. CUSTOMER - Cũ: " + oldRoleName + "): ");
+        int oldRoleInt = existing.getRole() == UserRole.STAFF ? 1 : 2;
+        int rChoice = InputUtils.inputIntUpdate("Nhập Role mới [Enter để giữ nguyên]: ", oldRoleInt, 1, 2);
+        existing.setRole(rChoice == 1 ? UserRole.STAFF : UserRole.CUSTOMER);
 
         userService.updateUser(existing);
         PrintUtils.printSuccess("Cập nhật thông tin thành công!");
@@ -178,7 +176,7 @@ public class UserManagementView {
             throw new BusinessException("NOT_FOUND", "Không tìm thấy User với ID " + id);
         }
 
-        if (existing.getRole() != null && existing.getRole().getRoleId() == 1) {
+        if (existing.getRole() == UserRole.ADMIN) {
             PrintUtils.printWarning("Không thể khóa tài khoản ADMIN.");
             return;
         }

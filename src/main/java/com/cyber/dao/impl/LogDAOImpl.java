@@ -21,32 +21,10 @@ public class LogDAOImpl implements ILogDAO {
         return instance;
     }
 
-    // -------------------------------------------------------
-    // SQL Constants
-    // -------------------------------------------------------
-    private static final String SQL_INSERT =
-            "INSERT INTO system_logs (log_type, actor_id, action, target_id) " +
-            "VALUES (?, ?, ?, ?)";
-
-    private static final String SQL_BY_TYPE =
-            "SELECT id, log_type, actor_id, action, target_id, created_at " +
-            "FROM system_logs " +
-            "WHERE log_type = ? " +
-            "ORDER BY created_at DESC";
-
-    private static final String SQL_BY_TYPE_AND_ACTOR =
-            "SELECT id, log_type, actor_id, action, target_id, created_at " +
-            "FROM system_logs " +
-            "WHERE log_type = ? AND actor_id = ? " +
-            "ORDER BY created_at DESC";
-
-    // -------------------------------------------------------
-    // WRITE — sử dụng Connection được truyền vào (cùng transaction)
-    // -------------------------------------------------------
-
     @Override
     public void insertLog(Connection conn, SystemLog log) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(SQL_INSERT)) {
+        String sql = "INSERT INTO system_logs (log_type, actor_id, action, target_id) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, log.getLogType().name());
             ps.setInt   (2, log.getActorId());
             ps.setString(3, log.getAction());
@@ -59,19 +37,27 @@ public class LogDAOImpl implements ILogDAO {
         }
     }
 
-    // -------------------------------------------------------
-    // READ — tự mở Connection riêng
-    // -------------------------------------------------------
-
     @Override
     public List<SystemLog> getLogsByType(LogType logType) throws SQLException {
         List<SystemLog> result = new ArrayList<>();
+        String sql = "SELECT id, log_type, actor_id, action, target_id, created_at " +
+                     "FROM system_logs WHERE log_type = ? ORDER BY created_at DESC";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_BY_TYPE)) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, logType.name());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    result.add(mapRow(rs));
+                    LogType lt = LogType.valueOf(rs.getString("log_type").toUpperCase());
+                    int rawTargetId = rs.getInt("target_id");
+                    Integer targetId = rs.wasNull() ? null : rawTargetId;
+                    result.add(new SystemLog(
+                            rs.getInt("id"),
+                            lt,
+                            rs.getInt("actor_id"),
+                            rs.getString("action"),
+                            targetId,
+                            rs.getTimestamp("created_at")
+                    ));
                 }
             }
         }
@@ -81,37 +67,28 @@ public class LogDAOImpl implements ILogDAO {
     @Override
     public List<SystemLog> getLogsByTypeAndActor(LogType logType, int actorId) throws SQLException {
         List<SystemLog> result = new ArrayList<>();
+        String sql = "SELECT id, log_type, actor_id, action, target_id, created_at " +
+                     "FROM system_logs WHERE log_type = ? AND actor_id = ? ORDER BY created_at DESC";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_BY_TYPE_AND_ACTOR)) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, logType.name());
             ps.setInt   (2, actorId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    result.add(mapRow(rs));
+                    LogType lt = LogType.valueOf(rs.getString("log_type").toUpperCase());
+                    int rawTargetId = rs.getInt("target_id");
+                    Integer targetId = rs.wasNull() ? null : rawTargetId;
+                    result.add(new SystemLog(
+                            rs.getInt("id"),
+                            lt,
+                            rs.getInt("actor_id"),
+                            rs.getString("action"),
+                            targetId,
+                            rs.getTimestamp("created_at")
+                    ));
                 }
             }
         }
         return result;
-    }
-
-    // -------------------------------------------------------
-    // Private Helper
-    // -------------------------------------------------------
-
-    /** Map một ResultSet row sang SystemLog object. */
-    private SystemLog mapRow(ResultSet rs) throws SQLException {
-        LogType logType = LogType.valueOf(rs.getString("log_type").toUpperCase());
-
-        int rawTargetId = rs.getInt("target_id");
-        Integer targetId = rs.wasNull() ? null : rawTargetId;
-
-        return new SystemLog(
-                rs.getInt      ("id"),
-                logType,
-                rs.getInt      ("actor_id"),
-                rs.getString   ("action"),
-                targetId,
-                rs.getTimestamp("created_at")
-        );
     }
 }

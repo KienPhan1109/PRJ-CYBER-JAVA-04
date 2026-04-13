@@ -35,14 +35,14 @@ public class UserServiceTest {
             User u = new User();
             u.setUsername(TEST_USERNAME);
             u.setFullName("Test Money");
-            u.setRole(new com.cyber.model.Role(1, "CUSTOMER"));
+            u.setRole(com.cyber.model.enums.UserRole.CUSTOMER);
             authService.register(u, "Admin@123");
             
             // Khởi tạo Admin Actor để làm Log Record
             adminActor = new User();
             adminActor.setUsername(ADMIN_TESTER);
             adminActor.setFullName("Admin Tester");
-            adminActor.setRole(new com.cyber.model.Role(2, "ADMIN")); // Giả lập Admin / Staff
+            adminActor.setRole(com.cyber.model.enums.UserRole.ADMIN); // Giả lập Admin / Staff
             adminActor.setUserId(9999);
             
             // Tìm id của test_money_guy vì register không trả về ID
@@ -67,8 +67,9 @@ public class UserServiceTest {
 
     private static void cleanTestData() {
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM logs WHERE user_id = ? OR action LIKE '%test_money_guy%'");
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM system_logs WHERE actor_id = ? OR action LIKE '%test_money_guy%'");
              PreparedStatement ps2 = conn.prepareStatement("DELETE FROM users WHERE username = ?")) {
+            ps.setInt(1, 9999);
             ps2.setString(1, TEST_USERNAME);
             ps2.executeUpdate();
             ps.executeUpdate();

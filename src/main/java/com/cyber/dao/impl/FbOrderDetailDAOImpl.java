@@ -20,29 +20,6 @@ public class FbOrderDetailDAOImpl implements IFbOrderDetailDAO {
         return instance;
     }
 
-    // -------------------------------------------------------
-    // SQL
-    // -------------------------------------------------------
-    private static final String SQL_SAVE =
-            "INSERT INTO fb_order_details " +
-            "(order_id, menu_item_id, quantity, unit_price, unit_price_snapshot, item_name_snapshot, item_description, item_config_json, discount_applied, discount_strategy_name) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-    private static final String SQL_FIND_BY_ORDER =
-            "SELECT d.* " +
-            "FROM fb_order_details d " +
-            "WHERE d.order_id = ? " +
-            "ORDER BY d.detail_id";
-
-    private static final String SQL_CALC_TOTAL =
-            "SELECT SUM(quantity * unit_price_snapshot) as total " +
-            "FROM fb_order_details " +
-            "WHERE order_id = ?";
-
-    // -------------------------------------------------------
-    // Implementations
-    // -------------------------------------------------------
-
     @Override
     public void insertOrderDetail(Connection conn, 
                                   int orderId, 
@@ -54,7 +31,10 @@ public class FbOrderDetailDAOImpl implements IFbOrderDetailDAO {
                                   String itemConfigJson, 
                                   BigDecimal discountApplied, 
                                   String discountStrategyName) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(SQL_SAVE)) {
+        String sql = "INSERT INTO fb_order_details " +
+                     "(order_id, menu_item_id, quantity, unit_price, unit_price_snapshot, item_name_snapshot, item_description, item_config_json, discount_applied, discount_strategy_name) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt       (1, orderId);
             ps.setInt       (2, menuItemId);
             ps.setInt       (3, quantity);
@@ -73,7 +53,8 @@ public class FbOrderDetailDAOImpl implements IFbOrderDetailDAO {
     @Override
     public List<Map<String, Object>> findDetailsByOrderId(Connection conn, int orderId) throws SQLException {
         List<Map<String, Object>> result = new ArrayList<>();
-        try (PreparedStatement ps = conn.prepareStatement(SQL_FIND_BY_ORDER)) {
+        String sql = "SELECT d.* FROM fb_order_details d WHERE d.order_id = ? ORDER BY d.detail_id";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, orderId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -98,7 +79,8 @@ public class FbOrderDetailDAOImpl implements IFbOrderDetailDAO {
 
     @Override
     public BigDecimal calculateTotalOrder(Connection conn, int orderId) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(SQL_CALC_TOTAL)) {
+        String sql = "SELECT SUM(quantity * unit_price_snapshot) as total FROM fb_order_details WHERE order_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, orderId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {

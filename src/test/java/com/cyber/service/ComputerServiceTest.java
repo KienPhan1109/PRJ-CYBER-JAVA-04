@@ -31,7 +31,7 @@ public class ComputerServiceTest {
         dummyAdmin = new User();
         dummyAdmin.setUserId(9999);
         dummyAdmin.setUsername("admin_bot");
-        dummyAdmin.setRole(new com.cyber.model.Role(2, "ADMIN")); // admin
+        dummyAdmin.setRole(com.cyber.model.enums.UserRole.ADMIN); // admin
 
         try {
             Computer c = new Computer();

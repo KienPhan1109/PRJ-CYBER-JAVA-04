@@ -63,12 +63,12 @@ public class AuthView {
                 PrintUtils.printSuccess("Đăng nhập thành công!");
                 
                 // Route mapping based on the User's Role capability
-                String role = currentUser.getRole() != null ? currentUser.getRole().getRoleName().toUpperCase() : "CUSTOMER";
+                com.cyber.model.enums.UserRole role = currentUser.getRole() != null ? currentUser.getRole() : com.cyber.model.enums.UserRole.CUSTOMER;
                 String name = currentUser.getFullName() != null ? currentUser.getFullName() : username;
 
-                if ("ADMIN".equals(role)) System.out.println("Xin chào Admin " + name + ", đang chuyển vào màn hình Quản trị...");
+                if (role == com.cyber.model.enums.UserRole.ADMIN) System.out.println("Xin chào Admin " + name + ", đang chuyển vào màn hình Quản trị...");
 
-                else if ("STAFF".equals(role)) System.out.println("Xin chào Nhân viên " + name + ", đang chuyển vào màn hình Thu ngân/Phục vụ...");
+                else if (role == com.cyber.model.enums.UserRole.STAFF) System.out.println("Xin chào Nhân viên " + name + ", đang chuyển vào màn hình Thu ngân/Phục vụ...");
 
                 else System.out.println("Xin chào " + name + ", chúc bạn trải nghiệm dịch vụ vui vẻ!");
                 

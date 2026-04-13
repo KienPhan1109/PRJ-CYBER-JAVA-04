@@ -3,7 +3,6 @@ package com.cyber.service;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import com.cyber.util.PrintUtils;
 
 public class SessionHeartbeatManager {
     private static SessionHeartbeatManager instance;
@@ -22,7 +21,7 @@ public class SessionHeartbeatManager {
     }
 
     public void startHeartbeat() {
-        int intervalMs = com.cyber.util.EnvUtils.getInt("HEARTBEAT_INTERVAL_MS", 10000);
+        int intervalMs = 10_000;
         int intervalSeconds = intervalMs / 1000;
         if (intervalSeconds == 0) intervalSeconds = 1;
 

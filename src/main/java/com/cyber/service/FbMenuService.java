@@ -83,6 +83,16 @@ public class FbMenuService {
         }
     }
 
+    /**
+     * Kiểm tra xem tên món đã tồn tại trong DB chưa (dùng cho validate tức thì).
+     */
+    public boolean isNameExists(String name) throws BusinessException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            return menuItemDAO.findByName(conn, name) != null;
+        } catch (SQLException e) {
+            throw new BusinessException("DB_ERROR", "Lỗi kiểm tra tên món: " + e.getMessage());
+        }
+    }
 
 
     // -------------------------------------------------------

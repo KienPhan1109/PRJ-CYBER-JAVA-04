@@ -77,7 +77,7 @@ public class UserService {
             }
 
             // Bảo vệ ADMIN: Không thể khóa tài khoản ADMIN
-            if (user.getRole() != null && user.getRole().getRoleId() == 1) {
+            if (user.getRole() == com.cyber.model.enums.UserRole.ADMIN) {
                 throw new BusinessException("SECURITY_ERROR", "Không được phép thay đổi trạng thái của Quản trị viên (ADMIN).");
             }
 
@@ -149,7 +149,7 @@ public class UserService {
             }
 
             // Bảo vệ ADMIN: Không được sửa thông tin ADMIN từ trang quản lý chung
-            if (existing.getRole() != null && existing.getRole().getRoleId() == 1) {
+            if (existing.getRole() == com.cyber.model.enums.UserRole.ADMIN) {
                 throw new BusinessException("SECURITY_ERROR", "Không được phép chỉnh sửa thông tin của Quản trị viên (ADMIN).");
             }
 

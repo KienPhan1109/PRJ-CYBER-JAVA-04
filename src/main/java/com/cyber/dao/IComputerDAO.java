@@ -18,4 +18,6 @@ public interface IComputerDAO {
     void addComputer(Connection conn, Computer computer) throws SQLException;
 
     void updateComputer(Connection conn, Computer computer) throws SQLException;
+
+    void deleteComputer(Connection conn, int computerId) throws SQLException;
 }

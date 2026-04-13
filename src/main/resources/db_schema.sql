@@ -2,32 +2,21 @@ DROP DATABASE IF EXISTS cyber_gaming_db;
 CREATE DATABASE IF NOT EXISTS cyber_gaming_db;
 USE cyber_gaming_db;
 
--- ==============================================
--- CORE TABLES
--- ==============================================
-
--- 1. Table Role
-CREATE TABLE roles (
-    role_id INT AUTO_INCREMENT PRIMARY KEY,
-    role_name VARCHAR(50) UNIQUE NOT NULL
-);
-
--- 2. Table User
+-- 1. Table User
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role_id INT NOT NULL,
+    role ENUM('ADMIN', 'STAFF', 'CUSTOMER') NOT NULL DEFAULT 'CUSTOMER',
     balance DECIMAL(12, 2) DEFAULT 0.00,
     full_name VARCHAR(100) NOT NULL,
     phone VARCHAR(15),
     status ENUM('ACTIVE', 'LOCKED') DEFAULT 'ACTIVE',
     is_deleted TINYINT(1) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE RESTRICT
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Table Computer
+-- 2. Table Computer
 CREATE TABLE computers (
     computer_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
@@ -38,7 +27,7 @@ CREATE TABLE computers (
     is_deleted TINYINT(1) DEFAULT 0
 );
 
--- 4. Table Booking (PC Reservation)
+-- 3. Table Booking
 CREATE TABLE bookings (
     booking_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -53,11 +42,7 @@ CREATE TABLE bookings (
     FOREIGN KEY (computer_id) REFERENCES computers(computer_id) ON DELETE RESTRICT
 );
 
--- ==============================================
--- F&B SCHEMA
--- ==============================================
-
--- 5. F&B Categories
+-- 4. F&B Categories
 CREATE TABLE fb_categories (
     category_id INT AUTO_INCREMENT PRIMARY KEY,
     category_name VARCHAR(50) NOT NULL,
@@ -66,7 +51,7 @@ CREATE TABLE fb_categories (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. F&B Menu Items
+-- 5. F&B Menu Items
 CREATE TABLE fb_menu_items (
     menu_item_id INT AUTO_INCREMENT PRIMARY KEY,
     category_id INT NOT NULL,
@@ -85,7 +70,7 @@ CREATE TABLE fb_menu_items (
 );
 
 
--- 9. F&B Orders
+-- 6. F&B Orders
 CREATE TABLE fb_orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -97,7 +82,7 @@ CREATE TABLE fb_orders (
     FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE
 );
 
--- 10. Order Details
+-- 7. Order Details
 CREATE TABLE fb_order_details (
     detail_id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
@@ -115,7 +100,7 @@ CREATE TABLE fb_order_details (
     FOREIGN KEY (menu_item_id) REFERENCES fb_menu_items(menu_item_id) ON DELETE RESTRICT
 );
 
--- 11. System Logs
+-- 8. System Logs
 CREATE TABLE system_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     log_type ENUM('USER', 'COMPUTER', 'FB') NOT NULL,
@@ -128,34 +113,72 @@ CREATE TABLE system_logs (
     INDEX idx_created_at (created_at)
 );
 
--- ==============================================
--- ENRICHED SEED DATA
--- ==============================================
+-- 1. Users
+INSERT INTO users (username, password_hash, role, balance, full_name, phone, status) VALUES
+('admin', 'hash123', 'ADMIN', 0.00, 'Quản trị viên Hệ thống', '0901234567', 'ACTIVE'),
+('staff1', 'hash123', 'STAFF', 0.00, 'Nguyễn Văn Nhân', '0901234568', 'ACTIVE'),
+('staff2', 'hash123', 'STAFF', 0.00, 'Trần Thị Viên', '0901234560', 'ACTIVE'),
+('customer1', 'hash123', 'CUSTOMER', 500000.00, 'Anh Khách VIP 1', '0901234569', 'ACTIVE'),
+('customer2', 'hash123', 'CUSTOMER', 150000.00, 'Bạn Khách Thường 1', '0901234570', 'ACTIVE'),
+('customer3', 'hash123', 'CUSTOMER', 1000000.00, 'Khách Quen Esport', '0901234571', 'ACTIVE'),
+('customer4', 'hash123', 'CUSTOMER', 20000.00, 'Khách Vãng Lai', '0901234572', 'ACTIVE');
 
-INSERT INTO roles (role_name) VALUES ('ADMIN'), ('STAFF'), ('CUSTOMER');
-
--- Users (password = hash123)
-INSERT INTO users (username, password_hash, role_id, balance, full_name, phone, status) VALUES
-('admin', 'hash123', 1, 0.00, 'Quản trị viên Hệ thống', '0901234567', 'ACTIVE'),
-('staff1', 'hash123', 2, 0.00, 'Nguyễn Văn Nhân', '0901234568', 'ACTIVE'),
-('staff2', 'hash123', 2, 0.00, 'Trần Thị Viên', '0901234560', 'ACTIVE'),
-('customer1', 'hash123', 3, 500000.00, 'Anh Khách VIP 1', '0901234569', 'ACTIVE'),
-('customer2', 'hash123', 3, 150000.00, 'Bạn Khách Thường 1', '0901234570', 'ACTIVE'),
-('customer3', 'hash123', 3, 1000000.00, 'Khách Quen Esport', '0901234571', 'ACTIVE'),
-('customer4', 'hash123', 3, 20000.00, 'Khách Vãng Lai', '0901234572', 'ACTIVE');
-
--- Computers (More Zones)
+-- 2. Computers
 INSERT INTO computers (name, zone, hardware_config, status, price_per_hour) VALUES
-('VIP-01', 'VIP', 'i9-13900K, RTX 4090, 64GB RAM, 240Hz Monitor', 'AVAILABLE', 25000.00),
-('VIP-02', 'VIP', 'i9-13900K, RTX 4090, 64GB RAM, 240Hz Monitor', 'AVAILABLE', 25000.00),
-('STD-01', 'STANDARD', 'i5-12400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
-('STD-02', 'STANDARD', 'i5-12400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
-('ESP-01', 'ESPORT', 'i7-13700K, RTX 4070Ti, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
-('ESP-02', 'ESPORT', 'i7-13700K, RTX 4070Ti, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
-('STR-01', 'STREAMING', 'i9-13900K, RTX 4080, Dual Monitor, GoXLR, Shure SM7B', 'AVAILABLE', 35000.00),
-('CP-01', 'COUPLE', '2x i5-13400, RTX 3060Ti, Sofa đôi, Privacy Partition', 'AVAILABLE', 20000.00);
+-- Khu VIP (10 máy)
+('VIP-01', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-02', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-03', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-04', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-05', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-06', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-07', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-08', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-09', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+('VIP-10', 'VIP', 'i9-14900K, RTX 4090, 64GB RAM, 240Hz OLED', 'AVAILABLE', 25000.00),
+-- Khu ESPORT (10 máy)
+('ESP-01', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-02', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-03', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-04', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-05', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-06', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-07', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-08', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-09', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+('ESP-10', 'ESPORT', 'i7-14700K, RTX 4070 Ti Super, 32GB RAM, 360Hz Monitor', 'AVAILABLE', 18000.00),
+-- Khu STANDARD (20 máy)
+('STD-01', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-02', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-03', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-04', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-05', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-06', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-07', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-08', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-09', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-10', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-11', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-12', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-13', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-14', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-15', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-16', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-17', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-18', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-19', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+('STD-20', 'STANDARD', 'i5-13400F, RTX 3060, 16GB RAM, 144Hz Monitor', 'AVAILABLE', 10000.00),
+-- Khu STREAMING & COUPLE
+('STR-01', 'STREAMING', 'i9-14900K, RTX 4080 Super, Shure SM7B, Dual Monitor', 'AVAILABLE', 35000.00),
+('STR-02', 'STREAMING', 'i9-14900K, RTX 4080 Super, Shure SM7B, Dual Monitor', 'AVAILABLE', 35000.00),
+('STR-03', 'STREAMING', 'i9-14900K, RTX 4080 Super, Shure SM7B, Dual Monitor', 'AVAILABLE', 35000.00),
+('CP-01', 'COUPLE', '2x i5-13400, 2x RTX 3060 Ti, Sofa, Privacy Partition', 'AVAILABLE', 20000.00),
+('CP-02', 'COUPLE', '2x i5-13400, 2x RTX 3060 Ti, Sofa, Privacy Partition', 'AVAILABLE', 20000.00),
+('CP-03', 'COUPLE', '2x i5-13400, 2x RTX 3060 Ti, Sofa, Privacy Partition', 'AVAILABLE', 20000.00),
+('CP-04', 'COUPLE', '2x i5-13400, 2x RTX 3060 Ti, Sofa, Privacy Partition', 'AVAILABLE', 20000.00),
+('CP-05', 'COUPLE', '2x i5-13400, 2x RTX 3060 Ti, Sofa, Privacy Partition', 'AVAILABLE', 20000.00);
 
--- F&B Categories
+-- 3. FB Categories
 INSERT INTO fb_categories (category_name, description) VALUES
 ('FOOD',  'Cơm, Mì, Bún thơm ngon'),
 ('DRINK', 'Trà sữa, Cafe, Nước ngọt mát lạnh'),
@@ -163,22 +186,56 @@ INSERT INTO fb_categories (category_name, description) VALUES
 ('COMBO', 'Các gói kết hợp tiết kiệm'),
 ('TOPPING', 'Các loại topping thêm');
 
--- F&B Menu Items
-INSERT INTO fb_menu_items (category_id, name, description, base_price, stock_quantity, prep_time_minutes, item_tags, availability, temperature_level, status) VALUES
-(1, 'Mì Xào Bò Đặc Biệt',      'Mì xào giòn kèm 100g thịt bò và rau cải', 45000.00, 30, 10, 'BestSeller,Hot', 'ALL', 'NONE', 'ACTIVE'),
-(1, 'Cơm Rang Dưa Bò',        'Cơm rang giòn kèm dưa chua và bò xào', 40000.00, 20, 12, 'Popular', 'ALL', 'NONE', 'ACTIVE'),
-(1, 'Mì Cay Seoul (Cấp 3)',   'Mì cay hải sản style Hàn Quốc', 55000.00, 15, 15, 'Spicy,Hot', 'ALL', 'NONE', 'ACTIVE'),
-(3, 'Khoai Tây Chiên Lắc Phô Mai', 'Khoai tây bổ múi cau, bột phô mai Mỹ', 25000.00, 50, 5, 'Snack', 'ALL', 'NONE', 'ACTIVE'),
-(2, 'Trà Sữa Truyền Thống',   'Trà đen ủ lạnh pha sữa tươi', 30000.00, 99, 5, 'BestSeller', 'ALL', 'COLD', 'ACTIVE'),
-(2, 'Trà Đào Cam Sả',         'Trà đào miếng to, cam tươi, sả thơm', 35000.00, 40, 5, 'Refreshing', 'ALL', 'COLD', 'ACTIVE'),
-(2, 'Nước Ngọt Pepsi',        'Pepsi lon 330ml mát lạnh', 15000.00, 100, 1, 'IceCold', 'ALL', 'COLD', 'ACTIVE'),
-(2, 'Cafe Sữa Đá',           'Cafe Ranger Robusta, sữa đặc Ngôi sao', 22000.00, 60, 7, 'Morning', 'ALL', 'COLD', 'ACTIVE'),
-(4, 'Combo Cày Đêm',          '1 Mì xào bò + 1 Pepsi + 1 Khăn lạnh', 55000.00, 99, 10, 'Value', 'ALL', 'NONE', 'ACTIVE');
+-- 4. FB Menu Items
+INSERT INTO fb_menu_items (category_id, name, description, base_price, stock_quantity, prep_time_minutes, item_tags, temperature_level) VALUES
+-- FOOD (Món chính)
+(1, 'Mì Xào Bò Đặc Biệt', 'Mì xào kèm 100g thịt bò và rau cải', 45000.00, 50, 10, 'BestSeller,Hot', 'NONE'),
+(1, 'Cơm Rang Dưa Bò', 'Cơm rang giòn kèm dưa chua và bò xào', 40000.00, 40, 12, 'Popular', 'NONE'),
+(1, 'Mì Cay Seoul (Cấp 3)', 'Mì cay hải sản style Hàn Quốc', 55000.00, 30, 15, 'Spicy,Hot', 'NONE'),
+(1, 'Cơm Gà Xối Mỡ', 'Đùi gà chiên giòn, cơm đỏ, dưa leo', 45000.00, 25, 15, 'Hot', 'NONE'),
+(1, 'Bánh Mì Pate Xúc Xích', 'Bánh mì nóng giòn, pate gan, xúc xích đức', 25000.00, 100, 5, 'Quick', 'NONE'),
+(1, 'Mì Tôm Trứng Xúc Xích', 'Mì Hảo Hảo, 2 trứng, 1 xúc xích', 30000.00, 200, 7, 'Classic', 'NONE'),
+(1, 'Phở Bò Tái Lăn', 'Phở bò xào tái theo kiểu Nam Định', 50000.00, 20, 10, 'Tradition', 'NONE'),
+(1, 'Bún Đậu Mắm Tôm', 'Mẹt bún đậu, thịt chân giò, chả cốm', 55000.00, 15, 12, 'Popular', 'NONE'),
+(1, 'Nui Xào Bò', 'Nui xào cháy tỏi, thịt bò phi lê', 45000.00, 30, 10, 'Hot', 'NONE'),
+(1, 'Cơm Sườn Nướng', 'Sườn cốt lết nướng mật ong', 45000.00, 20, 15, 'Popular', 'NONE'),
 
--- Toppings became normal items
-INSERT INTO fb_menu_items (category_id, name, description, base_price, stock_quantity, prep_time_minutes, item_tags, availability, temperature_level, status) VALUES
-(5, 'Trân châu đen',   'Topping trân châu', 7000.00, 99, 1, 'Topping', 'ALL', 'NONE', 'ACTIVE'),
-(5, 'Thạch nha đam',   'Topping thạch', 6000.00, 99, 1, 'Topping', 'ALL', 'NONE', 'ACTIVE'),
-(5, 'Kem cheese mặn',  'Topping kem', 10000.00, 50, 1, 'Topping', 'ALL', 'NONE', 'ACTIVE'),
-(5, 'Trứng ốp la',     'Topping trứng', 5000.00, 100, 1, 'Topping', 'ALL', 'NONE', 'ACTIVE'),
-(5, 'Thêm bò',         'Topping bò', 15000.00, 30, 2, 'Topping', 'ALL', 'NONE', 'ACTIVE');
+-- DRINK (Thức uống)
+(2, 'Trà Sữa Truyền Thống', 'Trà đen ủ lạnh pha sữa tươi', 30000.00, 100, 5, 'BestSeller', 'COLD'),
+(2, 'Trà Đào Cam Sả', 'Trà đào miếng to, cam tươi, sả thơm', 35000.00, 80, 5, 'Refreshing', 'COLD'),
+(2, 'Nước Ngọt Pepsi', 'Pepsi lon 330ml', 15000.00, 500, 1, 'IceCold', 'COLD'),
+(2, 'Nước Ngọt Coca Cola', 'Coca lon 330ml', 15000.00, 500, 1, 'IceCold', 'COLD'),
+(2, 'Sting Dâu', 'Sting dâu lon 330ml', 15000.00, 400, 1, 'IceCold', 'COLD'),
+(2, 'Redbull Thái', 'Bò húc Thái chính hãng', 20000.00, 300, 1, 'Energy', 'COLD'),
+(2, 'Cafe Sữa Đá', 'Cafe Robusta đậm đà', 22000.00, 150, 5, 'Morning', 'COLD'),
+(2, 'Cafe Đen Đá', 'Cafe không đường, không sữa', 18000.00, 150, 5, 'Morning', 'COLD'),
+(2, 'Trà Chanh Giã Tay', 'Trà chanh hot trend', 25000.00, 60, 7, 'Trend', 'COLD'),
+(2, 'Sinh Tố Bơ', 'Bơ sáp xay sữa đặc', 35000.00, 20, 10, 'Healthy', 'COLD'),
+(2, 'Nước Cam Ép', 'Cam sành vắt tươi', 30000.00, 40, 7, 'Healthy', 'COLD'),
+(2, 'Nước Suối Lavie', 'Chai 500ml', 10000.00, 600, 1, 'Basic', 'COLD'),
+
+-- SNACK (Đồ ăn vặt)
+(3, 'Khoai Tây Chiên Lắc Phô Mai', 'Khoai tây bổ múi cau, bột phô mai Mỹ', 25000.00, 100, 5, 'Snack', 'NONE'),
+(3, 'Hướng Dương Bà Già', 'Gói lớn loại 1', 15000.00, 200, 1, 'Snack', 'NONE'),
+(3, 'Bim Bim Oishi', 'Các loại đồng giá', 10000.00, 300, 1, 'Snack', 'NONE'),
+(3, 'Khô Gà Lá Chanh', 'Gói 100g', 35000.00, 50, 1, 'Snack', 'NONE'),
+(3, 'Khô Bò Miếng', 'Gói 50g loại đặc biệt', 45000.00, 40, 1, 'Premium', 'NONE'),
+(3, 'Phô Mai Que', '5 thanh phô mai chiên giòn', 35000.00, 30, 7, 'Kid', 'NONE'),
+(3, 'Xúc Xích Đức Nướng', '1 thanh lớn', 15000.00, 100, 5, 'Quick', 'NONE'),
+(3, 'Cá Viên Chiên', 'Phần 10 viên', 20000.00, 50, 7, 'Popular', 'NONE'),
+
+-- COMBO (Gói tiết kiệm)
+(4, 'Combo Cày Đêm', '1 Mì xào bò + 1 Pepsi + 1 Khăn lạnh', 55000.00, 999, 10, 'Value', 'NONE'),
+(4, 'Combo Buổi Sáng', '1 Bánh mì + 1 Cafe sữa', 40000.00, 999, 7, 'Value', 'NONE'),
+(4, 'Combo Ranker', '1 Mì cay + 1 Sting dâu + 1 Khô gà', 95000.00, 999, 15, 'BestSeller', 'NONE'),
+(4, 'Combo Học Sinh', '1 Mì tôm trứng + 1 Trà chanh', 45000.00, 999, 7, 'Cheap', 'NONE'),
+(4, 'Combo Streamer', '1 Cơm gà + 1 Trà đào + 1 Khoai tây', 90000.00, 999, 15, 'Premium', 'NONE'),
+
+-- TOPPING (Món thêm)
+(5, 'Trân châu đen', 'Thêm vào trà sữa', 7000.00, 999, 1, 'Topping', 'NONE'),
+(5, 'Thạch nha đam', 'Thêm vào trà trái cây', 6000.00, 999, 1, 'Topping', 'NONE'),
+(5, 'Kem cheese mặn', 'Kem béo ngậy', 10000.00, 50, 2, 'Topping', 'NONE'),
+(5, 'Trứng ốp la', 'Thêm vào cơm/mì', 5000.00, 999, 2, 'Topping', 'NONE'),
+(5, 'Thêm bò xào', 'Thêm 50g thịt bò', 15000.00, 100, 5, 'Topping', 'NONE'),
+(5, 'Thêm xúc xích', 'Thêm 1 thanh', 10000.00, 200, 3, 'Topping', 'NONE'),
+(5, 'Pate thêm', 'Thêm vào bánh mì', 8000.00, 100, 1, 'Topping', 'NONE');

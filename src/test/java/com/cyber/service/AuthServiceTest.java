@@ -35,13 +35,13 @@ public class AuthServiceTest {
             User u1 = new User();
             u1.setUsername(TEST_USER_1);
             u1.setFullName("Normal Guy");
-            u1.setRole(new com.cyber.model.Role(1, "CUSTOMER"));
+            u1.setRole(com.cyber.model.enums.UserRole.CUSTOMER);
             authService.register(u1, PWD);
 
             User uLocked = new User();
             uLocked.setUsername(TEST_USER_LOCKED);
             uLocked.setFullName("Locked Guy");
-            uLocked.setRole(new com.cyber.model.Role(1, "CUSTOMER"));
+            uLocked.setRole(com.cyber.model.enums.UserRole.CUSTOMER);
             authService.register(uLocked, "Locked123!");
             
             // Tìm UserId và Khoá (Lock) nó.
@@ -82,7 +82,7 @@ public class AuthServiceTest {
         newUser.setUsername(uniqueName);
         newUser.setFullName("Test User 1");
         newUser.setPhone("0901234567");
-        newUser.setRole(new com.cyber.model.Role(1, "CUSTOMER"));
+        newUser.setRole(com.cyber.model.enums.UserRole.CUSTOMER);
 
         assertDoesNotThrow(() -> authService.register(newUser, PWD), "Không được throw lỗi khi đăng ký hợp lệ");
         
@@ -100,7 +100,7 @@ public class AuthServiceTest {
         User newUser1 = new User();
         newUser1.setUsername(TEST_USER_2);
         newUser1.setFullName("Test User 2");
-        newUser1.setRole(new com.cyber.model.Role(1, "CUSTOMER"));
+        newUser1.setRole(com.cyber.model.enums.UserRole.CUSTOMER);
 
         // Đăng ký lần 1
         assertDoesNotThrow(() -> authService.register(newUser1, PWD));
@@ -109,7 +109,7 @@ public class AuthServiceTest {
         User newUser2 = new User();
         newUser2.setUsername(TEST_USER_2);
         newUser2.setFullName("Chôm Tên");
-        newUser2.setRole(new com.cyber.model.Role(1, "CUSTOMER"));
+        newUser2.setRole(com.cyber.model.enums.UserRole.CUSTOMER);
 
         BusinessException exception = assertThrows(BusinessException.class, () -> authService.register(newUser2, PWD));
         assertEquals("REGISTER_FAILED", exception.getErrorCode());

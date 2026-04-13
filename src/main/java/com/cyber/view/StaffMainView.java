@@ -75,20 +75,65 @@ public class StaffMainView {
             PrintUtils.printWarning("Không tìm thấy khách hàng nào khớp với từ khóa.");
             return;
         }
-        System.out.println("Kết quả tìm kiếm:");
-        for (User u : list) {
-            System.out.printf(" - ID: %d | Username: %s | Tên: %s | SĐT: %s | Số dư: %s\n",
-                    u.getUserId(), u.getUsername(), u.getFullName(), u.getPhone() != null ? u.getPhone() : "N/A", FormatUtils.formatVND(u.getBalance()));
+
+        // Hiển thị kết quả dưới dạng bảng phân trang giống Admin
+        int pageSize = 10;
+        int totalPages = (int) Math.ceil((double) list.size() / pageSize);
+        int currentPage = 1;
+
+        while (true) {
+            int startIdx = (currentPage - 1) * pageSize;
+            int endIdx = Math.min(startIdx + pageSize, list.size());
+
+            System.out.println("\n" + "=".repeat(120));
+            System.out.println("  KẾT QUẢ TÌM KIẾM (Trang " + currentPage + "/" + totalPages + ")");
+            System.out.println("=".repeat(120));
+            System.out.printf("%-5s | %-15s | %-20s | %-12s | %-15s | %-12s | %-15s%n",
+                    "ID", "Tài khoản", "Họ tên", "SĐT", "Số dư", "Quyền", "Trạng thái");
+            System.out.println("-".repeat(120));
+
+            for (int i = startIdx; i < endIdx; i++) {
+                User u = list.get(i);
+                System.out.printf("%-5d | %-15s | %-20s | %-12s | %-15s | %-12s | %-24s%n",
+                        u.getUserId(),
+                        FormatUtils.truncate(u.getUsername(), 15),
+                        FormatUtils.truncate(u.getFullName(), 20),
+                        FormatUtils.formatValue(u.getPhone()),
+                        FormatUtils.formatVND(u.getBalance()),
+                        u.getRole() != null ? u.getRole().name() : "---",
+                        FormatUtils.formatUserStatus(u.getStatus()));
+            }
+            System.out.println("=".repeat(120));
+            System.out.println("Tổng: " + list.size() + " người dùng | Trang " + currentPage + "/" + totalPages);
+
+            if (totalPages > 1) {
+                System.out.println("[N] Trang sau | [P] Trang trước | [S] Chọn người dùng");
+                String nav = InputUtils.inputString("Lựa chọn: ").toUpperCase();
+                if (nav.equals("N") && currentPage < totalPages) { currentPage++; continue; }
+                else if (nav.equals("P") && currentPage > 1) { currentPage--; continue; }
+                else if (!nav.equals("S")) continue;
+            }
+            break;
         }
 
         int id = InputUtils.inputInt("Nhập chính xác ID người dùng cần nạp (0 để hủy): ", 0, Integer.MAX_VALUE);
         if (id == 0) return;
+
+        User targetUser = list.stream().filter(u -> u.getUserId() == id).findFirst().orElse(null);
+        if (targetUser == null) {
+            PrintUtils.printWarning("ID không tồn tại trong danh sách tìm kiếm.");
+            return;
+        }
+        if (targetUser.getStatus() == com.cyber.model.enums.UserStatus.LOCKED) {
+            PrintUtils.printWarning("Tài khoản đang bị khóa, không được phép nạp tiền.");
+            return;
+        }
         
         BigDecimal amount = InputUtils.inputBigDecimal("Nhập số tiền muốn nạp (VND): ", BigDecimal.ONE);
 
         // Truyền staffUser (actor) để ghi vào system_logs
         userService.topUpUser(id, amount, staffUser);
-        PrintUtils.printSuccess("Đã nạp " + FormatUtils.formatVND(amount) + " thành công cho User ID: " + id);
+        PrintUtils.printSuccess("Đã nạp " + FormatUtils.formatVND(amount) + " thành công cho User: " + targetUser.getUsername());
     }
 
     private void manageFbOrders() throws BusinessException {

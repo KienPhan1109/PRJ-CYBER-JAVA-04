@@ -13,4 +13,6 @@ public interface IFbOrderDetailDAO {
                            BigDecimal discountApplied, String discountStrategyName) throws SQLException;
 
     List<Map<String, Object>> findDetailsByOrderId(Connection conn, int orderId) throws SQLException;
+
+    BigDecimal calculateTotalOrder(Connection conn, int orderId) throws SQLException;
 }

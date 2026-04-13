@@ -2,6 +2,7 @@ package com.cyber.model;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import com.cyber.model.enums.UserRole;
 import com.cyber.model.enums.UserStatus;
 import com.cyber.util.InputUtils;
 import com.cyber.util.PrintUtils;
@@ -10,7 +11,7 @@ public class User {
     private int userId;
     private String username;
     private String passwordHash;
-    private Role role;
+    private UserRole role;
     private BigDecimal balance;
     private String fullName;
     private String phone;
@@ -61,11 +62,11 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    public Role getRole() {
+    public UserRole getRole() {
         return role;
     }
 
-    public void setRole(Role role) {
+    public void setRole(UserRole role) {
         this.role = role;
     }
 

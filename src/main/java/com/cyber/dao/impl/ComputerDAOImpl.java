@@ -27,7 +27,17 @@ public class ComputerDAOImpl implements IComputerDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                computers.add(mapRowToComputer(rs));
+                Computer computer = new Computer();
+                computer.setComputerId(rs.getInt("computer_id"));
+                computer.setName(rs.getString("name"));
+                String zoneStr = rs.getString("zone");
+                if (zoneStr != null) computer.setZone(ComputerZone.valueOf(zoneStr.toUpperCase()));
+                computer.setHardwareConfig(rs.getString("hardware_config"));
+                String statusStr = rs.getString("status");
+                if (statusStr != null) computer.setStatus(ComputerStatus.valueOf(statusStr.toUpperCase()));
+                computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
+                computer.setDeleted(rs.getBoolean("is_deleted"));
+                computers.add(computer);
             }
         }
         return computers;
@@ -40,7 +50,17 @@ public class ComputerDAOImpl implements IComputerDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                computers.add(mapRowToComputer(rs));
+                Computer computer = new Computer();
+                computer.setComputerId(rs.getInt("computer_id"));
+                computer.setName(rs.getString("name"));
+                String zoneStr = rs.getString("zone");
+                if (zoneStr != null) computer.setZone(ComputerZone.valueOf(zoneStr.toUpperCase()));
+                computer.setHardwareConfig(rs.getString("hardware_config"));
+                String statusStr = rs.getString("status");
+                if (statusStr != null) computer.setStatus(ComputerStatus.valueOf(statusStr.toUpperCase()));
+                computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
+                computer.setDeleted(rs.getBoolean("is_deleted"));
+                computers.add(computer);
             }
         }
         return computers;
@@ -53,7 +73,17 @@ public class ComputerDAOImpl implements IComputerDAO {
             stmt.setInt(1, computerId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return mapRowToComputer(rs);
+                    Computer computer = new Computer();
+                    computer.setComputerId(rs.getInt("computer_id"));
+                    computer.setName(rs.getString("name"));
+                    String zoneStr = rs.getString("zone");
+                    if (zoneStr != null) computer.setZone(ComputerZone.valueOf(zoneStr.toUpperCase()));
+                    computer.setHardwareConfig(rs.getString("hardware_config"));
+                    String statusStr = rs.getString("status");
+                    if (statusStr != null) computer.setStatus(ComputerStatus.valueOf(statusStr.toUpperCase()));
+                    computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
+                    computer.setDeleted(rs.getBoolean("is_deleted"));
+                    return computer;
                 }
             }
         }
@@ -111,23 +141,5 @@ public class ComputerDAOImpl implements IComputerDAO {
             stmt.setInt(1, computerId);
             stmt.executeUpdate();
         }
-    }
-
-    private Computer mapRowToComputer(ResultSet rs) throws SQLException {
-        Computer computer = new Computer();
-        computer.setComputerId(rs.getInt("computer_id"));
-        computer.setName(rs.getString("name"));
-        
-        String zoneStr = rs.getString("zone");
-        if (zoneStr != null) computer.setZone(com.cyber.model.enums.ComputerZone.valueOf(zoneStr.toUpperCase()));
-        
-        computer.setHardwareConfig(rs.getString("hardware_config"));
-        
-        String statusStr = rs.getString("status");
-        if (statusStr != null) computer.setStatus(com.cyber.model.enums.ComputerStatus.valueOf(statusStr.toUpperCase()));
-        
-        computer.setPricePerHour(rs.getBigDecimal("price_per_hour"));
-        computer.setDeleted(rs.getBoolean("is_deleted"));
-        return computer;
     }
 }

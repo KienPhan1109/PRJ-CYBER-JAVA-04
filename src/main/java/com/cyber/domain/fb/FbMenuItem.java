@@ -1,6 +1,9 @@
 package com.cyber.domain.fb;
 import com.cyber.model.enums.FBStatus;
 import com.cyber.model.enums.FbTemperature;
+import com.cyber.util.InputUtils;
+import com.cyber.util.FormatUtils;
+
 import java.math.BigDecimal;
 
 public class FbMenuItem {
@@ -37,6 +40,118 @@ public class FbMenuItem {
         this.temperatureLevel = temperatureLevel;
         this.status = status;
         this.isDeleted = isDeleted;
+    }
+
+    /**
+     * Nhập dữ liệu cho FbMenuItem (dùng chung cho cả Thêm và Sửa).
+     * Tên món đã được validate trùng lặp từ bên ngoài trước khi gọi vào đây.
+     *
+     * @param isEdit        true = chế độ sửa (hiển thị giá trị cũ, Enter giữ nguyên)
+     * @param validatedName tên món đã qua validate (không null)
+     */
+    public void inputData(boolean isEdit, String validatedName) {
+        this.name = validatedName;
+
+        // Danh mục
+        System.out.println(isEdit ? "Danh mục (Cũ: " + this.categoryId + "):" : "Chọn danh mục:");
+        System.out.println("1. FOOD | 2. DRINK | 3. SNACK | 4. TOPPING");
+        if (isEdit) {
+            this.categoryId = InputUtils.inputIntUpdate(
+                    "Lựa chọn mới (1-4) [Enter giữ nguyên]: ", this.categoryId, 1, 4);
+        } else {
+            this.categoryId = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
+        }
+
+        // Mô tả (cho phép null)
+        if (isEdit) {
+            String oldDesc = this.description != null ? this.description : "";
+            this.description = InputUtils.inputStringUpdate(
+                    "Mô tả mới (Cũ: " + (oldDesc.isEmpty() ? "Không có" : oldDesc) + ") [Enter giữ nguyên]: ", oldDesc);
+            if (this.description != null && this.description.isBlank()) this.description = null;
+        } else {
+            String desc = InputUtils.inputStringOptional("Mô tả (Enter để bỏ qua): ");
+            this.description = desc.isEmpty() ? null : desc;
+        }
+
+        // Giá gốc
+        if (isEdit) {
+            this.basePrice = InputUtils.inputBigDecimalUpdate(
+                    "Giá gốc mới [Enter giữ nguyên]: ", this.basePrice, BigDecimal.ZERO);
+        } else {
+            this.basePrice = InputUtils.inputBigDecimal("Giá gốc (VND): ", BigDecimal.ZERO);
+        }
+
+        // Tồn kho
+        if (isEdit) {
+            this.stockQuantity = InputUtils.inputIntUpdate(
+                    "Tồn kho mới [Enter giữ nguyên]: ", this.stockQuantity, 0, 99999);
+        } else {
+            this.stockQuantity = InputUtils.inputInt("Tồn kho ban đầu: ", 0, 99999);
+        }
+
+        // Thời gian chuẩn bị
+        if (isEdit) {
+            this.prepTimeInMinutes = InputUtils.inputIntUpdate(
+                    "Thời gian chuẩn bị (phút) [Enter giữ nguyên]: ", this.prepTimeInMinutes, 0, 120);
+        } else {
+            this.prepTimeInMinutes = InputUtils.inputInt("Thời gian chuẩn bị (phút): ", 0, 120);
+        }
+
+        // Tags (cho phép null)
+        if (isEdit) {
+            String oldTags = this.itemTags != null ? this.itemTags : "";
+            this.itemTags = InputUtils.inputStringUpdate(
+                    "Tags (Cũ: " + (oldTags.isEmpty() ? "Không có" : oldTags) + ") [Enter giữ nguyên]: ", oldTags);
+            if (this.itemTags != null && this.itemTags.isBlank()) this.itemTags = null;
+        } else {
+            String tags = InputUtils.inputStringOptional("Tags (VD: Spicy,Vegan,BestSeller) [Enter để bỏ qua]: ");
+            this.itemTags = tags.isEmpty() ? null : tags;
+        }
+
+        // Khung giờ phục vụ
+        if (isEdit) {
+            this.availability = InputUtils.inputStringUpdate(
+                    "Khung giờ [Enter giữ nguyên]: ", this.availability != null ? this.availability : "ALL");
+        } else {
+            this.availability = InputUtils.inputString("Khung giờ phục vụ (ALL hoặc VD: 06:00-22:00): ");
+        }
+
+        // Nhiệt độ
+        System.out.println(isEdit ? "Nhiệt độ (Cũ: " + FormatUtils.formatFbTemperature(this.temperatureLevel) + "):" : "Chọn nhiệt độ:");
+        System.out.println("1. HOT | 2. COLD | 3. ICED | 4. NONE");
+        if (isEdit) {
+            int oldTempChoice = switch (this.temperatureLevel) {
+                case HOT -> 1;
+                case COLD -> 2;
+                case ICED -> 3;
+                default -> 4;
+            };
+            String tInput = InputUtils.inputStringUpdate("Lựa chọn mới (1-4) [Enter giữ nguyên]: ", "").trim();
+            if (!tInput.isEmpty()) {
+                try {
+                    int tChoice = Integer.parseInt(tInput);
+                    this.temperatureLevel = switch (tChoice) {
+                        case 1 -> FbTemperature.HOT;
+                        case 2 -> FbTemperature.COLD;
+                        case 3 -> FbTemperature.ICED;
+                        default -> FbTemperature.NONE;
+                    };
+                } catch (Exception e) {
+                    // giữ nguyên
+                }
+            }
+        } else {
+            int tempChoice = InputUtils.inputInt("Lựa chọn (1-4): ", 1, 4);
+            this.temperatureLevel = switch (tempChoice) {
+                case 1 -> FbTemperature.HOT;
+                case 2 -> FbTemperature.COLD;
+                case 3 -> FbTemperature.ICED;
+                default -> FbTemperature.NONE;
+            };
+        }
+
+        // Status tự động
+        this.status = this.stockQuantity == 0 ? FBStatus.OUT_OF_STOCK : FBStatus.ACTIVE;
     }
 
     public int getMenuItemId() {

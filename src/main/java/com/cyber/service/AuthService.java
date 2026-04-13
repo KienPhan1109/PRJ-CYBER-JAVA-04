@@ -84,7 +84,7 @@ public class AuthService {
                 try {
                     conn.setAutoCommit(true);
                     conn.close();
-                } catch (SQLException _) {}
+                } catch (SQLException e) {}
             }
         }
     }

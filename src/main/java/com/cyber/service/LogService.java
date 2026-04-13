@@ -111,7 +111,7 @@ public class LogService {
     public List<SystemLog> getLogsWithPermission(LogType logType,
                                                   User currentUser) throws BusinessException {
         String roleName = currentUser.getRole() != null
-                ? currentUser.getRole().getRoleName()
+                ? currentUser.getRole().name()
                 : "";
 
         try {

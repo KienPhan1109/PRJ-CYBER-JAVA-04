@@ -9,6 +9,8 @@ import java.util.List;
 public interface IBookingDAO {
     int createBooking(Connection conn, Booking booking) throws SQLException;
 
+    boolean hasDependentBookings(Connection conn, int computerId) throws SQLException;
+
     boolean isComputerAvailable(Connection conn, int computerId, Timestamp start, Timestamp end) throws SQLException;
 
     List<Booking> findActiveBookingsByUserId(Connection conn, int userId) throws SQLException;
